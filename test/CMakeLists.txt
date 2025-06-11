@@ -491,6 +491,9 @@ if(tiff-tools)
   if(JBIG_SUPPORT)
     add_convert_test(tiffcp   jbig         "-c jbig"         "images/lzw-single-strip.tiff" TRUE)
   endif()
+  if(JPEGLS_SUPPORT)
+    add_convert_test(tiffcp   jpegls       "-c jpegls"      "images/miniswhite-1c-1b.tiff" TRUE)
+  endif()
   
   # Old-JPEG tests
   #--- tiffcp does not support subsampled images, as the OldJPEG ones are ---

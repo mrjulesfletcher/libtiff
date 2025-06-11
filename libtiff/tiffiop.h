@@ -531,6 +531,9 @@ extern "C"
 #ifdef ZSTD_SUPPORT
     extern int TIFFInitZSTD(TIFF *, int);
 #endif
+#ifdef JPEGLS_SUPPORT
+    extern int TIFFInitJPEGLS(TIFF *, int);
+#endif
 #ifdef WEBP_SUPPORT
     extern int TIFFInitWebP(TIFF *, int);
 #endif

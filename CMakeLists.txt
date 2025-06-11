@@ -120,6 +120,9 @@ include(LERCCodec)
 # Check for LZMA codec
 include(LZMACodec)
 
+# Check for JPEG-LS codec
+include(JPEGLSCodec)
+
 # Check for ZSTD codec
 include(ZSTDCodec)
 

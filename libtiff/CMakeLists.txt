@@ -96,6 +96,7 @@ target_sources(tiff PRIVATE
         tif_tile.c
         tif_version.c
         tif_warning.c
+        tif_jpegls.c
         tif_webp.c
         tif_bayer.c
         tif_write.c
