@@ -53,7 +53,8 @@ noinst_HEADERS = \
         tif_predict.h \
         tiffiop.h \
         uvcode.h \
-        tif_bayer.h
+        tif_bayer.h \
+        tif_predict_neon.h
 
 nodist_libtiffinclude_HEADERS = \
 	tiffconf.h
@@ -99,6 +100,7 @@ libtiff_la_SOURCES = \
         tif_warning.c \
         tif_webp.c \
         tif_bayer.c \
+        tif_predict_neon.c \
         tif_write.c \
         tif_zip.c \
         tif_zstd.c

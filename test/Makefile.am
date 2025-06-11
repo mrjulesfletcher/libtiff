@@ -92,8 +92,8 @@ endif
 if TIFF_TESTS
 check_PROGRAMS = \
 	ascii_tag long_tag short_tag strip_rw rewrite custom_dir custom_dir_EXIF_231 \
-	defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
-	test_append_to_strip test_ifd_loop_detection testtypes test_signed_tags $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
+        defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
+        test_append_to_strip test_ifd_loop_detection testtypes test_signed_tags test_predict_neon $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
 endif
 
 # Test scripts to execute
@@ -301,6 +301,8 @@ test_append_to_strip_LDADD = $(LIBTIFF)
 test_ifd_loop_detection_CFLAGS = -DSOURCE_DIR=\"@srcdir@\"
 test_ifd_loop_detection_SOURCES = test_ifd_loop_detection.c
 test_ifd_loop_detection_LDADD = $(LIBTIFF)
+test_predict_neon_SOURCES = test_predict_neon.c
+test_predict_neon_LDADD = $(LIBTIFF)
 
 AM_CPPFLAGS = -I$(top_srcdir)/libtiff
 
