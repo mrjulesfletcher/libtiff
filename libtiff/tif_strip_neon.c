@@ -1,5 +1,5 @@
 #include "tif_bayer.h"
-#include <stdlib.h>
+#include "tiffiop.h"
 #include <string.h>
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
@@ -34,12 +34,12 @@ static void horiz_diff16_neon(uint16_t *row, uint32_t width)
 #endif
 }
 
-uint8_t *TIFFAssembleStripNEON(const uint16_t *src, uint32_t width,
+uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
                                int bigendian, size_t *out_size)
 {
     size_t count = (size_t)width * height;
-    uint16_t *tmp = (uint16_t *)malloc(count * sizeof(uint16_t));
+    uint16_t *tmp = (uint16_t *)_TIFFmallocExt(tif, count * sizeof(uint16_t));
     if (!tmp)
         return NULL;
     memcpy(tmp, src, count * sizeof(uint16_t));
@@ -49,14 +49,14 @@ uint8_t *TIFFAssembleStripNEON(const uint16_t *src, uint32_t width,
             horiz_diff16_neon(tmp + row * width, width);
     }
     size_t packed_size = ((count + 1) / 2) * 3;
-    uint8_t *packed = (uint8_t *)malloc(packed_size);
+    uint8_t *packed = (uint8_t *)_TIFFmallocExt(tif, packed_size);
     if (!packed)
     {
-        free(tmp);
+        _TIFFfreeExt(tif, tmp);
         return NULL;
     }
     TIFFPackRaw12(tmp, packed, count, bigendian);
-    free(tmp);
+    _TIFFfreeExt(tif, tmp);
     if (out_size)
         *out_size = packed_size;
     return packed;

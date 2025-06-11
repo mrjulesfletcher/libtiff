@@ -1,16 +1,19 @@
 #ifndef STRIP_NEON_H
 #define STRIP_NEON_H
 
-#include <stdint.h>
+#include "tiffio.h"
 #include <stddef.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
-uint8_t *TIFFAssembleStripNEON(const uint16_t *src, uint32_t width,
-                               uint32_t height, int apply_predictor,
-                               int bigendian, size_t *out_size);
+    uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src,
+                                   uint32_t width, uint32_t height,
+                                   int apply_predictor, int bigendian,
+                                   size_t *out_size);
 
 #ifdef __cplusplus
 }
