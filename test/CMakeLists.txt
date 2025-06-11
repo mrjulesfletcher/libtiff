@@ -231,6 +231,18 @@ target_link_libraries(test_ifd_loop_detection PRIVATE tiff tiff_port)
 target_compile_definitions(test_ifd_loop_detection PRIVATE SOURCE_DIR=\"${CMAKE_CURRENT_SOURCE_DIR}\")
 list(APPEND simple_tests test_ifd_loop_detection)
 
+add_executable(swab_neon_test ../placeholder.h)
+target_sources(swab_neon_test PRIVATE swab_neon_test.c)
+set_target_properties(swab_neon_test PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(swab_neon_test PRIVATE tiff tiff_port)
+list(APPEND simple_tests swab_neon_test)
+
+add_executable(swab_benchmark ../placeholder.h)
+target_sources(swab_benchmark PRIVATE swab_benchmark.c)
+set_target_properties(swab_benchmark PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(swab_benchmark PRIVATE tiff tiff_port)
+list(APPEND simple_tests swab_benchmark)
+
 if(WEBP_SUPPORT AND EMSCRIPTEN)
   # Emscripten is pretty finnicky about linker flags.
   # It needs --shared-memory if and only if atomics or bulk-memory is used.
