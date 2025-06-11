@@ -33,6 +33,9 @@
 #if defined(__x86_64__) || defined(_M_X64)
 #include <emmintrin.h>
 #endif
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 #define PredictorState(tif) ((TIFFPredictorState *)(tif)->tif_data)
 
@@ -722,6 +725,31 @@ static int horDiff8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         /*
          * Pipeline the most common cases.
          */
+        if (stride == 1)
+        {
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+            if (cc >= 16)
+            {
+                uint8_t *p = cp + 1;
+                tmsize_t remaining = cc - 1;
+                while (remaining >= 16)
+                {
+                    uint8x16_t cur = vld1q_u8(p);
+                    uint8x16_t prev = vld1q_u8(p - 1);
+                    uint8x16_t diff = vsubq_u8(cur, prev);
+                    vst1q_u8(p, diff);
+                    p += 16;
+                    remaining -= 16;
+                }
+                while (remaining--)
+                {
+                    *p = (uint8_t)(*p - *(p - 1));
+                    ++p;
+                }
+                return 1;
+            }
+#endif
+        }
         if (stride == 3)
         {
             unsigned int r1, g1, b1;
@@ -799,6 +827,28 @@ static int horDiff16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     {
         wc -= stride;
         wp += wc - 1;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+        if (stride == 1 && wc >= 8)
+        {
+            uint16_t *p = wp + 1;
+            tmsize_t remaining = wc - 1;
+            while (remaining >= 8)
+            {
+                uint16x8_t cur = vld1q_u16(p);
+                uint16x8_t prev = vld1q_u16(p - 1);
+                uint16x8_t diff = vsubq_u16(cur, prev);
+                vst1q_u16(p, diff);
+                p += 8;
+                remaining -= 8;
+            }
+            while (remaining--)
+            {
+                *p = (uint16_t)(*p - *(p - 1));
+                ++p;
+            }
+            return 1;
+        }
+#endif
         do
         {
             REPEAT4(stride, wp[stride] = (uint16_t)(((unsigned int)wp[stride] -
@@ -841,6 +891,28 @@ static int horDiff32(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     {
         wc -= stride;
         wp += wc - 1;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+        if (stride == 1 && wc >= 4)
+        {
+            uint32_t *p = wp + 1;
+            tmsize_t remaining = wc - 1;
+            while (remaining >= 4)
+            {
+                uint32x4_t cur = vld1q_u32(p);
+                uint32x4_t prev = vld1q_u32(p - 1);
+                uint32x4_t diff = vsubq_u32(cur, prev);
+                vst1q_u32(p, diff);
+                p += 4;
+                remaining -= 4;
+            }
+            while (remaining--)
+            {
+                *p = *p - *(p - 1);
+                ++p;
+            }
+            return 1;
+        }
+#endif
         do
         {
             REPEAT4(stride, wp[stride] -= wp[0]; wp--)
@@ -880,6 +952,28 @@ static int horDiff64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     {
         wc -= stride;
         wp += wc - 1;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+        if (stride == 1 && wc >= 2)
+        {
+            uint64_t *p = wp + 1;
+            tmsize_t remaining = wc - 1;
+            while (remaining >= 2)
+            {
+                uint64x2_t cur = vld1q_u64(p);
+                uint64x2_t prev = vld1q_u64(p - 1);
+                uint64x2_t diff = vsubq_u64(cur, prev);
+                vst1q_u64(p, diff);
+                p += 2;
+                remaining -= 2;
+            }
+            while (remaining--)
+            {
+                *p = *p - *(p - 1);
+                ++p;
+            }
+            return 1;
+        }
+#endif
         do
         {
             REPEAT4(stride, wp[stride] -= wp[0]; wp--)
@@ -925,22 +1019,83 @@ static int fpDiff(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         return 0;
 
     _TIFFmemcpy(tmp, cp0, cc);
-    for (count = 0; count < wc; count++)
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    if (bps == 4 && stride == 1)
     {
-        uint32_t byte;
-        for (byte = 0; byte < bps; byte++)
-        {
+        tmsize_t i = 0;
 #if WORDS_BIGENDIAN
-            cp[byte * wc + count] = tmp[bps * count + byte];
+        for (; i + 16 <= wc; i += 16)
+        {
+            uint8x16x4_t v = vld4q_u8(tmp + 4 * i);
+            vst1q_u8(cp + 0 * wc + i, v.val[0]);
+            vst1q_u8(cp + 1 * wc + i, v.val[1]);
+            vst1q_u8(cp + 2 * wc + i, v.val[2]);
+            vst1q_u8(cp + 3 * wc + i, v.val[3]);
+        }
 #else
-            cp[(bps - byte - 1) * wc + count] = tmp[bps * count + byte];
+        for (; i + 16 <= wc; i += 16)
+        {
+            uint8x16x4_t v = vld4q_u8(tmp + 4 * i);
+            vst1q_u8(cp + 0 * wc + i, v.val[3]);
+            vst1q_u8(cp + 1 * wc + i, v.val[2]);
+            vst1q_u8(cp + 2 * wc + i, v.val[1]);
+            vst1q_u8(cp + 3 * wc + i, v.val[0]);
+        }
 #endif
+        for (; i < wc; i++)
+        {
+            for (uint32_t byte = 0; byte < bps; byte++)
+            {
+#if WORDS_BIGENDIAN
+                cp[byte * wc + i] = tmp[bps * i + byte];
+#else
+                cp[(bps - byte - 1) * wc + i] = tmp[bps * i + byte];
+#endif
+            }
+        }
+    }
+    else
+#endif
+    {
+        for (count = 0; count < wc; count++)
+        {
+            uint32_t byte;
+            for (byte = 0; byte < bps; byte++)
+            {
+#if WORDS_BIGENDIAN
+                cp[byte * wc + count] = tmp[bps * count + byte];
+#else
+                cp[(bps - byte - 1) * wc + count] = tmp[bps * count + byte];
+#endif
+            }
         }
     }
     _TIFFfreeExt(tif, tmp);
 
     cp = (uint8_t *)cp0;
     cp += cc - stride - 1;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    if (stride == 1 && cc > 1)
+    {
+        uint8_t *p = cp0 + 1;
+        tmsize_t remaining = cc - 1;
+        while (remaining >= 16)
+        {
+            uint8x16_t cur = vld1q_u8(p);
+            uint8x16_t prev = vld1q_u8(p - 1);
+            uint8x16_t diff = vsubq_u8(cur, prev);
+            vst1q_u8(p, diff);
+            p += 16;
+            remaining -= 16;
+        }
+        while (remaining--)
+        {
+            *p = (uint8_t)(*p - *(p - 1));
+            ++p;
+        }
+        return 1;
+    }
+#endif
     for (count = cc; count > stride; count -= stride)
         REPEAT4(stride,
                 cp[stride] = (unsigned char)((cp[stride] - cp[0]) & 0xff);
