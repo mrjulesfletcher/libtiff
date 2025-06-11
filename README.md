@@ -125,7 +125,7 @@ Float32 predictor decoding on x86‑64 interleaves four vectors at once, yieldin
 ### NEON TIFF Strip Assembly
 `TIFFAssembleStripNEON()` assembles a strip from a 16‑bit buffer and optionally applies the predictor before packing samples to 12‑bit form:
 ```c
-uint8_t *TIFFAssembleStripNEON(const uint16_t *src, uint32_t width,
+uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
                                int bigendian, size_t *out_size);
 ```
@@ -158,7 +158,8 @@ uint32_t width = 64, height = 32;
 uint16_t *buf = malloc(width * height * sizeof(uint16_t));
 /* fill buf */
 size_t strip_size = 0;
-uint8_t *strip = TIFFAssembleStripNEON(buf, width, height, 1, 1, &strip_size);
+uint8_t *strip =
+    TIFFAssembleStripNEON(NULL, buf, width, height, 1, 1, &strip_size);
 
 TIFF *tif = TIFFOpen("out.dng", "w");
 TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
