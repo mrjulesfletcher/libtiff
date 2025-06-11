@@ -11,15 +11,25 @@ This repository extends **libtiff** with optimized implementations for ARM NEON 
 
 ### CMake
 ```bash
-$ mkdir build && cd build
+$ mkdir build-release && cd build-release
 $ cmake -DCMAKE_BUILD_TYPE=Release ..
 $ cmake --build . -j$(nproc)
 $ ctest
+$ cmake --install . --prefix /usr/local
 ```
 SIMD support is detected automatically.  You may explicitly control it:
 ```bash
 $ cmake -DHAVE_NEON=1 -DHAVE_SSE41=0 ..   # force NEON only
 $ cmake -DHAVE_SSE41=1 ..                 # enable SSE4.1
+```
+Cross-compiling examples:
+```bash
+# Target AArch64 with NEON
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake \
+        -DCMAKE_C_FLAGS="-march=armv8-a+simd" -DHAVE_NEON=1 ..
+# Target x86_64 with SSE4.1
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/x86_64.cmake \
+        -DCMAKE_C_FLAGS="-msse4.1" -DHAVE_SSE41=1 ..
 ```
 
 ### Autotools
@@ -28,8 +38,16 @@ $ ./autogen.sh       # when building from git
 $ ./configure CFLAGS="-msse4.1" --enable-shared
 $ make -j$(nproc)
 $ make check
+$ make install DESTDIR=/usr/local
 ```
 Use `--disable-sse41` or `--disable-neon` to disable the respective optimizations.
+Cross-compiling for NEON or SSE4.1 requires setting appropriate host/CC flags, for example:
+```bash
+# Cross-build for AArch64 with NEON
+$ ./configure --host=aarch64-linux-gnu CFLAGS="-march=armv8-a+simd" --enable-shared
+# Cross-build for x86_64 with SSE4.1
+$ ./configure --host=x86_64-linux-gnu CFLAGS="-msse4.1" --enable-shared
+```
 
 ## New Features
 
@@ -130,14 +148,42 @@ typedef uint8x16_t tiff_v16u8;
 A placeholder codec integrates with CharLS when available. Configure with `-Djpegls=ON` or `--with-jpegls` to experiment.
 
 ## How to Use SIMD Routines
-1. Prepare an image buffer and call `TIFFAssembleStripNEON` to produce a packed strip.
-2. Write the strip using standard libtiff APIs:
+Below is a short example that assembles a 12‑bit strip and writes a DNG.
+The full program is [`test/assemble_strip_neon_test.c`](test/assemble_strip_neon_test.c).
 ```c
-uint8_t *strip = TIFFAssembleStripNEON(buf, width, height, 1, 1, &size);
-TIFFWriteRawStrip(tif, 0, strip, size);
+#include "tiffio.h"
+#include "strip_neon.h"
+
+uint32_t width = 64, height = 32;
+uint16_t *buf = malloc(width * height * sizeof(uint16_t));
+/* fill buf */
+size_t strip_size = 0;
+uint8_t *strip = TIFFAssembleStripNEON(buf, width, height, 1, 1, &strip_size);
+
+TIFF *tif = TIFFOpen("out.dng", "w");
+TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
+TIFFSetField(tif, TIFFTAG_IMAGELENGTH, height);
+TIFFSetField(tif, TIFFTAG_SAMPLESPERPIXEL, 1);
+TIFFSetField(tif, TIFFTAG_BITSPERSAMPLE, 12);
+TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, height);
+TIFFWriteRawStrip(tif, 0, strip, strip_size);
+TIFFClose(tif);
+free(strip);
+free(buf);
 ```
-3. Use `TIFFPackRaw12`/`TIFFUnpackRaw12` directly when handling raw Bayer buffers.
-4. Include `tiff_simd.h` in custom code to access portable vector types.
+
+Packing helpers for raw Bayer buffers:
+```c
+TIFFPackRaw12(src16, packed, count, 0);
+TIFFUnpackRaw12(packed, dst16, count, 0);
+```
+Include `tiff_simd.h` to use vector types that map to NEON, SSE4.1 or scalar C automatically:
+```c
+#include "tiff_simd.h"
+tiff_v16u8 a = tiff_loadu_u8(ptr_a);
+tiff_v16u8 b = tiff_loadu_u8(ptr_b);
+tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
+```
 
 ## SIMD Feature Summary
 | Feature | API | Platforms | Typical Speedup |
@@ -150,22 +196,43 @@ TIFFWriteRawStrip(tif, 0, strip, size);
 
 ¹Measured with `swab_benchmark` on an RK3588.
 
-## Testing and Validation
-Run the full test suite after building:
+## Benchmarks
+Run the provided utilities to reproduce the numbers below.  These were measured
+on an Intel Xeon Platinum 8370C with GCC and `-msse4.1`.
 ```bash
-$ ctest      # or: make check
+$ ./tools/bayerbench 50
+pack:   2177.78 MPix/s
+unpack: 1661.60 MPix/s
+
+$ ./test/swab_benchmark
+TIFFSwabArrayOfShort: 0.011 ms
+scalar_swab_short:    0.004 ms
+TIFFSwabArrayOfLong:  0.016 ms
+scalar_swab_long:     0.014 ms
 ```
-Additional programs validate SIMD helpers:
+ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
+`TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`.
+
+## Testing and Validation
+Configure with testing enabled and run the full suite:
+```bash
+$ cmake -DBUILD_TESTING=ON ..
+$ cmake --build .
+$ ctest       # or: make check
+```
+Additional programs validate SIMD helpers individually:
 - `assemble_strip_neon_test` writes and reads a small image to verify strip assembly【F:test/assemble_strip_neon_test.c†L8-L68】.
 - `swab_neon_test` checks byte swapping correctness.
 - `swab_benchmark` reports timing for NEON vs. scalar swapping.
-All tests should complete without errors.
+All SIMD helpers must pass the same tests as the scalar implementations.
 
 ## Contributing
 See [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style and workflow.  The project uses `clang-format` and `pre-commit` hooks to enforce formatting【F:CONTRIBUTING.md†L1-L13】.  When adding SIMD code:
-1. Provide a scalar fallback.
-2. Add regression tests under `test/`.
-3. Run `pre-commit` and `ctest` before submitting a pull request.
+1. Provide a scalar fallback for every routine.
+2. Ensure the code builds on both ARM (NEON) and x86 (SSE4.1).
+3. Add regression tests and benchmark programs under `test/` or `tools/`.
+4. Document new code paths and follow the existing naming conventions.
+5. Run `pre-commit` and `ctest` before submitting a pull request.
 
 ## FAQ
 **Q: CMake fails to detect NEON or SSE.**
@@ -177,8 +244,22 @@ Install CharLS and configure with `-Djpegls=ON` (CMake) or `--with-jpegls` (Auto
 **Q: Can I disable SIMD at runtime?**
 The library selects SIMD code at compile time. Build with `-DHAVE_NEON=0` or `-DHAVE_SSE41=0` to obtain purely scalar routines.
 
+**Q: The program crashes with "illegal instruction". What can I do?**
+Your CPU might not support the required SIMD level. Rebuild libtiff with
+`-DHAVE_NEON=0` or `-DHAVE_SSE41=0` and run `ctest` to confirm the scalar path.
+
+**Q: How do I know which implementation is active?**
+Compile your program including `tiff_simd.h` and check the macros
+`TIFF_SIMD_NEON` and `TIFF_SIMD_SSE41`. They are set to `1` when that code path
+was compiled in.
+
 ## Fallback Behaviour
-When SIMD instructions are not available, all routines transparently use portable C implementations so the same API works everywhere.
+SIMD support is selected at build time with `HAVE_NEON` and `HAVE_SSE41`.
+If neither is enabled the library builds a fully scalar implementation.
+There is currently no runtime toggle, but you can rebuild with
+`-DHAVE_NEON=0` or `-DHAVE_SSE41=0` to force scalar code and verify behaviour.
+Including `tiff_simd.h` exposes `TIFF_SIMD_ENABLED`, `TIFF_SIMD_NEON` and
+`TIFF_SIMD_SSE41` so applications can log which path was compiled.
 
 ## License
 This fork inherits the original [libtiff license](LICENSE.md).
