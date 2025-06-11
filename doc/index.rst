@@ -60,6 +60,7 @@ The following sections are included in this documentation:
     functions
     internals
     bayer12neon
+    predict_neon
     addingtags
     tools
     contrib
