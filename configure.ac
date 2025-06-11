@@ -300,6 +300,23 @@ AC_COMPILE_IFELSE([
 ])
 AC_SUBST(HAVE_NEON)
 
+dnl Check for SSE4.1 intrinsics
+AC_MSG_CHECKING([for SSE4.1 support])
+AC_COMPILE_IFELSE([
+  AC_LANG_PROGRAM([
+    #include <smmintrin.h>
+  ],[
+    __m128i v = _mm_setzero_si128(); return _mm_extract_epi8(v,0);
+  ])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_SSE41],[1],[Define if SSE4.1 intrinsics are available])
+  HAVE_SSE41=1
+],[
+  AC_MSG_RESULT(no)
+  HAVE_SSE41=0
+])
+AC_SUBST(HAVE_SSE41)
+
 dnl ---------------------------------------------------------------------------
 dnl Enable run-time paths to libraries usage.
 dnl ---------------------------------------------------------------------------

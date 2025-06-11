@@ -45,3 +45,11 @@ check_c_source_compiles(
 if(HAVE_NEON)
   add_compile_definitions(HAVE_NEON=1)
 endif()
+
+check_c_source_compiles(
+  "#include <smmintrin.h>
+   int main(){ __m128i v = _mm_setzero_si128(); return _mm_extract_epi8(v,0); }"
+  HAVE_SSE41)
+if(HAVE_SSE41)
+  add_compile_definitions(HAVE_SSE41=1)
+endif()
