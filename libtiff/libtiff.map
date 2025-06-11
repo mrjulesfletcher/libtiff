@@ -223,4 +223,5 @@ LIBTIFF_4.7.1 {
     TIFFOpenOptionsSetWarnAboutUnknownTags;
     TIFFPackRaw12;
     TIFFUnpackRaw12;
+    TIFFAssembleStripNEON;
 } LIBTIFF_4.6.1;

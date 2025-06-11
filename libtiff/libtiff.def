@@ -197,3 +197,4 @@ EXPORTS	TIFFAccessTagMethods
         _TIFFGetGpsFields
         TIFFPackRaw12
         TIFFUnpackRaw12
+        TIFFAssembleStripNEON
