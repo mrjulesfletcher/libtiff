@@ -890,6 +890,61 @@ fi
 AM_CONDITIONAL(HAVE_ZSTD, test "$HAVE_ZSTD" = 'yes')
 
 dnl ---------------------------------------------------------------------------
+dnl Check for CharLS.
+dnl ---------------------------------------------------------------------------
+
+HAVE_JPEGLS=no
+
+AC_ARG_ENABLE(jpegls,
+              AS_HELP_STRING([--disable-jpegls],
+                             [disable CharLS usage (required for JPEG-LS compression, enabled by default)]),,)
+AC_ARG_WITH(jpegls-include-dir,
+            AS_HELP_STRING([--with-jpegls-include-dir=DIR],
+                           [location of CharLS headers]),,)
+AC_ARG_WITH(jpegls-lib-dir,
+            AS_HELP_STRING([--with-jpegls-lib-dir=DIR],
+                           [location of CharLS library binary]),,)
+
+if test "x$enable_jpegls" != "xno" ; then
+
+  if test "x$with_jpegls_lib_dir" != "x" ; then
+    LDFLAGS="-L$with_jpegls_lib_dir $LDFLAGS"
+  fi
+
+  AC_CHECK_LIB(charls, JpegLsEncode, [jpegls_lib=yes], [jpegls_lib=no],)
+  if test "$jpegls_lib" = "no" -a "x$with_jpegls_lib_dir" != "x"; then
+    AC_MSG_ERROR([charls library not found at $with_jpegls_lib_dir])
+  fi
+
+  if test "x$with_jpegls_include_dir" != "x" ; then
+    CPPFLAGS="-I$with_jpegls_include_dir $CPPFLAGS"
+  fi
+  AC_CHECK_HEADER(charls/public.h, [jpegls_h=yes], [jpegls_h=no])
+  if test "$jpegls_h" = "no" -a "x$with_jpegls_include_dir" != "x" ; then
+    AC_MSG_ERROR([CharLS headers not found at $with_jpegls_include_dir])
+  fi
+
+  if test "$jpegls_lib" = "yes" -a "$jpegls_h" = "yes" ; then
+    HAVE_JPEGLS=yes
+  fi
+
+fi
+
+if test "$HAVE_JPEGLS" = "yes" ; then
+  AC_DEFINE(JPEGLS_SUPPORT,1,[Support JPEG-LS compression via CharLS])
+  LIBS="-lcharls $LIBS"
+  tiff_libs_private="-lcharls ${tiff_libs_private}"
+  tiff_requires_private="CharLS ${tiff_requires_private}"
+
+  if test "$HAVE_RPATH" = "yes" -a "x$with_jpegls_lib_dir" != "x" ; then
+    LIBDIR="-R $with_jpegls_lib_dir $LIBDIR"
+  fi
+
+fi
+
+AM_CONDITIONAL(HAVE_JPEGLS, test "$HAVE_JPEGLS" = 'yes')
+
+dnl ---------------------------------------------------------------------------
 dnl Check for libwebp.
 dnl ---------------------------------------------------------------------------
 
@@ -1299,6 +1354,7 @@ LOC_MSG([  ISO JBIG support:                   ${HAVE_JBIG}])
 LOC_MSG([  LERC support:                       ${HAVE_LERC}])
 LOC_MSG([  LZMA2 support:                      ${HAVE_LZMA}])
 LOC_MSG([  ZSTD support:                       ${HAVE_ZSTD}])
+LOC_MSG([  JPEG-LS support:                   ${HAVE_JPEGLS}])
 LOC_MSG([  WEBP support:                       ${HAVE_WEBP}])
 LOC_MSG()
 LOC_MSG([  C++ support:                        ${HAVE_CXX}])

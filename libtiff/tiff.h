@@ -210,6 +210,7 @@ typedef enum
 #define COMPRESSION_SGILOG 34676   /* SGI Log Luminance RLE */
 #define COMPRESSION_SGILOG24 34677 /* SGI Log 24-bit packed */
 #define COMPRESSION_JP2000 34712   /* Leadtools JPEG2000 */
+#define COMPRESSION_JPEGLS 34713    /* JPEG-LS */
 #define COMPRESSION_LERC 34887     /* ESRI Lerc codec: https://github.com/Esri/lerc */
 /* compression codes 34887-34889 are reserved for ESRI */
 #define COMPRESSION_LZMA 34925             /* LZMA2 */

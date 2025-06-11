@@ -76,6 +76,9 @@ static int NotConfigured(TIFF *, int);
 #ifndef ZSTD_SUPPORT
 #define TIFFInitZSTD NotConfigured
 #endif
+#ifndef JPEGLS_SUPPORT
+#define TIFFInitJPEGLS NotConfigured
+#endif
 #ifndef WEBP_SUPPORT
 #define TIFFInitWebP NotConfigured
 #endif
@@ -96,6 +99,7 @@ const TIFFCodec _TIFFBuiltinCODECS[] = {
     {"CCITT Group 3", COMPRESSION_CCITTFAX3, TIFFInitCCITTFax3},
     {"CCITT Group 4", COMPRESSION_CCITTFAX4, TIFFInitCCITTFax4},
     {"ISO JBIG", COMPRESSION_JBIG, TIFFInitJBIG},
+    {"JPEG-LS", COMPRESSION_JPEGLS, TIFFInitJPEGLS},
     {"Deflate", COMPRESSION_DEFLATE, TIFFInitZIP},
     {"AdobeDeflate", COMPRESSION_ADOBE_DEFLATE, TIFFInitZIP},
     {"PixarLog", COMPRESSION_PIXARLOG, TIFFInitPixarLog},
