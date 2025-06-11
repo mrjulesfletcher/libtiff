@@ -28,6 +28,9 @@
  * XXX We assume short = 16-bits and long = 32-bits XXX
  */
 #include "tiffiop.h"
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 
 #if defined(DISABLE_CHECK_TIFFSWABMACROS) || !defined(TIFFSwabShort)
 void TIFFSwabShort(uint16_t *wp)
@@ -78,12 +81,11 @@ void TIFFSwabLong8(uint64_t *lp)
 #endif
 
 #if defined(DISABLE_CHECK_TIFFSWABMACROS) || !defined(TIFFSwabArrayOfShort)
-void TIFFSwabArrayOfShort(register uint16_t *wp, tmsize_t n)
+static void TIFFSwabArrayOfShortScalar(uint16_t *wp, tmsize_t n)
 {
-    register unsigned char *cp;
-    register unsigned char t;
+    unsigned char *cp;
+    unsigned char t;
     assert(sizeof(uint16_t) == 2);
-    /* XXX unroll loop some */
     while (n-- > 0)
     {
         cp = (unsigned char *)wp;
@@ -92,6 +94,30 @@ void TIFFSwabArrayOfShort(register uint16_t *wp, tmsize_t n)
         cp[0] = t;
         wp++;
     }
+}
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void TIFFSwabArrayOfShortNeon(uint16_t *wp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 8 <= (size_t)n; i += 8)
+    {
+        uint16x8_t v = vld1q_u16(wp + i);
+        v = vreinterpretq_u16_u8(vrev16q_u8(vreinterpretq_u8_u16(v)));
+        vst1q_u16(wp + i, v);
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfShortScalar(wp + i, n - i);
+}
+#endif
+
+void TIFFSwabArrayOfShort(uint16_t *wp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    TIFFSwabArrayOfShortNeon(wp, n);
+#else
+    TIFFSwabArrayOfShortScalar(wp, n);
+#endif
 }
 #endif
 
@@ -114,12 +140,11 @@ void TIFFSwabArrayOfTriples(register uint8_t *tp, tmsize_t n)
 #endif
 
 #if defined(DISABLE_CHECK_TIFFSWABMACROS) || !defined(TIFFSwabArrayOfLong)
-void TIFFSwabArrayOfLong(register uint32_t *lp, tmsize_t n)
+static void TIFFSwabArrayOfLongScalar(uint32_t *lp, tmsize_t n)
 {
-    register unsigned char *cp;
-    register unsigned char t;
+    unsigned char *cp;
+    unsigned char t;
     assert(sizeof(uint32_t) == 4);
-    /* XXX unroll loop some */
     while (n-- > 0)
     {
         cp = (unsigned char *)lp;
@@ -131,6 +156,31 @@ void TIFFSwabArrayOfLong(register uint32_t *lp, tmsize_t n)
         cp[1] = t;
         lp++;
     }
+}
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void TIFFSwabArrayOfLongNeon(uint32_t *lp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 4 <= (size_t)n; i += 4)
+    {
+        uint32x4_t v = vld1q_u32(lp + i);
+        uint8x16_t b = vreinterpretq_u8_u32(v);
+        b = vrev32q_u8(b);
+        vst1q_u32(lp + i, vreinterpretq_u32_u8(b));
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfLongScalar(lp + i, n - i);
+}
+#endif
+
+void TIFFSwabArrayOfLong(uint32_t *lp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    TIFFSwabArrayOfLongNeon(lp, n);
+#else
+    TIFFSwabArrayOfLongScalar(lp, n);
+#endif
 }
 #endif
 
