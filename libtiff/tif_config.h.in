@@ -176,4 +176,7 @@
 #  error "Unsupported size_t size; please submit a bug report"
 #endif
 
+/* Define to 1 if ARM NEON intrinsics are available */
+#undef HAVE_NEON
+
 /* clang-format on */

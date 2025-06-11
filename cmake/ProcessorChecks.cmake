@@ -36,3 +36,12 @@ endif()
 
 # IEEE floating point
 set(HAVE_IEEEFP 1)
+
+include(CheckCSourceCompiles)
+check_c_source_compiles(
+  "#include <arm_neon.h>
+  int main(){ uint8x16_t v = vdupq_n_u8(0); return (int)v[0]; }"
+  HAVE_NEON)
+if(HAVE_NEON)
+  add_compile_definitions(HAVE_NEON=1)
+endif()

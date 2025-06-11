@@ -46,6 +46,7 @@ set(tiff_private_HEADERS
         tif_predict.h
         tiffiop.h
         uvcode.h
+        tif_bayer.h
         ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h)
 
 
@@ -94,6 +95,7 @@ target_sources(tiff PRIVATE
         tif_version.c
         tif_warning.c
         tif_webp.c
+        tif_bayer.c
         tif_write.c
         tif_zip.c
         tif_zstd.c)

@@ -50,9 +50,10 @@ noinst_HEADERS = \
 	t4.h \
 	tif_dir.h \
 	tif_hash_set.h \
-	tif_predict.h \
-	tiffiop.h \
-	uvcode.h
+        tif_predict.h \
+        tiffiop.h \
+        uvcode.h \
+        tif_bayer.h
 
 nodist_libtiffinclude_HEADERS = \
 	tiffconf.h
@@ -95,11 +96,12 @@ libtiff_la_SOURCES = \
 	tif_thunder.c \
 	tif_tile.c \
 	tif_version.c \
-	tif_warning.c \
-	tif_webp.c \
-	tif_write.c \
-	tif_zip.c \
-	tif_zstd.c
+        tif_warning.c \
+        tif_webp.c \
+        tif_bayer.c \
+        tif_write.c \
+        tif_zip.c \
+        tif_zstd.c
 
 libtiffxx_la_SOURCES = \
 	tif_stream.cxx

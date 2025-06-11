@@ -283,6 +283,23 @@ dnl ---------------------------------------------------------------------------
 HAVE_IEEEFP=1
 AC_DEFINE_UNQUOTED(HAVE_IEEEFP, $HAVE_IEEEFP, [Define as 0 or 1 according to the floating point format supported by the machine])
 
+dnl Check for ARM NEON intrinsics
+AC_MSG_CHECKING([for ARM NEON support])
+AC_COMPILE_IFELSE([
+  AC_LANG_PROGRAM([
+    #include <arm_neon.h>
+  ],[
+    uint8x16_t v = vdupq_n_u8(0); return v[0];
+  ])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_NEON],[1],[Define if ARM NEON intrinsics are available])
+  HAVE_NEON=1
+],[
+  AC_MSG_RESULT(no)
+  HAVE_NEON=0
+])
+AC_SUBST(HAVE_NEON)
+
 dnl ---------------------------------------------------------------------------
 dnl Enable run-time paths to libraries usage.
 dnl ---------------------------------------------------------------------------

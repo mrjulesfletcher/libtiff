@@ -221,4 +221,6 @@ LIBTIFF_4.6.1 {
 
 LIBTIFF_4.7.1 {
     TIFFOpenOptionsSetWarnAboutUnknownTags;
+    TIFFPackRaw12;
+    TIFFUnpackRaw12;
 } LIBTIFF_4.6.1;

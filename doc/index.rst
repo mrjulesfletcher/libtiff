@@ -59,6 +59,7 @@ The following sections are included in this documentation:
     multi_page
     functions
     internals
+    bayer12neon
     addingtags
     tools
     contrib
