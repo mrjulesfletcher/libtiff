@@ -93,7 +93,7 @@ if TIFF_TESTS
 check_PROGRAMS = \
         ascii_tag long_tag short_tag strip_rw rewrite custom_dir custom_dir_EXIF_231 \
         defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
-        test_append_to_strip test_ifd_loop_detection swab_neon_test swab_benchmark testtypes test_signed_tags $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
+        test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test swab_benchmark testtypes test_signed_tags $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
 endif
 
 # Test scripts to execute
@@ -304,6 +304,9 @@ test_ifd_loop_detection_LDADD = $(LIBTIFF)
 
 swab_neon_test_SOURCES = swab_neon_test.c
 swab_neon_test_LDADD = $(LIBTIFF)
+
+assemble_strip_neon_test_SOURCES = assemble_strip_neon_test.c
+assemble_strip_neon_test_LDADD = $(LIBTIFF)
 
 swab_benchmark_SOURCES = swab_benchmark.c
 swab_benchmark_LDADD = $(LIBTIFF)

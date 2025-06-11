@@ -237,6 +237,12 @@ set_target_properties(swab_neon_test PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(swab_neon_test PRIVATE tiff tiff_port)
 list(APPEND simple_tests swab_neon_test)
 
+add_executable(assemble_strip_neon_test ../placeholder.h)
+target_sources(assemble_strip_neon_test PRIVATE assemble_strip_neon_test.c)
+set_target_properties(assemble_strip_neon_test PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(assemble_strip_neon_test PRIVATE tiff tiff_port)
+list(APPEND simple_tests assemble_strip_neon_test)
+
 add_executable(swab_benchmark ../placeholder.h)
 target_sources(swab_benchmark PRIVATE swab_benchmark.c)
 set_target_properties(swab_benchmark PROPERTIES LINKER_LANGUAGE CXX)
