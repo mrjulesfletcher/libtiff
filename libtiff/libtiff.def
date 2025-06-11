@@ -192,6 +192,8 @@ EXPORTS	TIFFAccessTagMethods
 	_TIFFmemset
 	_TIFFrealloc
 	_TIFFMultiply32
-	_TIFFMultiply64
-	_TIFFGetExifFields
-	_TIFFGetGpsFields
+        _TIFFMultiply64
+        _TIFFGetExifFields
+        _TIFFGetGpsFields
+        TIFFPackRaw12
+        TIFFUnpackRaw12

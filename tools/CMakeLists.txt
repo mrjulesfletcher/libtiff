@@ -70,6 +70,11 @@ target_sources(tiff2bw PRIVATE tiff2bw.c ${MSVC_RESOURCE_FILE})
 set_target_properties(tiff2bw PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(tiff2bw PRIVATE tiff tiff_port)
 
+add_executable(bayerbench ../placeholder.h)
+target_sources(bayerbench PRIVATE bayerbench.c ${MSVC_RESOURCE_FILE})
+set_target_properties(bayerbench PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(bayerbench PRIVATE tiff tiff_port)
+
 add_executable(tiff2pdf ../placeholder.h)
 target_sources(tiff2pdf PRIVATE tiff2pdf.c ${MSVC_RESOURCE_FILE})
 set_target_properties(tiff2pdf PROPERTIES LINKER_LANGUAGE CXX)
