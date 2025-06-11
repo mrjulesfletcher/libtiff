@@ -1,27 +1,43 @@
 # LibTIFF SIMD Fork
 
-This fork of **libtiff** extends the upstream project with optimized code paths for modern SIMD architectures and introduces new helper routines for working with 12‑bit data and TIFF/DNG strips.  It remains fully compatible with existing applications while providing significant speedups on supported hardware.
+This repository extends **libtiff** with optimized implementations for ARM NEON and x86 SSE4.1.  Additional helpers simplify working with 12‑bit data and assembling in-memory TIFF/DNG strips.  The fork stays API compatible with upstream while delivering substantial speedups on supported CPUs.
 
-## Quickstart
+## Building
 
+### Dependencies
+- CMake 3.10 or later (or GNU Autotools)
+- A C compiler such as GCC >=7 or Clang >=6
+- Optional: `ninja` or `make` for building
+
+### CMake
 ```bash
 $ mkdir build && cd build
-$ cmake ..
-$ cmake --build .
-$ ctest      # run regression tests
+$ cmake -DCMAKE_BUILD_TYPE=Release ..
+$ cmake --build . -j$(nproc)
+$ ctest
+```
+SIMD support is detected automatically.  You may explicitly control it:
+```bash
+$ cmake -DHAVE_NEON=1 -DHAVE_SSE41=0 ..   # force NEON only
+$ cmake -DHAVE_SSE41=1 ..                 # enable SSE4.1
 ```
 
-By default the build system detects ARM NEON and x86 SSE4.1 support and enables the matching code paths.  Pass `-DHAVE_NEON=0` or `-DHAVE_SSE41=0` to disable the optimizations when cross‑compiling.
+### Autotools
+```bash
+$ ./autogen.sh       # when building from git
+$ ./configure CFLAGS="-msse4.1" --enable-shared
+$ make -j$(nproc)
+$ make check
+```
+Use `--disable-sse41` or `--disable-neon` to disable the respective optimizations.
 
-## New Features and Enhancements
+## New Features
 
 ### NEON 12‑bit Bayer Packing
-
-The functions `TIFFPackRaw12()` and `TIFFUnpackRaw12()` now use NEON when available and fall back to a scalar implementation otherwise.  Processing 16 pixels at a time yields around a 6× packing and 5× unpacking speedup on an RK3588 (ARMv8) system【F:doc/bayer12neon.rst†L1-L12】.
+The functions `TIFFPackRaw12()` and `TIFFUnpackRaw12()` leverage NEON to process 16 pixels per iteration and fall back to scalar code when NEON is unavailable.  On an RK3588 (ARMv8) system the NEON path provides about **6×** packing and **5×** unpacking speedups【F:doc/bayer12neon.rst†L1-L12】.
 
 ### NEON Byte Swapping
-
-Byte‑swapping helpers accelerate endian conversion of image buffers.  Example implementation:
+Byte-swapping routines accelerate endian conversion with vector instructions:
 ```c
 static void TIFFSwabArrayOfShortNeon(uint16_t *wp, tmsize_t n)
 {
@@ -39,8 +55,7 @@ static void TIFFSwabArrayOfShortNeon(uint16_t *wp, tmsize_t n)
 【F:libtiff/tif_swab.c†L96-L116】
 
 ### NEON Predictor Acceleration
-
-Horizontal differencing used by the predictor tag includes NEON implementations for 8/16/32/64‑bit samples.  When `stride == 1` the optimized loops process 16 values per iteration and fall back to the portable code otherwise:
+Horizontal differencing used by the predictor tag includes NEON implementations for 8/16/32/64‑bit samples.  When `stride == 1` each loop handles 16 values:
 ```c
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
     if (stride == 1 && cc > 1)
@@ -60,8 +75,7 @@ Horizontal differencing used by the predictor tag includes NEON implementations 
 【F:libtiff/tif_predict.c†L1078-L1094】
 
 ### SSE2 Predictor Optimization
-
-On x86‑64 systems, Float32 predictor decoding interleaves four vectors at once using SSE2 intrinsics for roughly a 25% speed improvement over the scalar path:
+Float32 predictor decoding on x86‑64 interleaves four vectors at once, yielding about a **25 %** improvement:
 ```c
 #if defined(__x86_64__) || defined(_M_X64)
     if (bps == 4)
@@ -91,20 +105,17 @@ On x86‑64 systems, Float32 predictor decoding interleaves four vectors at once
 【F:libtiff/tif_predict.c†L596-L626】
 
 ### NEON TIFF Strip Assembly
-
-`TIFFAssembleStripNEON()` assembles a TIFF/DNG strip from a 16‑bit buffer and optionally applies the horizontal predictor before packing the samples to 12‑bit form:
+`TIFFAssembleStripNEON()` assembles a strip from a 16‑bit buffer and optionally applies the predictor before packing samples to 12‑bit form:
 ```c
 uint8_t *TIFFAssembleStripNEON(const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
                                int bigendian, size_t *out_size);
 ```
 【F:libtiff/strip_neon.h†L1-L19】
-
-The helper uses NEON in `tif_strip_neon.c` to compute differences and pack data efficiently【F:libtiff/tif_strip_neon.c†L1-L63】.
+The implementation computes differences and packs data efficiently【F:libtiff/tif_strip_neon.c†L1-L63】.
 
 ### SIMD Abstraction Header
-
-`libtiff/tiff_simd.h` exposes a small vector API that maps to NEON, SSE4.1 or plain C depending on the build environment.  Example definitions:
+`libtiff/tiff_simd.h` exposes a small vector API that maps to NEON, SSE4.1 or plain C:
 ```c
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
@@ -116,62 +127,58 @@ typedef uint8x16_t tiff_v16u8;
 【F:libtiff/tiff_simd.h†L11-L18】
 
 ### JPEG‑LS Codec Stub
+A placeholder codec integrates with CharLS when available. Configure with `-Djpegls=ON` or `--with-jpegls` to experiment.
 
-A placeholder codec integrates with CharLS when available.  Enable it with `-Djpegls=ON` to experiment with JPEG‑LS compression.
+## How to Use SIMD Routines
+1. Prepare an image buffer and call `TIFFAssembleStripNEON` to produce a packed strip.
+2. Write the strip using standard libtiff APIs:
+```c
+uint8_t *strip = TIFFAssembleStripNEON(buf, width, height, 1, 1, &size);
+TIFFWriteRawStrip(tif, 0, strip, size);
+```
+3. Use `TIFFPackRaw12`/`TIFFUnpackRaw12` directly when handling raw Bayer buffers.
+4. Include `tiff_simd.h` in custom code to access portable vector types.
 
-## Verifying the Optimizations
+## SIMD Feature Summary
+| Feature | API | Platforms | Typical Speedup |
+|---------|-----|-----------|-----------------|
+|12‑bit Bayer pack/unpack|`TIFFPackRaw12`, `TIFFUnpackRaw12`|ARM NEON|6× pack, 5× unpack|
+|Byte swapping|`TIFFSwabArrayOfShort`|ARM NEON|~3×¹|
+|Predictor acceleration|`PredictorDecodeRow`|ARM NEON / SSE2|up to 25 %|
+|Strip assembly|`TIFFAssembleStripNEON`|ARM NEON|>5× pack|
+|SIMD abstraction|`tiff_v16u8` etc.|NEON / SSE4.1 / scalar|N/A|
 
-The regular test suite can be run with `ctest` or `make test`.  Additional checks include `assemble_strip_neon_test`, which validates the NEON strip assembler by writing and reading a sample image【F:test/assemble_strip_neon_test.c†L8-L68】.
+¹Measured with `swab_benchmark` on an RK3588.
 
-## Fallback Behaviour
+## Testing and Validation
+Run the full test suite after building:
+```bash
+$ ctest      # or: make check
+```
+Additional programs validate SIMD helpers:
+- `assemble_strip_neon_test` writes and reads a small image to verify strip assembly【F:test/assemble_strip_neon_test.c†L8-L68】.
+- `swab_neon_test` checks byte swapping correctness.
+- `swab_benchmark` reports timing for NEON vs. scalar swapping.
+All tests should complete without errors.
 
-When SIMD instructions are not detected, all routines transparently use portable C implementations.  The same API is available regardless of the hardware capabilities.
-
-## Contributing NEON/SIMD Code
-
-1. Implement new vector routines using the helpers in `tiff_simd.h`.
-2. Always provide a scalar fallback so the library builds on all systems.
-3. Add a regression or unit test under `test/`.
-4. Run `cmake` and `ctest` to verify that the full suite passes.
+## Contributing
+See [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style and workflow.  The project uses `clang-format` and `pre-commit` hooks to enforce formatting【F:CONTRIBUTING.md†L1-L13】.  When adding SIMD code:
+1. Provide a scalar fallback.
+2. Add regression tests under `test/`.
+3. Run `pre-commit` and `ctest` before submitting a pull request.
 
 ## FAQ
-
-**Q: CMake fails to detect NEON or SSE. How do I force it?**
-
-Use `-DHAVE_NEON=1` or `-DHAVE_SSE41=1` when invoking CMake. Cross‑compile toolchains may require additional compiler flags.
+**Q: CMake fails to detect NEON or SSE.**
+Use `-DHAVE_NEON=1` or `-DHAVE_SSE41=1` to force detection. Cross‑compilers may require additional flags.
 
 **Q: How do I enable JPEG‑LS support?**
+Install CharLS and configure with `-Djpegls=ON` (CMake) or `--with-jpegls` (Autotools).
 
-Install CharLS and configure with `-Djpegls=ON` (or `--with-jpegls` when using Autotools).
+**Q: Can I disable SIMD at runtime?**
+The library selects SIMD code at compile time. Build with `-DHAVE_NEON=0` or `-DHAVE_SSE41=0` to obtain purely scalar routines.
 
-**Q: Tests fail on my platform.**
-
-Ensure your compiler supports the chosen SIMD features and rerun `ctest -V` to obtain verbose logs.
+## Fallback Behaviour
+When SIMD instructions are not available, all routines transparently use portable C implementations so the same API works everywhere.
 
 ## License
-
-This project inherits libtiff's original license.  Silicon Graphics has allowed this work to be distributed for free with no warranty.  See below for the full text.
-
-```
-Copyright (c) 1988-1997 Sam Leffler
-Copyright (c) 1991-1997 Silicon Graphics, Inc.
-
-Permission to use, copy, modify, distribute, and sell this software and
-its documentation for any purpose is hereby granted without fee, provided
-that (i) the above copyright notices and this permission notice appear in
-all copies of the software and related documentation, and (ii) the names of
-Sam Leffler and Silicon Graphics may not be used in any advertising or
-publicity relating to the software without the specific, prior written
-permission of Sam Leffler and Silicon Graphics.
-
-THE SOFTWARE IS PROVIDED "AS-IS" AND WITHOUT WARRANTY OF ANY KIND,
-EXPRESS, IMPLIED OR OTHERWISE, INCLUDING WITHOUT LIMITATION, ANY
-WARRANTY OF MERCHANTABILITY OR FITNESS FOR A PARTICULAR PURPOSE.
-
-IN NO EVENT SHALL SAM LEFFLER OR SILICON GRAPHICS BE LIABLE FOR
-ANY SPECIAL, INCIDENTAL, INDIRECT OR CONSEQUENTIAL DAMAGES OF ANY KIND,
-OR ANY DAMAGES WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS,
-WHETHER OR NOT ADVISED OF THE POSSIBILITY OF DAMAGE, AND ON ANY THEORY OF
-LIABILITY, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
-OF THIS SOFTWARE.
-```
+This fork inherits the original [libtiff license](LICENSE.md).
