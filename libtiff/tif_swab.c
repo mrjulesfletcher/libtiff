@@ -251,12 +251,11 @@ void TIFFSwabFloat(float *fp)
 #endif
 
 #if defined(DISABLE_CHECK_TIFFSWABMACROS) || !defined(TIFFSwabArrayOfFloat)
-void TIFFSwabArrayOfFloat(register float *fp, tmsize_t n)
+static void TIFFSwabArrayOfFloatScalar(float *fp, tmsize_t n)
 {
-    register unsigned char *cp;
-    register unsigned char t;
+    unsigned char *cp;
+    unsigned char t;
     assert(sizeof(float) == 4);
-    /* XXX unroll loop some */
     while (n-- > 0)
     {
         cp = (unsigned char *)fp;
@@ -268,6 +267,31 @@ void TIFFSwabArrayOfFloat(register float *fp, tmsize_t n)
         cp[1] = t;
         fp++;
     }
+}
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void TIFFSwabArrayOfFloatNeon(float *fp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 4 <= (size_t)n; i += 4)
+    {
+        uint32x4_t v = vld1q_u32((const uint32_t *)(fp + i));
+        uint8x16_t b = vreinterpretq_u8_u32(v);
+        b = vrev32q_u8(b);
+        vst1q_u32((uint32_t *)(fp + i), vreinterpretq_u32_u8(b));
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfFloatScalar(fp + i, n - i);
+}
+#endif
+
+void TIFFSwabArrayOfFloat(float *fp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    TIFFSwabArrayOfFloatNeon(fp, n);
+#else
+    TIFFSwabArrayOfFloatScalar(fp, n);
+#endif
 }
 #endif
 
@@ -293,12 +317,11 @@ void TIFFSwabDouble(double *dp)
 #endif
 
 #if defined(DISABLE_CHECK_TIFFSWABMACROS) || !defined(TIFFSwabArrayOfDouble)
-void TIFFSwabArrayOfDouble(double *dp, tmsize_t n)
+static void TIFFSwabArrayOfDoubleScalar(double *dp, tmsize_t n)
 {
-    register unsigned char *cp;
-    register unsigned char t;
+    unsigned char *cp;
+    unsigned char t;
     assert(sizeof(double) == 8);
-    /* XXX unroll loop some */
     while (n-- > 0)
     {
         cp = (unsigned char *)dp;
@@ -316,6 +339,31 @@ void TIFFSwabArrayOfDouble(double *dp, tmsize_t n)
         cp[3] = t;
         dp++;
     }
+}
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void TIFFSwabArrayOfDoubleNeon(double *dp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 2 <= (size_t)n; i += 2)
+    {
+        uint64x2_t v = vld1q_u64((const uint64_t *)(dp + i));
+        uint8x16_t b = vreinterpretq_u8_u64(v);
+        b = vrev64q_u8(b);
+        vst1q_u64((uint64_t *)(dp + i), vreinterpretq_u64_u8(b));
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfDoubleScalar(dp + i, n - i);
+}
+#endif
+
+void TIFFSwabArrayOfDouble(double *dp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    TIFFSwabArrayOfDoubleNeon(dp, n);
+#else
+    TIFFSwabArrayOfDoubleScalar(dp, n);
+#endif
 }
 #endif
 
