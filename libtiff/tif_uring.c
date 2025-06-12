@@ -95,9 +95,31 @@ int _tiffUringInit(TIFF *tif)
     unsigned int depth = 8;
     const char *env = getenv("TIFF_URING_DEPTH");
     if (tif->tif_uring_depth > 0)
+    {
         depth = tif->tif_uring_depth;
+        if (depth > 1024)
+        {
+            TIFFErrorExtR(
+                tif, "tif_uring",
+                "Invalid TIFFOpenOptions queue depth %u, using default", depth);
+            depth = 8;
+        }
+    }
     else if (env)
-        depth = (unsigned int)atoi(env);
+    {
+        char *endptr = NULL;
+        errno = 0;
+        unsigned long val = strtoul(env, &endptr, 10);
+        if (errno != 0 || *endptr != '\0' || endptr == env || env[0] == '-' ||
+            val == 0 || val > 1024)
+        {
+            TIFFErrorExtR(tif, "tif_uring",
+                          "Invalid TIFF_URING_DEPTH value '%s', using default",
+                          env);
+        }
+        else
+            depth = (unsigned int)val;
+    }
     if (depth == 0)
         depth = 1;
     if (io_uring_queue_init(depth, tif->tif_uring, 0) < 0)
