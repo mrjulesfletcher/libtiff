@@ -105,6 +105,7 @@ check_PROGRAMS = \
         ascii_tag long_tag short_tag strip_rw rewrite custom_dir custom_dir_EXIF_231 \
        defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
        test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test gray_flip_neon_test swab_benchmark predictor_threadpool_benchmark pack_uring_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
+       threadpool_stress uring_thread_stress
 endif
 
 # Test scripts to execute
@@ -333,6 +334,10 @@ predictor_threadpool_benchmark_LDADD = $(LIBTIFF)
 
 pack_uring_benchmark_SOURCES = pack_uring_benchmark.c
 pack_uring_benchmark_LDADD = $(LIBTIFF)
+threadpool_stress_SOURCES = threadpool_stress.c
+threadpool_stress_LDADD = $(LIBTIFF)
+uring_thread_stress_SOURCES = uring_thread_stress.c
+uring_thread_stress_LDADD = $(LIBTIFF)
 
 AM_CPPFLAGS = -I$(top_srcdir)/libtiff
 
