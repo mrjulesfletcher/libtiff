@@ -10,6 +10,14 @@ TOOLS=$(cd ../tools && pwd)
 IMAGES="${SRCDIR}/images"
 REFS="${SRCDIR}/refs"
 
+# Split MEMCHECK environment variable into an array for safe invocation
+if [ -n "${MEMCHECK-}" ]; then
+  # shellcheck disable=SC2206
+  MEMCHECK=( $MEMCHECK )
+else
+  MEMCHECK=()
+fi
+
 # Aliases for built tools
 FAX2PS=${TOOLS}/fax2ps
 FAX2TIFF=${TOOLS}/fax2tiff
@@ -64,8 +72,8 @@ f_test_convert ()
   infile=$2
   outfile=$3
   rm -f "$outfile"
-  echo "$MEMCHECK $command $infile $outfile"
-  eval $MEMCHECK $command "$infile" "$outfile"
+  echo "${MEMCHECK[@]} $command $infile $outfile"
+  "${MEMCHECK[@]}" "$command" "$infile" "$outfile"
   status=$?
   if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
@@ -84,8 +92,8 @@ f_test_stdout ()
   infile=$2
   outfile=$3
   rm -f "$outfile"
-  echo "$MEMCHECK $command $infile > $outfile"
-  eval $MEMCHECK $command "$infile" > "$outfile"
+  echo "${MEMCHECK[@]} $command $infile > $outfile"
+  "${MEMCHECK[@]}" "$command" "$infile" > "$outfile"
   status=$?
   if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
@@ -102,8 +110,8 @@ f_test_reader ()
 { 
   command=$1
   infile=$2
-  echo "$MEMCHECK $command $infile"
-  eval $MEMCHECK $command "$infile"
+  echo "${MEMCHECK[@]} $command $infile"
+  "${MEMCHECK[@]}" "$command" "$infile"
   status=$?
   if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
