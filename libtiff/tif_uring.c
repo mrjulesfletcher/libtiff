@@ -7,6 +7,10 @@
 #include <stdlib.h>
 
 /*
+ * io_uring based asynchronous I/O helpers.  The API became stable in
+ * Linux 5.1, so callers should expect initialization to fail on older
+ * kernels.
+ *
  * Mapping between file descriptors and their io_uring.  Access to this list
  * and all io_uring operations is serialized by the global mutex below since
  * liburing itself is not thread-safe.  The queue depth is currently fixed to
@@ -38,13 +42,22 @@ static _TIFFURingEntry *_tiffUringFind(int fd)
 /* Add a mapping entry. Returns 1 on success. */
 static int _tiffUringAdd(TIFF *tif, int fd, struct io_uring *ring)
 {
+    pthread_mutex_lock(&gUringMutex);
+    if (_tiffUringFind(fd))
+    {
+        pthread_mutex_unlock(&gUringMutex);
+        TIFFErrorExtR(tif, "tif_uring", "fd %d already registered", fd);
+        return 0;
+    }
+
     _TIFFURingEntry *e = (_TIFFURingEntry *)_TIFFmallocExt(tif, sizeof(*e));
     if (!e)
     {
+        pthread_mutex_unlock(&gUringMutex);
         TIFFErrorExtR(tif, "tif_uring", "Out of memory allocating ring entry");
         return 0;
     }
-    pthread_mutex_lock(&gUringMutex);
+
     e->fd = fd;
     e->ring = ring;
     e->async = 0;
@@ -91,6 +104,7 @@ int _tiffUringInit(TIFF *tif)
     {
         _TIFFfreeExt(tif, tif->tif_uring);
         tif->tif_uring = NULL;
+        /* queue creation failed: nothing added to the mapping list */
         return 0;
     }
     tif->tif_uring_async = 0;
