@@ -7,16 +7,16 @@ set -euo pipefail
 infile="${IMAGES}/testfax3_bug_513.tiff"
 outfile="o-testfax3_bug_513.tiff"
 rm -f "$outfile"
-echo "$MEMCHECK ${TIFFCP} -c none "$infile" "$outfile""
-eval "$MEMCHECK ${TIFFCP} -c none "$infile" "$outfile""
+echo "${MEMCHECK[@]} ${TIFFCP} -c none $infile $outfile"
+"${MEMCHECK[@]}" "${TIFFCP}" -c none "$infile" "$outfile"
 status=$?
 if [ "$status" != 0 ] ; then
   echo "Returned failed status $status!"
   echo "Output (if any) is in \"${outfile}\"."
   exit $status
 fi
-echo "$MEMCHECK ${TIFFCMP} "$outfile" ${REFS}/$outfile"
-eval "$MEMCHECK ${TIFFCMP} "$outfile" ${REFS}/$outfile"
+echo "${MEMCHECK[@]} ${TIFFCMP} $outfile ${REFS}/$outfile"
+"${MEMCHECK[@]}" "${TIFFCMP}" "$outfile" "${REFS}/$outfile"
 status=$?
 if [ "$status" != 0 ] ; then
   echo "Returned failed status $status!"
