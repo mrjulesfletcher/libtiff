@@ -314,6 +314,12 @@ int main(int argc, char *argv[])
         case BAND: /* band interleaved data */
             linebytes = width * depth;
             buf = (unsigned char *)_TIFFmalloc(linebytes);
+            if (!buf)
+            {
+                TIFFError("raw2tiff", "Failed to allocate scanline buffer");
+                TIFFClose(out);
+                return (EXIT_FAILURE);
+            }
             break;
         case PIXEL: /* pixel interleaved data */
         default:
@@ -322,6 +328,14 @@ int main(int argc, char *argv[])
     }
     bufsize = width * nbands * depth;
     buf1 = (unsigned char *)_TIFFmalloc(bufsize);
+    if (!buf1)
+    {
+        TIFFError("raw2tiff", "Failed to allocate conversion buffer");
+        if (buf)
+            _TIFFfree(buf);
+        TIFFClose(out);
+        return (EXIT_FAILURE);
+    }
 
     rowsperstrip = TIFFDefaultStripSize(out, rowsperstrip);
     if (rowsperstrip > length)
@@ -486,6 +500,15 @@ static int guessSize(int fd, TIFFDataType dtype, _TIFF_off_t hdr_size,
                  * compare line 0 and line 1 */
                 buf1 = _TIFFmalloc(scanlinesize);
                 buf2 = _TIFFmalloc(scanlinesize);
+                if (!buf1 || !buf2)
+                {
+                    TIFFError("raw2tiff", "Memory allocation failed in guessSize");
+                    if (buf1)
+                        _TIFFfree(buf1);
+                    if (buf2)
+                        _TIFFfree(buf2);
+                    return -1;
+                }
                 do
                 {
                     if (_TIFF_lseek_f(

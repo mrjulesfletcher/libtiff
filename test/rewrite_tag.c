@@ -240,6 +240,11 @@ int rewrite_test(const char *filename, uint32_t width, int length, int bigtiff,
     }
 
     upd_rowoffset = (uint64_t *)_TIFFmalloc(sizeof(uint64_t) * length);
+    if (!upd_rowoffset)
+    {
+        TIFFError("rewrite_test", "Failed to allocate upd_rowoffset buffer");
+        goto failure;
+    }
     for (i = 0; i < length; i++)
         upd_rowoffset[i] = base_value + i * width;
 
@@ -254,6 +259,11 @@ int rewrite_test(const char *filename, uint32_t width, int length, int bigtiff,
     upd_rowoffset = NULL;
 
     upd_bytecount = (uint64_t *)_TIFFmalloc(sizeof(uint64_t) * length);
+    if (!upd_bytecount)
+    {
+        TIFFError("rewrite_test", "Failed to allocate upd_bytecount buffer");
+        goto failure;
+    }
     for (i = 0; i < length; i++)
         upd_bytecount[i] = 100 + (uint64_t)i * width;
 

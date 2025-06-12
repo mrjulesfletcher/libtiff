@@ -68,7 +68,7 @@ static uint8_t *thumbnail;
 
 static int cpIFD(TIFF *, TIFF *);
 static int generateThumbnail(TIFF *, TIFF *);
-static void initScale();
+static int initScale();
 static void usage(int code);
 
 #if !HAVE_DECL_OPTARG
@@ -126,7 +126,8 @@ int main(int argc, char *argv[])
 
     if (in != NULL)
     {
-        initScale();
+        if (!initScale())
+            goto bad;
         do
         {
             if (!generateThumbnail(in, out))
@@ -526,15 +527,31 @@ static void setupCmap()
     }
 }
 
-static void initScale()
+static int initScale()
 {
     src0 = (uint8_t *)_TIFFmalloc(sizeof(uint8_t) * tnw);
     src1 = (uint8_t *)_TIFFmalloc(sizeof(uint8_t) * tnw);
     src2 = (uint8_t *)_TIFFmalloc(sizeof(uint8_t) * tnw);
     rowoff = (uint32_t *)_TIFFmalloc(sizeof(uint32_t) * tnw);
+    if (!src0 || !src1 || !src2 || !rowoff)
+    {
+        TIFFError("thumbnail", "Failed to allocate scaling buffers");
+        if (src0)
+            _TIFFfree(src0);
+        if (src1)
+            _TIFFfree(src1);
+        if (src2)
+            _TIFFfree(src2);
+        if (rowoff)
+            _TIFFfree(rowoff);
+        src0 = src1 = src2 = NULL;
+        rowoff = NULL;
+        return 0;
+    }
     filterWidth = 0;
     stepDstWidth = stepSrcWidth = 0;
     setupBitsTables();
+    return 1;
 }
 
 /*

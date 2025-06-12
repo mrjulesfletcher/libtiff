@@ -174,6 +174,11 @@ int main(int argc, char **argv)
     }
 
     buffer = (unsigned char *)malloc(sz);
+    if (!buffer)
+    {
+        TIFFError("raw_decode", "Failed to allocate buffer of size %u", (unsigned)sz);
+        return 1;
+    }
 
     /*
      * Read a tile in decompressed form, but still YCbCr subsampled.
@@ -210,6 +215,11 @@ int main(int argc, char **argv)
     }
 
     buffer = (unsigned char *)malloc(sz);
+    if (!buffer)
+    {
+        TIFFError("raw_decode", "Failed to allocate buffer of size %u", (unsigned)sz);
+        return 1;
+    }
 
     szout = TIFFReadEncodedTile(tif, 9, buffer, sz);
     if (szout != sz)
@@ -244,6 +254,11 @@ int main(int argc, char **argv)
 
     sz = 128 * 128 * sizeof(uint32_t);
     rgba_buffer = (uint32_t *)malloc(sz);
+    if (!rgba_buffer)
+    {
+        TIFFError("raw_decode", "Failed to allocate RGBA buffer of size %u", (unsigned)sz);
+        return 1;
+    }
 
     if (!TIFFReadRGBATile(tif, 1 * 128, 2 * 128, rgba_buffer))
     {
