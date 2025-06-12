@@ -298,6 +298,11 @@ target_sources(threadpool_alloc_fail PRIVATE threadpool_alloc_fail.c)
 target_link_libraries(threadpool_alloc_fail PRIVATE tiff tiff_port failalloc)
 list(APPEND simple_tests threadpool_alloc_fail)
 
+add_executable(threadpool_init_fail ../placeholder.h)
+target_sources(threadpool_init_fail PRIVATE threadpool_init_fail.c)
+target_link_libraries(threadpool_init_fail PRIVATE tiff tiff_port failalloc)
+list(APPEND simple_tests threadpool_init_fail)
+
 add_executable(grow_strips_alloc_fail ../placeholder.h)
 target_sources(grow_strips_alloc_fail PRIVATE grow_strips_alloc_fail.c)
 target_link_libraries(grow_strips_alloc_fail PRIVATE tiff tiff_port failalloc)

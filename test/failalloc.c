@@ -7,6 +7,8 @@
 static int malloc_fail_count = -1;
 static int calloc_fail_count = -1;
 static int pthread_create_fail_count = -1;
+static int pthread_mutex_init_fail_count = -1;
+static int pthread_cond_init_fail_count = -1;
 
 static void update_from_env(void)
 {
@@ -16,6 +18,10 @@ static void update_from_env(void)
     calloc_fail_count = s ? atoi(s) : -1;
     s = getenv("FAIL_PTHREAD_CREATE_COUNT");
     pthread_create_fail_count = s ? atoi(s) : -1;
+    s = getenv("FAIL_PTHREAD_MUTEX_INIT_COUNT");
+    pthread_mutex_init_fail_count = s ? atoi(s) : -1;
+    s = getenv("FAIL_PTHREAD_COND_INIT_COUNT");
+    pthread_cond_init_fail_count = s ? atoi(s) : -1;
 }
 
 void failalloc_reset_from_env(void) { update_from_env(); }
@@ -64,4 +70,32 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
             return EAGAIN;
     }
     return real_pthread_create(thread, attr, start_routine, arg);
+}
+
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
+{
+    static int (*real_pthread_mutex_init)(pthread_mutex_t *, const pthread_mutexattr_t *) = NULL;
+    if (!real_pthread_mutex_init)
+        real_pthread_mutex_init = dlsym(RTLD_NEXT, "pthread_mutex_init");
+    if (pthread_mutex_init_fail_count > 0)
+    {
+        pthread_mutex_init_fail_count--;
+        if (pthread_mutex_init_fail_count == 0)
+            return EAGAIN;
+    }
+    return real_pthread_mutex_init(mutex, attr);
+}
+
+int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
+{
+    static int (*real_pthread_cond_init)(pthread_cond_t *, const pthread_condattr_t *) = NULL;
+    if (!real_pthread_cond_init)
+        real_pthread_cond_init = dlsym(RTLD_NEXT, "pthread_cond_init");
+    if (pthread_cond_init_fail_count > 0)
+    {
+        pthread_cond_init_fail_count--;
+        if (pthread_cond_init_fail_count == 0)
+            return EAGAIN;
+    }
+    return real_pthread_cond_init(cond, attr);
 }
