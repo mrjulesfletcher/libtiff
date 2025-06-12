@@ -481,6 +481,7 @@ extern "C"
     extern uint32_t _TIFFClampDoubleToUInt32(double);
 
     extern void _TIFFCleanupIFDOffsetAndNumberMaps(TIFF *tif);
+    extern void _TIFFCleanupCustomValueMap(TIFFDirectory *td);
 
     extern tmsize_t _TIFFReadEncodedStripAndAllocBuffer(TIFF *tif,
                                                         uint32_t strip,

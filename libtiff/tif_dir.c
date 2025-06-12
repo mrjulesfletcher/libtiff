@@ -185,6 +185,44 @@ static int setExtraSamples(TIFF *tif, va_list ap, uint32_t *v)
 #undef EXTRASAMPLE_COREL_UNASSALPHA
 }
 
+/* Hash functions for custom value map */
+static unsigned long hashCustomValue(const void *elt)
+{
+    const TIFFTagValue *tv = (const TIFFTagValue *)elt;
+    return tv->info->field_tag;
+}
+
+static bool equalCustomValue(const void *elt1, const void *elt2)
+{
+    const TIFFTagValue *tv1 = (const TIFFTagValue *)elt1;
+    const TIFFTagValue *tv2 = (const TIFFTagValue *)elt2;
+    return tv1->info->field_tag == tv2->info->field_tag;
+}
+
+static int TIFFBuildCustomValueMap(TIFFDirectory *td)
+{
+    TIFFHashSet *newMap = TIFFHashSetNew(hashCustomValue, equalCustomValue, NULL);
+    if (!newMap)
+        return 0;
+    for (int i = 0; i < td->td_customValueCount; i++)
+        TIFFHashSetInsert(newMap, td->td_customValues + i);
+    if (td->td_customValueMap)
+        TIFFHashSetDestroy(td->td_customValueMap);
+    td->td_customValueMap = newMap;
+    return 1;
+}
+
+static TIFFTagValue *TIFFCustomValueLookup(TIFFDirectory *td, uint32_t tag)
+{
+    if (!td->td_customValueMap)
+        return NULL;
+    TIFFField fieldDummy;
+    fieldDummy.field_tag = tag;
+    TIFFTagValue tvDummy;
+    tvDummy.info = &fieldDummy;
+    return (TIFFTagValue *)TIFFHashSetLookup(td->td_customValueMap, &tvDummy);
+}
+
 /*
  * Count ink names separated by \0.  Returns
  * zero if the ink names are not as expected.
@@ -701,18 +739,22 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
             /*
              * Find the existing entry for this custom value.
              */
-            tv = NULL;
-            for (iCustom = 0; iCustom < td->td_customValueCount; iCustom++)
+            tv = TIFFCustomValueLookup(td, tag);
+            if (tv != NULL)
             {
-                if (td->td_customValues[iCustom].info->field_tag == tag)
+                iCustom = (int)(tv - td->td_customValues);
+                if (tv->value != NULL)
                 {
-                    tv = td->td_customValues + iCustom;
-                    if (tv->value != NULL)
-                    {
-                        _TIFFfreeExt(tif, tv->value);
-                        tv->value = NULL;
-                    }
-                    break;
+                    _TIFFfreeExt(tif, tv->value);
+                    tv->value = NULL;
+                }
+            }
+            if (td->td_customValueMap == NULL && td->td_customValueCount > 0)
+            {
+                if (!TIFFBuildCustomValueMap(td))
+                {
+                    status = 0;
+                    goto end;
                 }
             }
 
@@ -743,6 +785,12 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                 tv->info = fip;
                 tv->value = NULL;
                 tv->count = 0;
+
+                if (!TIFFBuildCustomValueMap(td))
+                {
+                    status = 0;
+                    goto end;
+                }
             }
 
             /*
@@ -1065,32 +1113,25 @@ badvaluedouble:
 badvalueifd8long8:
 {
     /* Error message issued already above. */
-    TIFFTagValue *tv2 = NULL;
-    int iCustom2, iC2;
-    /* Find the existing entry for this custom value. */
-    for (iCustom2 = 0; iCustom2 < td->td_customValueCount; iCustom2++)
-    {
-        if (td->td_customValues[iCustom2].info->field_tag == tag)
-        {
-            tv2 = td->td_customValues + (iCustom2);
-            break;
-        }
-    }
+    TIFFTagValue *tv2 = TIFFCustomValueLookup(td, tag);
     if (tv2 != NULL)
     {
+        int idx = (int)(tv2 - td->td_customValues);
         /* Remove custom field from custom list */
         if (tv2->value != NULL)
         {
             _TIFFfreeExt(tif, tv2->value);
             tv2->value = NULL;
         }
+        TIFFHashSetRemove(td->td_customValueMap, tv2);
         /* Shorten list and close gap in customValues list.
          * Re-allocation of td_customValues not necessary here. */
         td->td_customValueCount--;
-        for (iC2 = iCustom2; iC2 < td->td_customValueCount; iC2++)
+        for (int iC2 = idx; iC2 < td->td_customValueCount; iC2++)
         {
             td->td_customValues[iC2] = td->td_customValues[iC2 + 1];
         }
+        TIFFBuildCustomValueMap(td);
     }
     else
     {
@@ -1169,25 +1210,17 @@ int TIFFUnsetField(TIFF *tif, uint32_t tag)
         TIFFClrFieldBit(tif, fip->field_bit);
     else
     {
-        TIFFTagValue *tv = NULL;
-        int i;
-
-        for (i = 0; i < td->td_customValueCount; i++)
+        TIFFTagValue *tv = TIFFCustomValueLookup(td, tag);
+        if (tv)
         {
-
-            tv = td->td_customValues + i;
-            if (tv->info->field_tag == tag)
-                break;
-        }
-
-        if (i < td->td_customValueCount)
-        {
+            int idx = (int)(tv - td->td_customValues);
             _TIFFfreeExt(tif, tv->value);
-            for (; i < td->td_customValueCount - 1; i++)
+            for (; idx < td->td_customValueCount - 1; idx++)
             {
-                td->td_customValues[i] = td->td_customValues[i + 1];
+                td->td_customValues[idx] = td->td_customValues[idx + 1];
             }
             td->td_customValueCount--;
+            TIFFBuildCustomValueMap(td);
         }
     }
 
@@ -1650,6 +1683,7 @@ void TIFFFreeDirectory(TIFF *tif)
 
     td->td_customValueCount = 0;
     CleanupField(td_customValues);
+    _TIFFCleanupCustomValueMap(td);
 
     _TIFFmemset(&(td->td_stripoffset_entry), 0, sizeof(TIFFDirEntry));
     _TIFFmemset(&(td->td_stripbytecount_entry), 0, sizeof(TIFFDirEntry));
