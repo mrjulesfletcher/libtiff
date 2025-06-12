@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -euo pipefail
 #
 # Basic sanity check for tiffcp with G3 compression, 2 dimensional
 # encoding, and zero-filled boundaries.

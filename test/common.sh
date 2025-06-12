@@ -1,11 +1,12 @@
 # Common code fragment for tests
+set -euo pipefail
 #
 srcdir=${srcdir:-.}
-BUILDDIR=`pwd`
-SRCDIR=`dirname $0`
-SRCDIR=`cd $SRCDIR && pwd`
-TOPSRCDIR=`cd $srcdir/.. && pwd`
-TOOLS=`cd ../tools && pwd`
+BUILDDIR=$(pwd)
+SRCDIR=$(dirname "$0")
+SRCDIR=$(cd "$SRCDIR" && pwd)
+TOPSRCDIR=$(cd "$srcdir/.." && pwd)
+TOOLS=$(cd ../tools && pwd)
 IMAGES="${SRCDIR}/images"
 REFS="${SRCDIR}/refs"
 
@@ -62,11 +63,11 @@ f_test_convert ()
   command=$1
   infile=$2
   outfile=$3
-  rm -f $outfile
+  rm -f "$outfile"
   echo "$MEMCHECK $command $infile $outfile"
-  eval $MEMCHECK $command $infile $outfile
+  eval $MEMCHECK $command "$infile" "$outfile"
   status=$?
-  if [ $status != 0 ] ; then
+  if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
     echo "Output (if any) is in \"${outfile}\"."
     exit $status
@@ -82,11 +83,11 @@ f_test_stdout ()
   command=$1
   infile=$2
   outfile=$3
-  rm -f $outfile
+  rm -f "$outfile"
   echo "$MEMCHECK $command $infile > $outfile"
-  eval $MEMCHECK $command $infile > $outfile
+  eval $MEMCHECK $command "$infile" > "$outfile"
   status=$?
-  if [ $status != 0 ] ; then
+  if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
     echo "Output (if any) is in \"${outfile}\"."
     exit $status
@@ -102,9 +103,9 @@ f_test_reader ()
   command=$1
   infile=$2
   echo "$MEMCHECK $command $infile"
-  eval $MEMCHECK $command $infile
+  eval $MEMCHECK $command "$infile"
   status=$?
-  if [ $status != 0 ] ; then
+  if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
     exit $status
   fi
@@ -116,7 +117,7 @@ f_test_reader ()
 # f_tiffinfo_validate infile
 f_tiffinfo_validate ()
 {
-    f_test_reader "$TIFFINFO -D" $1
+    f_test_reader "$TIFFINFO -D" "$1"
 }
 
 if test "$VERBOSE" = TRUE
