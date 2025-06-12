@@ -2322,6 +2322,16 @@ int TIFFUnlinkDirectory(TIFF *tif, tdir_t dirn)
      */
     if (!TIFFAdvanceDirectory(tif, &nextdir, NULL, &nextdirnum))
         return (0);
+
+    /* Validate that the next directory offset is within the file size */
+    if (nextdir != 0 && nextdir >= TIFFGetFileSize(tif))
+    {
+        TIFFErrorExtR(tif, module,
+                      "Next directory offset 0x%" PRIx64 " (%" PRIu64
+                      ") is beyond file size %" PRIu64,
+                      nextdir, nextdir, TIFFGetFileSize(tif));
+        return (0);
+    }
     /*
      * Go back and patch the link field of the preceding
      * directory to point to the offset of the directory
