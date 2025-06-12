@@ -592,7 +592,19 @@ int TIFFSetupStrips(TIFF *tif)
     td->td_stripbytecount_p = (uint64_t *)_TIFFCheckMalloc(
         tif, td->td_nstrips, sizeof(uint64_t), "for \"StripByteCounts\" array");
     if (td->td_stripoffset_p == NULL || td->td_stripbytecount_p == NULL)
+    {
+        if (td->td_stripoffset_p)
+        {
+            _TIFFfreeExt(tif, td->td_stripoffset_p);
+            td->td_stripoffset_p = NULL;
+        }
+        if (td->td_stripbytecount_p)
+        {
+            _TIFFfreeExt(tif, td->td_stripbytecount_p);
+            td->td_stripbytecount_p = NULL;
+        }
         return (0);
+    }
     /*
      * Place data at the end-of-file
      * (by setting offsets to zero).
@@ -769,6 +781,12 @@ static int TIFFGrowStrips(TIFF *tif, uint32_t delta, const char *module)
                 _TIFFfreeExt(tif, new_stripoffset);
             if (new_stripbytecount)
                 _TIFFfreeExt(tif, new_stripbytecount);
+            if (td->td_stripoffset_p)
+                _TIFFfreeExt(tif, td->td_stripoffset_p);
+            if (td->td_stripbytecount_p)
+                _TIFFfreeExt(tif, td->td_stripbytecount_p);
+            td->td_stripoffset_p = NULL;
+            td->td_stripbytecount_p = NULL;
             td->td_nstrips = 0;
             td->td_stripoffsetbyteallocsize = 0;
             TIFFErrorExtR(tif, module, "No space to expand strip arrays");
@@ -894,6 +912,8 @@ static int TIFFAppendToStrip(TIFF *tif, uint32_t strip, uint8_t *data,
 
         /* Move data written by previous calls to us at end of file */
 #ifdef HAVE_COPY_FILE_RANGE
+        TIFFWarningExtR(tif, module,
+                       "_TIFFCopyFileRange used to relocate strip/tile data");
         if (!_TIFFCopyFileRange(tif, offsetRead, offsetWrite, toCopy))
         {
             return (0);
