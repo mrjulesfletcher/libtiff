@@ -318,6 +318,28 @@ AC_COMPILE_IFELSE([
 AC_SUBST(HAVE_SSE41)
 
 dnl ---------------------------------------------------------------------------
+dnl Optional internal thread pool
+dnl ---------------------------------------------------------------------------
+
+AC_ARG_ENABLE(multithreading,
+              AS_HELP_STRING([--enable-multithreading],
+                             [Enable internal thread pool]),
+              [HAVE_THREADPOOL=$enableval], [HAVE_THREADPOOL=no])
+
+if test "$HAVE_THREADPOOL" = "yes" ; then
+  AX_PTHREAD
+  if test "x$ax_pthread_ok" = "xno" ; then
+    AC_MSG_WARN([pthreads not found, disabling multithreading])
+    HAVE_THREADPOOL=no
+  else
+    LIBS="$PTHREAD_LIBS $LIBS"
+    CFLAGS="$CFLAGS $PTHREAD_CFLAGS"
+    AC_DEFINE(TIFF_USE_THREADPOOL,1,[Use internal thread pool])
+  fi
+fi
+AM_CONDITIONAL(HAVE_THREADPOOL, test "$HAVE_THREADPOOL" = "yes")
+
+dnl ---------------------------------------------------------------------------
 dnl Enable run-time paths to libraries usage.
 dnl ---------------------------------------------------------------------------
 

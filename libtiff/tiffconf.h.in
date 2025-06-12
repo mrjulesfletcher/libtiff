@@ -108,6 +108,9 @@
 /* Support libdeflate enhanced compression */
 #undef LIBDEFLATE_SUPPORT
 
+/* Enable internal thread pool */
+#undef TIFF_USE_THREADPOOL
+
 /* Support strip chopping (whether or not to convert single-strip uncompressed
    images to multiple strips of ~8Kb to reduce memory usage) */
 #undef STRIPCHOP_DEFAULT

@@ -209,12 +209,28 @@ typedef struct
 
 #define JState(tif) ((JPEGState *)(tif)->tif_data)
 
-static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
+static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGDecodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGEncode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGEncodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGInitializeLibJPEG(TIFF *tif, int decode);
 static int DecodeRowError(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
+#ifdef TIFF_USE_THREADPOOL
+typedef struct
+{
+    TIFF *tif;
+    uint8_t *buf;
+    tmsize_t cc;
+    uint16_t s;
+    int result;
+} JPEGTask;
+
+static void JPEGDecodeTask(void *arg)
+{
+    JPEGTask *t = (JPEGTask *)arg;
+    t->result = JPEGDecodeInternal(t->tif, t->buf, t->cc, t->s);
+}
+#endif
 
 #define FIELD_JPEGTABLES (FIELD_CODEC + 0)
 
@@ -1437,7 +1453,7 @@ int TIFFJPEGIsFullStripRequired(TIFF *tif)
  * "Standard" case: returned data is not downsampled.
  */
 #if !JPEG_LIB_MK1_OR_12BIT
-static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
+static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 {
     JPEGState *sp = JState(tif);
     tmsize_t nrows;
@@ -1497,7 +1513,7 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 #endif /* !JPEG_LIB_MK1_OR_12BIT */
 
 #if JPEG_LIB_MK1_OR_12BIT
-/*ARGSUSED*/ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc,
+/*ARGSUSED*/ static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc,
                                    uint16_t s)
 {
     JPEGState *sp = JState(tif);
@@ -1608,6 +1624,20 @@ static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
            TIFFjpeg_finish_decompress(sp);
 }
 #endif /* JPEG_LIB_MK1_OR_12BIT */
+
+static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
+{
+#ifdef TIFF_USE_THREADPOOL
+    if (TIFFGetThreadCount() > 1)
+    {
+        JPEGTask task = {tif, buf, cc, s, 0};
+        _TIFFThreadPoolSubmit(JPEGDecodeTask, &task);
+        _TIFFThreadPoolWait();
+        return task.result;
+    }
+#endif
+    return JPEGDecodeInternal(tif, buf, cc, s);
+}
 
 /*ARGSUSED*/ static int DecodeRowError(TIFF *tif, uint8_t *buf, tmsize_t cc,
                                        uint16_t s)

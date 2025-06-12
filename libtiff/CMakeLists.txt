@@ -100,6 +100,7 @@ target_sources(tiff PRIVATE
         tif_webp.c
         tif_bayer.c
         tif_write.c
+        tiff_threadpool.c
         tif_zip.c
         tif_zstd.c)
 
