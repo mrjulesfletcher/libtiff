@@ -24,7 +24,9 @@ $ cmake -DHAVE_SSE41=1 ..                 # enable SSE4.1
 ```
 Cross-compiling examples:
 ```bash
-# Target AArch64 with NEON
+# Raspberry Pi 5 (AArch64 with NEON)
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake -DHAVE_NEON=1 ..
+# Generic AArch64 target
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake \
         -DCMAKE_C_FLAGS="-march=armv8-a+simd" -DHAVE_NEON=1 ..
 # Target x86_64 with SSE4.1
@@ -39,9 +41,9 @@ Install libdeflate and enable the option when configuring:
 $ cmake -Dlibdeflate=ON -DCMAKE_BUILD_TYPE=Release ..
 $ cmake --build . -j$(nproc)
 ```
-Cross-compiling for AArch64 with libdeflate:
+Cross-compiling for Raspberry Pi 5 with libdeflate:
 ```bash
-$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake \
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake \
         -Dlibdeflate=ON -DHAVE_NEON=1 -DCMAKE_BUILD_TYPE=Release ..
 ```
 Benchmarking a 10MB image gave about 2x faster compression with `zip:p9:s1` (libdeflate) versus `zip:p9:s0` (zlib).
