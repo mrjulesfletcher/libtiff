@@ -246,7 +246,8 @@ ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
 around 3× faster than the scalar implementation on the same device.
 
 On a Raspberry Pi 5 you can enable the thread pool and io_uring backends and run
-additional benchmarks:
+additional benchmarks.  The io_uring code requires Linux 5.1 or newer.  When the
+kernel or liburing are missing, support is automatically disabled:
 
 ```bash
 $ cmake -Dthreadpool=ON -Dio-uring=ON -DCMAKE_BUILD_TYPE=Release ..

@@ -1151,7 +1151,8 @@ if test "x$enable_io_uring" = "xyes" ; then
     tiff_libs_private="-luring ${tiff_libs_private}"
     have_io_uring=yes
   else
-    AC_MSG_ERROR([io_uring requested but liburing not found])
+    AC_MSG_WARN([io_uring requested but liburing not found -- disabling])
+    have_io_uring=no
   fi
 fi
 
