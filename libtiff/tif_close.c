@@ -49,6 +49,7 @@ void TIFFCleanup(TIFF *tif)
     if (tif->tif_mode != O_RDONLY)
         TIFFFlush(tif);
     TIFFFreeDirectory(tif);
+    _TIFFCleanupCustomValueMap(&tif->tif_dir);
 
     _TIFFCleanupIFDOffsetAndNumberMaps(tif);
 #ifdef USE_IO_URING
@@ -138,6 +139,19 @@ void _TIFFCleanupIFDOffsetAndNumberMaps(TIFF *tif)
     {
         TIFFHashSetDestroy(tif->tif_map_dir_number_to_offset);
         tif->tif_map_dir_number_to_offset = NULL;
+    }
+}
+
+/************************************************************************/
+/*                    _TIFFCleanupCustomValueMap()                      */
+/************************************************************************/
+
+void _TIFFCleanupCustomValueMap(TIFFDirectory *td)
+{
+    if (td->td_customValueMap)
+    {
+        TIFFHashSetDestroy(td->td_customValueMap);
+        td->td_customValueMap = NULL;
     }
 }
 

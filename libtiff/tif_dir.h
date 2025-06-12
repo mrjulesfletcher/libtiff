@@ -27,6 +27,7 @@
 
 #include "tiff.h"
 #include "tiffio.h"
+#include "tif_hash_set.h"
 
 /*
  * ``Library-private'' Directory-related Definitions.
@@ -141,6 +142,7 @@ typedef struct
 
     int td_customValueCount;
     TIFFTagValue *td_customValues;
+    TIFFHashSet *td_customValueMap;
 
     unsigned char
         td_deferstrilearraywriting; /* see TIFFDeferStrileArrayWriting() */
