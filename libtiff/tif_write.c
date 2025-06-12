@@ -777,9 +777,11 @@ static int TIFFGrowStrips(TIFF *tif, uint32_t delta, const char *module)
         td->td_stripoffset_p = new_stripoffset;
         td->td_stripbytecount_p = new_stripbytecount;
         _TIFFmemset(td->td_stripoffset_p + td->td_stripoffsetbyteallocsize, 0,
-                    (alloc - td->td_stripoffsetbyteallocsize) * sizeof(uint64_t));
-        _TIFFmemset(td->td_stripbytecount_p + td->td_stripoffsetbyteallocsize, 0,
-                    (alloc - td->td_stripoffsetbyteallocsize) * sizeof(uint64_t));
+                    (alloc - td->td_stripoffsetbyteallocsize) *
+                        sizeof(uint64_t));
+        _TIFFmemset(
+            td->td_stripbytecount_p + td->td_stripoffsetbyteallocsize, 0,
+            (alloc - td->td_stripoffsetbyteallocsize) * sizeof(uint64_t));
         td->td_stripoffsetbyteallocsize = alloc;
     }
 
@@ -871,16 +873,9 @@ static int TIFFAppendToStrip(TIFF *tif, uint32_t strip, uint8_t *data,
         /* append-at-end-of-file strategy, and start by moving what we already
          */
         /* wrote. */
-        tmsize_t tempSize;
-        void *temp;
         uint64_t offsetRead;
         uint64_t offsetWrite;
         uint64_t toCopy = td->td_stripbytecount_p[strip];
-
-        if (toCopy < 1024 * 1024)
-            tempSize = (tmsize_t)toCopy;
-        else
-            tempSize = 1024 * 1024;
 
         offsetRead = td->td_stripoffset_p[strip];
         offsetWrite = TIFFSeekFile(tif, 0, SEEK_END);
@@ -892,6 +887,25 @@ static int TIFFAppendToStrip(TIFF *tif, uint32_t strip, uint8_t *data,
             return (0);
         }
 
+        tif->tif_flags |= TIFF_DIRTYSTRIP;
+
+        td->td_stripoffset_p[strip] = offsetWrite;
+        td->td_stripbytecount_p[strip] = 0;
+
+        /* Move data written by previous calls to us at end of file */
+#ifdef HAVE_COPY_FILE_RANGE
+        if (!_TIFFCopyFileRange(tif, offsetRead, offsetWrite, toCopy))
+        {
+            return (0);
+        }
+#else
+        tmsize_t tempSize;
+        void *temp;
+        if (toCopy < 1024 * 1024)
+            tempSize = (tmsize_t)toCopy;
+        else
+            tempSize = 1024 * 1024;
+
         temp = _TIFFmallocExt(tif, tempSize);
         if (temp == NULL)
         {
@@ -899,21 +913,18 @@ static int TIFFAppendToStrip(TIFF *tif, uint32_t strip, uint8_t *data,
             return (0);
         }
 
-        tif->tif_flags |= TIFF_DIRTYSTRIP;
-
-        td->td_stripoffset_p[strip] = offsetWrite;
-        td->td_stripbytecount_p[strip] = 0;
-
-        /* Move data written by previous calls to us at end of file */
         while (toCopy > 0)
         {
+            tmsize_t chunk =
+                (tmsize_t)((toCopy < (uint64_t)tempSize) ? toCopy
+                                                         : (uint64_t)tempSize);
             if (!SeekOK(tif, offsetRead))
             {
                 TIFFErrorExtR(tif, module, "Seek error");
                 _TIFFfreeExt(tif, temp);
                 return (0);
             }
-            if (!ReadOK(tif, temp, tempSize))
+            if (!ReadOK(tif, temp, chunk))
             {
                 TIFFErrorExtR(tif, module, "Cannot read");
                 _TIFFfreeExt(tif, temp);
@@ -925,18 +936,19 @@ static int TIFFAppendToStrip(TIFF *tif, uint32_t strip, uint8_t *data,
                 _TIFFfreeExt(tif, temp);
                 return (0);
             }
-            if (!WriteOK(tif, temp, tempSize))
+            if (!WriteOK(tif, temp, chunk))
             {
                 TIFFErrorExtR(tif, module, "Cannot write");
                 _TIFFfreeExt(tif, temp);
                 return (0);
             }
-            offsetRead += tempSize;
-            offsetWrite += tempSize;
-            td->td_stripbytecount_p[strip] += tempSize;
-            toCopy -= tempSize;
+            offsetRead += chunk;
+            offsetWrite += chunk;
+            td->td_stripbytecount_p[strip] += chunk;
+            toCopy -= chunk;
         }
         _TIFFfreeExt(tif, temp);
+#endif
 
         /* Append the data of this call */
         offsetWrite += cc;

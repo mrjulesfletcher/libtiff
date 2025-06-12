@@ -380,6 +380,58 @@ int _TIFFmemcmp(const void *p1, const void *p2, tmsize_t c)
     return (memcmp(p1, p2, (size_t)c));
 }
 
+int _TIFFCopyFileRange(TIFF *tif, uint64_t offsetRead, uint64_t offsetWrite,
+                       uint64_t toCopy)
+{
+#if defined(HAVE_COPY_FILE_RANGE)
+    int fd = tif->tif_fd;
+    while (toCopy > 0)
+    {
+        size_t chunk = toCopy > 1024 * 1024 ? 1024 * 1024 : (size_t)toCopy;
+        ssize_t ret = copy_file_range(fd, (off64_t *)&offsetRead, fd,
+                                      (off64_t *)&offsetWrite, chunk, 0);
+        if (ret < 0)
+        {
+            if (errno != ENOSYS && errno != EINVAL)
+                return 0;
+            break;
+        }
+        if (ret == 0)
+            break;
+        toCopy -= (uint64_t)ret;
+    }
+    if (toCopy == 0)
+        return 1;
+#endif
+
+    tmsize_t bufSize = (toCopy < 1024 * 1024) ? (tmsize_t)toCopy : 1024 * 1024;
+    void *temp = _TIFFmallocExt(tif, bufSize);
+    if (temp == NULL)
+    {
+        TIFFErrorExtR(tif, "_TIFFCopyFileRange", "No space for output buffer");
+        return 0;
+    }
+
+    while (toCopy > 0)
+    {
+        tmsize_t chunk =
+            (tmsize_t)((toCopy < (uint64_t)bufSize) ? toCopy
+                                                    : (uint64_t)bufSize);
+        if (!SeekOK(tif, offsetRead) || !ReadOK(tif, temp, chunk) ||
+            !SeekOK(tif, offsetWrite) || !WriteOK(tif, temp, chunk))
+        {
+            _TIFFfreeExt(tif, temp);
+            return 0;
+        }
+        offsetRead += chunk;
+        offsetWrite += chunk;
+        toCopy -= chunk;
+    }
+
+    _TIFFfreeExt(tif, temp);
+    return 1;
+}
+
 static void unixWarningHandler(const char *module, const char *fmt, va_list ap)
 {
     if (module != NULL)
