@@ -93,7 +93,10 @@ static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
             io_size = TIFF_IO_MAX;
         /* Below is an obvious false positive of Coverity Scan */
         /* coverity[overflow_sink] */
-        count = read(fdh.fd, buf_offset, (TIFFIOSize_t)io_size);
+        do
+        {
+            count = read(fdh.fd, buf_offset, (TIFFIOSize_t)io_size);
+        } while (count == -1 && errno == EINTR);
         if (count <= 0)
             break;
     }
@@ -128,7 +131,10 @@ static tmsize_t _tiffWriteProc(thandle_t fd, void *buf, tmsize_t size)
             io_size = TIFF_IO_MAX;
         /* Below is an obvious false positive of Coverity Scan */
         /* coverity[overflow_sink] */
-        count = write(fdh.fd, buf_offset, (TIFFIOSize_t)io_size);
+        do
+        {
+            count = write(fdh.fd, buf_offset, (TIFFIOSize_t)io_size);
+        } while (count == -1 && errno == EINTR);
         if (count <= 0)
             break;
     }
@@ -384,16 +390,28 @@ int _TIFFCopyFileRange(TIFF *tif, uint64_t offsetRead, uint64_t offsetWrite,
                        uint64_t toCopy)
 {
 #if defined(HAVE_COPY_FILE_RANGE)
+    static const char module[] = "_TIFFCopyFileRange";
     int fd = tif->tif_fd;
     while (toCopy > 0)
     {
         size_t chunk = toCopy > 1024 * 1024 ? 1024 * 1024 : (size_t)toCopy;
-        ssize_t ret = copy_file_range(fd, (off64_t *)&offsetRead, fd,
-                                      (off64_t *)&offsetWrite, chunk, 0);
+        ssize_t ret;
+        do
+        {
+            ret = copy_file_range(fd, (off64_t *)&offsetRead, fd,
+                                  (off64_t *)&offsetWrite, chunk, 0);
+        } while (ret < 0 && errno == EINTR);
         if (ret < 0)
         {
             if (errno != ENOSYS && errno != EINVAL)
+            {
+                TIFFErrorExtR(tif, module, "copy_file_range failed: %s",
+                              strerror(errno));
                 return 0;
+            }
+            TIFFErrorExtR(tif, module,
+                          "copy_file_range unavailable, falling back: %s",
+                          strerror(errno));
             break;
         }
         if (ret == 0)
