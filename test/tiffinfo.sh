@@ -1,4 +1,5 @@
-#!/bin/sh
+#!/bin/bash
+set -euo pipefail
 #
 # Basic sanity check for tiffinfo.
 #

@@ -1,4 +1,5 @@
-#!/bin/bash -eu
+#!/bin/bash
+set -euo pipefail
 # Copyright (c) 1988-1997 Sam Leffler
 # Copyright (c) 1991-1997 Silicon Graphics, Inc.
 #
@@ -30,7 +31,7 @@ popd
 
 # Build libjpeg-turbo
 pushd "$SRC/libjpeg-turbo"
-cmake . -DCMAKE_INSTALL_PREFIX=$WORK -DENABLE_STATIC=on -DENABLE_SHARED=off
+cmake . -DCMAKE_INSTALL_PREFIX="$WORK" -DENABLE_STATIC=on -DENABLE_SHARED=off
 make -j$(nproc)
 make install
 popd
@@ -41,7 +42,7 @@ if [ "$ARCHITECTURE" = "i386" ]; then
     echo "#!/bin/bash" > gcc
     echo "clang -m32 \$*" >> gcc
     chmod +x gcc
-    PATH=$PWD:$PATH make lib
+    PATH="$PWD:$PATH" make lib
 else
     make lib
 fi
@@ -54,20 +55,20 @@ if [ "$ARCHITECTURE" != "i386" ]; then
     apt-get install -y liblzma-dev
 fi
 
-cmake . -DCMAKE_INSTALL_PREFIX=$WORK -DBUILD_SHARED_LIBS=off
+cmake . -DCMAKE_INSTALL_PREFIX="$WORK" -DBUILD_SHARED_LIBS=off
 make -j$(nproc)
 make install
 
 if [ "$ARCHITECTURE" = "i386" ]; then
-    $CXX $CXXFLAGS -std=c++11 -I$WORK/include \
-        $SRC/libtiff/contrib/oss-fuzz/tiff_read_rgba_fuzzer.cc -o $OUT/tiff_read_rgba_fuzzer \
-        $LIB_FUZZING_ENGINE $WORK/lib/libtiffxx.a $WORK/lib/libtiff.a $WORK/lib/libz.a $WORK/lib/libjpeg.a \
-        $WORK/lib/libjbig.a $WORK/lib/libjbig85.a
+    "$CXX" $CXXFLAGS -std=c++11 -I"$WORK/include" \
+        "$SRC/libtiff/contrib/oss-fuzz/tiff_read_rgba_fuzzer.cc" -o "$OUT/tiff_read_rgba_fuzzer" \
+        "$LIB_FUZZING_ENGINE" "$WORK/lib/libtiffxx.a" "$WORK/lib/libtiff.a" "$WORK/lib/libz.a" "$WORK/lib/libjpeg.a" \
+        "$WORK/lib/libjbig.a" "$WORK/lib/libjbig85.a"
 else
-    $CXX $CXXFLAGS -std=c++11 -I$WORK/include \
-        $SRC/libtiff/contrib/oss-fuzz/tiff_read_rgba_fuzzer.cc -o $OUT/tiff_read_rgba_fuzzer \
-        $LIB_FUZZING_ENGINE $WORK/lib/libtiffxx.a $WORK/lib/libtiff.a $WORK/lib/libz.a $WORK/lib/libjpeg.a \
-        $WORK/lib/libjbig.a $WORK/lib/libjbig85.a -Wl,-Bstatic -llzma -Wl,-Bdynamic
+    "$CXX" $CXXFLAGS -std=c++11 -I"$WORK/include" \
+        "$SRC/libtiff/contrib/oss-fuzz/tiff_read_rgba_fuzzer.cc" -o "$OUT/tiff_read_rgba_fuzzer" \
+        "$LIB_FUZZING_ENGINE" "$WORK/lib/libtiffxx.a" "$WORK/lib/libtiff.a" "$WORK/lib/libz.a" "$WORK/lib/libjpeg.a" \
+        "$WORK/lib/libjbig.a" "$WORK/lib/libjbig85.a" -Wl,-Bstatic -llzma -Wl,-Bdynamic
 fi
 
 mkdir afl_testcases
