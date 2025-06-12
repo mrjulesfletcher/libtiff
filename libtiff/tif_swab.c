@@ -185,12 +185,11 @@ void TIFFSwabArrayOfLong(uint32_t *lp, tmsize_t n)
 #endif
 
 #if defined(DISABLE_CHECK_TIFFSWABMACROS) || !defined(TIFFSwabArrayOfLong8)
-void TIFFSwabArrayOfLong8(register uint64_t *lp, tmsize_t n)
+static void TIFFSwabArrayOfLong8Scalar(uint64_t *lp, tmsize_t n)
 {
-    register unsigned char *cp;
-    register unsigned char t;
+    unsigned char *cp;
+    unsigned char t;
     assert(sizeof(uint64_t) == 8);
-    /* XXX unroll loop some */
     while (n-- > 0)
     {
         cp = (unsigned char *)lp;
@@ -208,6 +207,31 @@ void TIFFSwabArrayOfLong8(register uint64_t *lp, tmsize_t n)
         cp[3] = t;
         lp++;
     }
+}
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void TIFFSwabArrayOfLong8Neon(uint64_t *lp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 2 <= (size_t)n; i += 2)
+    {
+        uint64x2_t v = vld1q_u64(lp + i);
+        uint8x16_t b = vreinterpretq_u8_u64(v);
+        b = vrev64q_u8(b);
+        vst1q_u64(lp + i, vreinterpretq_u64_u8(b));
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfLong8Scalar(lp + i, n - i);
+}
+#endif
+
+void TIFFSwabArrayOfLong8(uint64_t *lp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    TIFFSwabArrayOfLong8Neon(lp, n);
+#else
+    TIFFSwabArrayOfLong8Scalar(lp, n);
+#endif
 }
 #endif
 
