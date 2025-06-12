@@ -39,7 +39,7 @@ int main(int argc, char **argv)
     if (argc > 2)
         loops = (size_t)atoi(argv[2]);
 
-    _TIFFThreadPoolInit(threads);
+    TIFFThreadPool *tp = _TIFFThreadPoolInit(threads);
 
     const uint32_t width = 512, height = 512;
     size_t count = (size_t)width * height;
@@ -58,12 +58,12 @@ int main(int argc, char **argv)
         tasks[t].width = width;
         tasks[t].height = height;
         tasks[t].loops = loops;
-        _TIFFThreadPoolSubmit(bench_task, &tasks[t]);
+        _TIFFThreadPoolSubmit(tp, bench_task, &tasks[t]);
     }
 
     struct timespec s, e;
     clock_gettime(CLOCK_MONOTONIC, &s);
-    _TIFFThreadPoolWait();
+    _TIFFThreadPoolWait(tp);
     clock_gettime(CLOCK_MONOTONIC, &e);
 
     printf("predictor+pack with %d threads (%zu loops each): %.2f ms\n",
@@ -71,6 +71,6 @@ int main(int argc, char **argv)
 
     free(tasks);
     free(buf);
-    _TIFFThreadPoolShutdown();
+    _TIFFThreadPoolShutdown(tp);
     return 0;
 }

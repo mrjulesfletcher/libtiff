@@ -1628,11 +1628,11 @@ static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 {
 #ifdef TIFF_USE_THREADPOOL
-    if (TIFFGetThreadCount() > 1)
+    if (TIFFGetThreadCount(tif) > 1)
     {
         JPEGTask task = {tif, buf, cc, s, 0};
-        _TIFFThreadPoolSubmit(JPEGDecodeTask, &task);
-        _TIFFThreadPoolWait();
+        _TIFFThreadPoolSubmit(tif->tif_threadpool, JPEGDecodeTask, &task);
+        _TIFFThreadPoolWait(tif->tif_threadpool);
         return task.result;
     }
 #endif

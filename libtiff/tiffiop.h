@@ -112,6 +112,8 @@ typedef union
     TIFFHeaderBig big;
 } TIFFHeaderUnion;
 
+struct TIFFThreadPool; /* forward declaration */
+
 struct tiff
 {
     char *tif_name; /* name of open file */
@@ -267,6 +269,7 @@ struct tiff
     unsigned int tif_uring_depth; /* queue depth. 0 for default */
 #endif
     int tif_warn_about_unknown_tags;
+    struct TIFFThreadPool *tif_threadpool; /* thread pool handle */
 };
 
 struct TIFFOpenOptions

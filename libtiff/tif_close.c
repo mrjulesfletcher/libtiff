@@ -120,6 +120,13 @@ void TIFFCleanup(TIFF *tif)
                       "should be 0",
                       (uint64_t)tif->tif_cur_cumulated_mem_alloc);
     }
+#ifdef TIFF_USE_THREADPOOL
+    if (tif->tif_threadpool)
+    {
+        _TIFFThreadPoolShutdown(tif->tif_threadpool);
+        tif->tif_threadpool = NULL;
+    }
+#endif
 
     _TIFFfreeExt(NULL, tif);
 }
