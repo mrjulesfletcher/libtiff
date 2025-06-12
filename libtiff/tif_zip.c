@@ -90,7 +90,23 @@ typedef struct
 #define ZIPEncoderState(tif) GetZIPState(tif)
 
 static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s);
-static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s);
+static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s);
+#ifdef TIFF_USE_THREADPOOL
+typedef struct
+{
+    TIFF *tif;
+    uint8_t *op;
+    tmsize_t occ;
+    uint16_t s;
+    int result;
+} ZIPTask;
+
+static void ZIPDecodeTask(void *arg)
+{
+    ZIPTask *t = (ZIPTask *)arg;
+    t->result = ZIPDecodeInternal(t->tif, t->op, t->occ, t->s);
+}
+#endif
 
 static int ZIPFixupTags(TIFF *tif)
 {
@@ -168,7 +184,7 @@ static int ZIPPreDecode(TIFF *tif, uint16_t s)
     return 0;
 }
 
-static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
+static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 {
     static const char module[] = "ZIPDecode";
     ZIPState *sp = ZIPDecoderState(tif);
@@ -314,6 +330,20 @@ static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     tif->tif_rawcp = sp->stream.next_in;
 
     return (1);
+}
+
+static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
+{
+#ifdef TIFF_USE_THREADPOOL
+    if (TIFFGetThreadCount() > 1)
+    {
+        ZIPTask task = {tif, op, occ, s, 0};
+        _TIFFThreadPoolSubmit(ZIPDecodeTask, &task);
+        _TIFFThreadPoolWait();
+        return task.result;
+    }
+#endif
+    return ZIPDecodeInternal(tif, op, occ, s);
 }
 
 static int ZIPSetupEncode(TIFF *tif)

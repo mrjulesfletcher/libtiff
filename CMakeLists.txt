@@ -138,6 +138,7 @@ include(OpenGLChecks)
 # Windows support
 include(WindowsSupport)
 include(IOURing)
+include(ThreadPool)
 
 # Orthogonal features
 include(LibraryFeatures)

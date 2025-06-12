@@ -103,6 +103,7 @@ libtiff_la_SOURCES = \
         tif_webp.c \
         tif_bayer.c \
         tif_write.c \
+        tiff_threadpool.c \
         tif_zip.c \
         tif_zstd.c
 
