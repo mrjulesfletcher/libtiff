@@ -5,7 +5,13 @@
 #include <liburing.h>
 #include <pthread.h>
 
-/* Mapping between file descriptors and their io_uring */
+/*
+ * Mapping between file descriptors and their io_uring.  Access to this list
+ * and all io_uring operations is serialized by the global mutex below since
+ * liburing itself is not thread-safe.  The queue depth is currently fixed to
+ * 8 events which is sufficient for the sequential access patterns used by
+ * libtiff.
+ */
 typedef struct _TIFFURingEntry
 {
     int fd;
@@ -28,11 +34,15 @@ static _TIFFURingEntry *_tiffUringFind(int fd)
     return NULL;
 }
 
-static void _tiffUringAdd(int fd, struct io_uring *ring)
+/* Add a mapping entry. Returns 1 on success. */
+static int _tiffUringAdd(TIFF *tif, int fd, struct io_uring *ring)
 {
-    _TIFFURingEntry *e = (_TIFFURingEntry *)_TIFFmallocExt(NULL, sizeof(*e));
+    _TIFFURingEntry *e = (_TIFFURingEntry *)_TIFFmallocExt(tif, sizeof(*e));
     if (!e)
-        return;
+    {
+        TIFFErrorExtR(tif, "tif_uring", "Out of memory allocating ring entry");
+        return 0;
+    }
     pthread_mutex_lock(&gUringMutex);
     e->fd = fd;
     e->ring = ring;
@@ -40,6 +50,7 @@ static void _tiffUringAdd(int fd, struct io_uring *ring)
     e->next = gUringList;
     gUringList = e;
     pthread_mutex_unlock(&gUringMutex);
+    return 1;
 }
 
 static void _tiffUringRemove(int fd)
@@ -74,7 +85,13 @@ int _tiffUringInit(TIFF *tif)
         return 0;
     }
     tif->tif_uring_async = 0;
-    _tiffUringAdd(tif->tif_fd, tif->tif_uring);
+    if (!_tiffUringAdd(tif, tif->tif_fd, tif->tif_uring))
+    {
+        io_uring_queue_exit(tif->tif_uring);
+        _TIFFfreeExt(tif, tif->tif_uring);
+        tif->tif_uring = NULL;
+        return 0;
+    }
     return 1;
 }
 
@@ -106,14 +123,21 @@ void _tiffUringFlush(TIFF *tif)
         io_uring_submit(tif->tif_uring);
 }
 
+/*
+ * Wait for completion events.  The global mutex is released while waiting so
+ * that other threads may submit additional requests.
+ */
 void _tiffUringWait(TIFF *tif)
 {
     if (!tif || !tif->tif_uring)
         return;
+    struct io_uring *ring = tif->tif_uring;
     struct io_uring_cqe *cqe;
-    while (io_uring_wait_cqe(tif->tif_uring, &cqe) == 0)
+    while (io_uring_wait_cqe(ring, &cqe) == 0)
     {
-        io_uring_cqe_seen(tif->tif_uring, cqe);
+        pthread_mutex_lock(&gUringMutex);
+        io_uring_cqe_seen(ring, cqe);
+        pthread_mutex_unlock(&gUringMutex);
     }
 }
 
