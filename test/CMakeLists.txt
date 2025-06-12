@@ -249,6 +249,12 @@ set_target_properties(assemble_strip_neon_test PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(assemble_strip_neon_test PRIVATE tiff tiff_port)
 list(APPEND simple_tests assemble_strip_neon_test)
 
+add_executable(assemble_strip_neon_alloc_fail ../placeholder.h)
+target_sources(assemble_strip_neon_alloc_fail PRIVATE assemble_strip_neon_alloc_fail.c)
+set_target_properties(assemble_strip_neon_alloc_fail PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(assemble_strip_neon_alloc_fail PRIVATE tiff tiff_port failalloc)
+list(APPEND simple_tests assemble_strip_neon_alloc_fail)
+
 add_executable(gray_flip_neon_test ../placeholder.h)
 target_sources(gray_flip_neon_test PRIVATE gray_flip_neon_test.c)
 set_target_properties(gray_flip_neon_test PROPERTIES LINKER_LANGUAGE CXX)

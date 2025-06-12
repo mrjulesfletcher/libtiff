@@ -38,10 +38,14 @@ uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
                                int bigendian, size_t *out_size)
 {
+    static const char module[] = "TIFFAssembleStripNEON";
     size_t count = (size_t)width * height;
     uint16_t *tmp = (uint16_t *)_TIFFmallocExt(tif, count * sizeof(uint16_t));
     if (!tmp)
+    {
+        TIFFErrorExtR(tif, module, "Out of memory");
         return NULL;
+    }
     memcpy(tmp, src, count * sizeof(uint16_t));
     if (apply_predictor)
     {
@@ -53,6 +57,7 @@ uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
     if (!packed)
     {
         _TIFFfreeExt(tif, tmp);
+        TIFFErrorExtR(tif, module, "Out of memory");
         return NULL;
     }
     TIFFPackRaw12(tmp, packed, count, bigendian);

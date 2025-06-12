@@ -105,7 +105,7 @@ check_PROGRAMS = \
         ascii_tag long_tag short_tag strip_rw rewrite custom_dir custom_dir_EXIF_231 \
        defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
        test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test gray_flip_neon_test swab_benchmark predictor_threadpool_benchmark pack_uring_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
-       threadpool_stress uring_thread_stress threadpool_alloc_fail
+       threadpool_stress uring_thread_stress threadpool_alloc_fail assemble_strip_neon_alloc_fail
 endif
 
 # Test scripts to execute
@@ -322,6 +322,9 @@ swab_neon_test_LDADD = $(LIBTIFF)
 
 assemble_strip_neon_test_SOURCES = assemble_strip_neon_test.c
 assemble_strip_neon_test_LDADD = $(LIBTIFF)
+
+assemble_strip_neon_alloc_fail_SOURCES = assemble_strip_neon_alloc_fail.c failalloc.c
+assemble_strip_neon_alloc_fail_LDADD = $(LIBTIFF)
 
 gray_flip_neon_test_SOURCES = gray_flip_neon_test.c
 gray_flip_neon_test_LDADD = $(LIBTIFF)
