@@ -51,6 +51,9 @@ void TIFFCleanup(TIFF *tif)
     TIFFFreeDirectory(tif);
 
     _TIFFCleanupIFDOffsetAndNumberMaps(tif);
+#ifdef USE_IO_URING
+    _tiffUringTeardown(tif);
+#endif
 
     /*
      * Clean up client info links.

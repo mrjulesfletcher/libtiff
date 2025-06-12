@@ -235,7 +235,12 @@ TIFF *TIFFFdOpenExt(int fd, const char *name, const char *mode,
                             _tiffSeekProc, _tiffCloseProc, _tiffSizeProc,
                             _tiffMapProc, _tiffUnmapProc, opts);
     if (tif)
+    {
         tif->tif_fd = fd;
+#ifdef USE_IO_URING
+        _tiffUringInit(tif);
+#endif
+    }
     return (tif);
 }
 
