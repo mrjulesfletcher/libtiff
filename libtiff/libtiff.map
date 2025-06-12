@@ -225,4 +225,10 @@ LIBTIFF_4.7.1 {
     TIFFPackRaw12;
     TIFFUnpackRaw12;
     TIFFAssembleStripNEON;
+    _TIFFThreadPoolInit;
+    _TIFFThreadPoolShutdown;
+    _TIFFThreadPoolSubmit;
+    _TIFFThreadPoolWait;
+    TIFFSetThreadCount;
+    TIFFGetThreadCount;
 } LIBTIFF_4.6.1;
