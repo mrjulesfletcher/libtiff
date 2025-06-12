@@ -39,7 +39,13 @@ uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
                                int bigendian, size_t *out_size)
 {
     static const char module[] = "TIFFAssembleStripNEON";
-    size_t count = (size_t)width * height;
+    uint64_t count64 = _TIFFMultiply64(tif, width, height, module);
+    if (count64 == 0 && width != 0 && height != 0)
+        return NULL;
+    tmsize_t countm = _TIFFCastUInt64ToSSize(tif, count64, module);
+    if (countm == 0 && count64 != 0)
+        return NULL;
+    size_t count = (size_t)countm;
     uint16_t *tmp = (uint16_t *)_TIFFmallocExt(tif, count * sizeof(uint16_t));
     if (!tmp)
     {
