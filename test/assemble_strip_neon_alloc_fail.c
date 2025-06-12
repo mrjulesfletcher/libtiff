@@ -63,6 +63,26 @@ int main(void)
 
     unsetenv("FAIL_MALLOC_COUNT");
     failalloc_reset_from_env();
+
+    /* Overflow detection */
+    error_buffer[0] = '\0';
+    error_module[0] = '\0';
+    strip =
+        TIFFAssembleStripNEON(NULL, buf, 0xFFFFFFFFU, 0xFFFFFFFFU, 0, 1, NULL);
+    if (strip != NULL)
+    {
+        fprintf(stderr, "Expected overflow failure\n");
+        free(strip);
+        ret = 1;
+    }
+    if (strcmp(error_buffer, "Integer overflow in TIFFAssembleStripNEON") != 0 ||
+        strcmp(error_module, "TIFFAssembleStripNEON") != 0)
+    {
+        fprintf(stderr, "Unexpected error: %s (%s)\n", error_module,
+                error_buffer);
+        ret = 1;
+    }
+
     TIFFSetErrorHandlerExt(prev);
 
     return ret;
