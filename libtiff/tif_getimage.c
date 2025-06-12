@@ -28,6 +28,7 @@
  * Read and return a packed RGBA image.
  */
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #include <limits.h>
 #include <stdio.h>
 
@@ -702,6 +703,52 @@ static int setorientation(TIFFRGBAImage *img)
     }
 }
 
+static void flip_horizontal(uint32_t *raster, uint32_t w, uint32_t h)
+{
+#if TIFF_SIMD_NEON
+    for (uint32_t line = 0; line < h; line++)
+    {
+        uint32_t *left = raster + line * w;
+        uint32_t *right = left + w - 4;
+        while (left + 3 < right)
+        {
+            uint32x4_t l = vld1q_u32(left);
+            uint32x4_t r = vld1q_u32(right);
+            uint32x4_t lrev = vrev64q_u32(l);
+            lrev = vcombine_u32(vget_high_u32(lrev), vget_low_u32(lrev));
+            uint32x4_t rrev = vrev64q_u32(r);
+            rrev = vcombine_u32(vget_high_u32(rrev), vget_low_u32(rrev));
+            vst1q_u32(left, rrev);
+            vst1q_u32(right, lrev);
+            left += 4;
+            right -= 4;
+        }
+        while (left < right)
+        {
+            uint32_t tmp = *left;
+            *left = *right;
+            *right = tmp;
+            left++;
+            right--;
+        }
+    }
+#else
+    for (uint32_t line = 0; line < h; line++)
+    {
+        uint32_t *left = raster + (line * w);
+        uint32_t *right = left + w - 1;
+        while (left < right)
+        {
+            uint32_t temp = *left;
+            *left = *right;
+            *right = temp;
+            left++;
+            right--;
+        }
+    }
+#endif
+}
+
 /*
  * Get an tile-organized image that has
  *	PlanarConfiguration contiguous if SamplesPerPixel > 1
@@ -828,24 +875,7 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     _TIFFfreeExt(img->tif, buf);
 
     if (flip & FLIP_HORIZONTALLY)
-    {
-        uint32_t line;
-
-        for (line = 0; line < h; line++)
-        {
-            uint32_t *left = raster + (line * w);
-            uint32_t *right = left + w - 1;
-
-            while (left < right)
-            {
-                uint32_t temp = *left;
-                *left = *right;
-                *right = temp;
-                left++;
-                right--;
-            }
-        }
-    }
+        flip_horizontal(raster, w, h);
 
     return (ret);
 }
@@ -1044,24 +1074,7 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
 
     if (flip & FLIP_HORIZONTALLY)
-    {
-        uint32_t line;
-
-        for (line = 0; line < h; line++)
-        {
-            uint32_t *left = raster + (line * w);
-            uint32_t *right = left + w - 1;
-
-            while (left < right)
-            {
-                uint32_t temp = *left;
-                *left = *right;
-                *right = temp;
-                left++;
-                right--;
-            }
-        }
-    }
+        flip_horizontal(raster, w, h);
 
     _TIFFfreeExt(img->tif, buf);
     return (ret);
@@ -1160,24 +1173,7 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
 
     if (flip & FLIP_HORIZONTALLY)
-    {
-        uint32_t line;
-
-        for (line = 0; line < h; line++)
-        {
-            uint32_t *left = raster + (line * w);
-            uint32_t *right = left + w - 1;
-
-            while (left < right)
-            {
-                uint32_t temp = *left;
-                *left = *right;
-                *right = temp;
-                left++;
-                right--;
-            }
-        }
-    }
+        flip_horizontal(raster, w, h);
 
     _TIFFfreeExt(img->tif, buf);
     return (ret);
@@ -1335,24 +1331,7 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
 
     if (flip & FLIP_HORIZONTALLY)
-    {
-        uint32_t line;
-
-        for (line = 0; line < h; line++)
-        {
-            uint32_t *left = raster + (line * w);
-            uint32_t *right = left + w - 1;
-
-            while (left < right)
-            {
-                uint32_t temp = *left;
-                *left = *right;
-                *right = temp;
-                left++;
-                right--;
-            }
-        }
-    }
+        flip_horizontal(raster, w, h);
 
     _TIFFfreeExt(img->tif, buf);
     return (ret);
@@ -1602,6 +1581,103 @@ DECLAREContigPutFunc(putagreytile)
         pp += fromskew;
     }
 }
+
+#if TIFF_SIMD_NEON
+static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
+                             uint32_t y, uint32_t w, uint32_t h,
+                             int32_t fromskew, int32_t toskew, unsigned char *pp)
+{
+    int samplesperpixel = img->samplesperpixel;
+    int invert = (img->photometric == PHOTOMETRIC_MINISWHITE);
+    (void)x;
+    (void)y;
+    if (samplesperpixel != 1)
+    {
+        putgreytile(img, cp, x, y, w, h, fromskew, toskew, pp);
+        return;
+    }
+    uint8x16_t maxv = vdupq_n_u8(255);
+    for (; h > 0; --h)
+    {
+        uint32_t ww = w;
+        while (ww >= 16)
+        {
+            uint8x16_t g = vld1q_u8(pp);
+            if (invert)
+                g = vsubq_u8(maxv, g);
+            uint8x16x4_t outv;
+            outv.val[0] = g;
+            outv.val[1] = g;
+            outv.val[2] = g;
+            outv.val[3] = maxv;
+            vst4q_u8((uint8_t *)cp, outv);
+            pp += 16;
+            cp += 16;
+            ww -= 16;
+        }
+        for (; ww > 0; --ww)
+        {
+            uint8_t v = *pp++;
+            if (invert)
+                v = (uint8_t)(255 - v);
+            *cp++ = ((uint32_t)v) | ((uint32_t)v << 8) | ((uint32_t)v << 16) |
+                     A1;
+        }
+        cp += toskew;
+        pp += fromskew;
+    }
+}
+
+static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
+                              uint32_t y, uint32_t w, uint32_t h,
+                              int32_t fromskew, int32_t toskew,
+                              unsigned char *pp)
+{
+    int samplesperpixel = img->samplesperpixel;
+    int invert = (img->photometric == PHOTOMETRIC_MINISWHITE);
+    (void)x;
+    (void)y;
+    if (samplesperpixel != 2)
+    {
+        putagreytile(img, cp, x, y, w, h, fromskew, toskew, pp);
+        return;
+    }
+    uint8x16_t maxv = vdupq_n_u8(255);
+    for (; h > 0; --h)
+    {
+        uint32_t ww = w;
+        while (ww >= 16)
+        {
+            uint8x16x2_t src = vld2q_u8(pp);
+            uint8x16_t g = src.val[0];
+            uint8x16_t a = src.val[1];
+            if (invert)
+                g = vsubq_u8(maxv, g);
+            uint8x16x4_t outv;
+            outv.val[0] = g;
+            outv.val[1] = g;
+            outv.val[2] = g;
+            outv.val[3] = a;
+            vst4q_u8((uint8_t *)cp, outv);
+            pp += 32;
+            cp += 16;
+            ww -= 16;
+        }
+        for (; ww > 0; --ww)
+        {
+            uint8_t g = pp[0];
+            uint8_t a = pp[1];
+            pp += 2;
+            if (invert)
+                g = (uint8_t)(255 - g);
+            *cp++ = ((uint32_t)g) | ((uint32_t)g << 8) | ((uint32_t)g << 16) |
+                     ((uint32_t)a << 24);
+        }
+        cp += toskew;
+        pp += fromskew;
+    }
+}
+#endif
 
 /*
  * 16-bit greyscale => colormap/RGB
@@ -3029,10 +3105,17 @@ static int PickContigCase(TIFFRGBAImage *img)
                         img->put.contig = put16bitbwtile;
                         break;
                     case 8:
+#if TIFF_SIMD_NEON
+                        if (img->alpha && img->samplesperpixel == 2)
+                            img->put.contig = putagreytile_neon;
+                        else
+                            img->put.contig = putgreytile_neon;
+#else
                         if (img->alpha && img->samplesperpixel == 2)
                             img->put.contig = putagreytile;
                         else
                             img->put.contig = putgreytile;
+#endif
                         break;
                     case 4:
                         img->put.contig = put4bitbwtile;
