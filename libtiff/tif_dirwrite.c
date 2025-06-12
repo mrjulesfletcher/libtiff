@@ -491,6 +491,8 @@ static int TIFFWriteDirectorySec(TIFF *tif, int isimage, int imagedone,
     static const char module[] = "TIFFWriteDirectorySec";
     uint32_t ndir;
     TIFFDirEntry *dir;
+    TIFFDirEntry dir_local[16];
+    int dir_is_local = 0;
     uint32_t dirsize;
     void *dirmem;
     uint32_t m;
@@ -1127,11 +1129,20 @@ static int TIFFWriteDirectorySec(TIFF *tif, int isimage, int imagedone,
             tif->tif_dir.td_dirdatasize_write += 8 + ndir * 20 + 8;
 
         /* Setup a new directory within first pass. */
-        dir = _TIFFmallocExt(tif, ndir * sizeof(TIFFDirEntry));
-        if (dir == NULL)
+        if (ndir <= 16)
         {
-            TIFFErrorExtR(tif, module, "Out of memory");
-            goto bad;
+            dir = dir_local;
+            dir_is_local = 1;
+        }
+        else
+        {
+            dir = _TIFFmallocExt(tif, ndir * sizeof(TIFFDirEntry));
+            if (dir == NULL)
+            {
+                TIFFErrorExtR(tif, module, "Out of memory");
+                goto bad;
+            }
+            dir_is_local = 0;
         }
         if (isimage)
         {
@@ -1151,7 +1162,7 @@ static int TIFFWriteDirectorySec(TIFF *tif, int isimage, int imagedone,
             else if (tif->tif_dir.td_dirdatasize_write >
                      tif->tif_dir.td_dirdatasize_read)
             {
-                if (dir != NULL)
+                if (dir != NULL && !dir_is_local)
                 {
                     _TIFFfreeExt(tif, dir);
                     dir = NULL;
@@ -1301,7 +1312,8 @@ static int TIFFWriteDirectorySec(TIFF *tif, int isimage, int imagedone,
         if (tif->tif_flags & TIFF_SWAB)
             TIFFSwabLong8((uint64_t *)n);
     }
-    _TIFFfreeExt(tif, dir);
+    if (!dir_is_local)
+        _TIFFfreeExt(tif, dir);
     dir = NULL;
     if (!SeekOK(tif, tif->tif_diroff))
     {
@@ -1393,7 +1405,7 @@ static int TIFFWriteDirectorySec(TIFF *tif, int isimage, int imagedone,
     }
     return (1);
 bad:
-    if (dir != NULL)
+    if (dir != NULL && !dir_is_local)
         _TIFFfreeExt(tif, dir);
     if (dirmem != NULL)
         _TIFFfreeExt(tif, dirmem);
