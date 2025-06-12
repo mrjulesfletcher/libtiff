@@ -12,7 +12,7 @@ typedef struct _TPTask
     struct _TPTask *next;
 } TPTask;
 
-typedef struct
+typedef struct TIFFThreadPool
 {
     int workers;
     pthread_t *threads;
@@ -60,11 +60,25 @@ TIFFThreadPool *_TIFFThreadPoolInit(int workers)
 {
     if (workers <= 0)
         workers = 1;
+    static const char module[] = "_TIFFThreadPoolInit";
     TIFFThreadPool *pool = (TIFFThreadPool *)calloc(1, sizeof(TIFFThreadPool));
     if (!pool)
         return NULL;
-    pthread_mutex_init(&pool->mutex, NULL);
-    pthread_cond_init(&pool->cond, NULL);
+    int err = pthread_mutex_init(&pool->mutex, NULL);
+    if (err != 0)
+    {
+        TIFFErrorExtR(NULL, module, "pthread_mutex_init failed: %d", err);
+        free(pool);
+        return NULL;
+    }
+    err = pthread_cond_init(&pool->cond, NULL);
+    if (err != 0)
+    {
+        TIFFErrorExtR(NULL, module, "pthread_cond_init failed: %d", err);
+        pthread_mutex_destroy(&pool->mutex);
+        free(pool);
+        return NULL;
+    }
     pool->workers = workers;
     pool->threads = (pthread_t *)calloc(workers, sizeof(pthread_t));
     if (!pool->threads)
