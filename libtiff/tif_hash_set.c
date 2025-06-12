@@ -30,11 +30,15 @@
 
 #include "tif_hash_set.h"
 
+#ifdef TIFF_DO_NOT_USE_NON_EXT_ALLOC_FUNCTIONS
+#undef TIFF_DO_NOT_USE_NON_EXT_ALLOC_FUNCTIONS
+#endif
+
+#include "tiffio.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>
-#include <stdlib.h>
 
 /** List element structure. */
 typedef struct _TIFFList TIFFList;
@@ -139,17 +143,17 @@ TIFFHashSet *TIFFHashSetNew(TIFFHashSetHashFunc fnHashFunc,
                             TIFFHashSetEqualFunc fnEqualFunc,
                             TIFFHashSetFreeEltFunc fnFreeEltFunc)
 {
-    TIFFHashSet *set = (TIFFHashSet *)malloc(sizeof(TIFFHashSet));
+    TIFFHashSet *set = (TIFFHashSet *)_TIFFmalloc(sizeof(TIFFHashSet));
     if (set == NULL)
         return NULL;
     set->fnHashFunc = fnHashFunc ? fnHashFunc : TIFFHashSetHashPointer;
     set->fnEqualFunc = fnEqualFunc ? fnEqualFunc : TIFFHashSetEqualPointer;
     set->fnFreeEltFunc = fnFreeEltFunc;
     set->nSize = 0;
-    set->tabList = (TIFFList **)(calloc(53, sizeof(TIFFList *)));
+    set->tabList = (TIFFList **)(_TIFFcalloc(53, sizeof(TIFFList *)));
     if (set->tabList == NULL)
     {
-        free(set);
+        _TIFFfree(set);
         return NULL;
     }
     set->nIndiceAllocatedSize = 0;
@@ -198,7 +202,7 @@ static TIFFList *TIFFHashSetGetNewListElt(TIFFHashSet *set)
         return psRet;
     }
 
-    return (TIFFList *)malloc(sizeof(TIFFList));
+    return (TIFFList *)_TIFFmalloc(sizeof(TIFFList));
 }
 
 /************************************************************************/
@@ -215,7 +219,7 @@ static void TIFFHashSetReturnListElt(TIFFHashSet *set, TIFFList *psList)
     }
     else
     {
-        free(psList);
+        _TIFFfree(psList);
     }
 }
 
@@ -235,7 +239,7 @@ static void TIFFHashSetClearInternal(TIFFHashSet *set, bool bFinalize)
                 set->fnFreeEltFunc(cur->pData);
             TIFFList *psNext = cur->psNext;
             if (bFinalize)
-                free(cur);
+                _TIFFfree(cur);
             else
                 TIFFHashSetReturnListElt(set, cur);
             cur = psNext;
@@ -264,7 +268,7 @@ static void TIFFListDestroy(TIFFList *psList)
     while (psCurrent)
     {
         TIFFList *const psNext = psCurrent->psNext;
-        free(psCurrent);
+        _TIFFfree(psCurrent);
         psCurrent = psNext;
     }
 }
@@ -287,9 +291,9 @@ void TIFFHashSetDestroy(TIFFHashSet *set)
     if (set)
     {
         TIFFHashSetClearInternal(set, true);
-        free(set->tabList);
+        _TIFFfree(set->tabList);
         TIFFListDestroy(set->psRecyclingList);
-        free(set);
+        _TIFFfree(set);
     }
 }
 
@@ -367,7 +371,7 @@ static bool TIFFHashSetRehash(TIFFHashSet *set)
 {
     int nNewAllocatedSize = anPrimes[set->nIndiceAllocatedSize];
     TIFFList **newTabList =
-        (TIFFList **)(calloc(nNewAllocatedSize, sizeof(TIFFList *)));
+        (TIFFList **)(_TIFFcalloc(nNewAllocatedSize, sizeof(TIFFList *)));
     if (newTabList == NULL)
         return false;
 #ifdef HASH_DEBUG
@@ -395,7 +399,7 @@ static bool TIFFHashSetRehash(TIFFHashSet *set)
             cur = psNext;
         }
     }
-    free(set->tabList);
+    _TIFFfree(set->tabList);
     set->tabList = newTabList;
     set->nAllocatedSize = nNewAllocatedSize;
     set->bRehash = false;
