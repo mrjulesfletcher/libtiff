@@ -29,58 +29,58 @@
  */
 #include "tiffiop.h"
 
-static int NotConfigured(TIFF *, int);
+static int tiff_not_configured(TIFF *, int);
 
 #ifndef LZW_SUPPORT
-#define TIFFInitLZW NotConfigured
+#define TIFFInitLZW tiff_not_configured
 #endif
 #ifndef PACKBITS_SUPPORT
-#define TIFFInitPackBits NotConfigured
+#define TIFFInitPackBits tiff_not_configured
 #endif
 #ifndef THUNDER_SUPPORT
-#define TIFFInitThunderScan NotConfigured
+#define TIFFInitThunderScan tiff_not_configured
 #endif
 #ifndef NEXT_SUPPORT
-#define TIFFInitNeXT NotConfigured
+#define TIFFInitNeXT tiff_not_configured
 #endif
 #ifndef JPEG_SUPPORT
-#define TIFFInitJPEG NotConfigured
+#define TIFFInitJPEG tiff_not_configured
 #endif
 #ifndef OJPEG_SUPPORT
-#define TIFFInitOJPEG NotConfigured
+#define TIFFInitOJPEG tiff_not_configured
 #endif
 #ifndef CCITT_SUPPORT
-#define TIFFInitCCITTRLE NotConfigured
-#define TIFFInitCCITTRLEW NotConfigured
-#define TIFFInitCCITTFax3 NotConfigured
-#define TIFFInitCCITTFax4 NotConfigured
+#define TIFFInitCCITTRLE tiff_not_configured
+#define TIFFInitCCITTRLEW tiff_not_configured
+#define TIFFInitCCITTFax3 tiff_not_configured
+#define TIFFInitCCITTFax4 tiff_not_configured
 #endif
 #ifndef JBIG_SUPPORT
-#define TIFFInitJBIG NotConfigured
+#define TIFFInitJBIG tiff_not_configured
 #endif
 #ifndef ZIP_SUPPORT
-#define TIFFInitZIP NotConfigured
+#define TIFFInitZIP tiff_not_configured
 #endif
 #ifndef PIXARLOG_SUPPORT
-#define TIFFInitPixarLog NotConfigured
+#define TIFFInitPixarLog tiff_not_configured
 #endif
 #ifndef LOGLUV_SUPPORT
-#define TIFFInitSGILog NotConfigured
+#define TIFFInitSGILog tiff_not_configured
 #endif
 #ifndef LERC_SUPPORT
-#define TIFFInitLERC NotConfigured
+#define TIFFInitLERC tiff_not_configured
 #endif
 #ifndef LZMA_SUPPORT
-#define TIFFInitLZMA NotConfigured
+#define TIFFInitLZMA tiff_not_configured
 #endif
 #ifndef ZSTD_SUPPORT
-#define TIFFInitZSTD NotConfigured
+#define TIFFInitZSTD tiff_not_configured
 #endif
 #ifndef JPEGLS_SUPPORT
-#define TIFFInitJPEGLS NotConfigured
+#define TIFFInitJPEGLS tiff_not_configured
 #endif
 #ifndef WEBP_SUPPORT
-#define TIFFInitWebP NotConfigured
+#define TIFFInitWebP tiff_not_configured
 #endif
 
 /*
@@ -111,7 +111,7 @@ const TIFFCodec _TIFFBuiltinCODECS[] = {
     {"LERC", COMPRESSION_LERC, TIFFInitLERC},
     {NULL, 0, NULL}};
 
-static int _notConfigured(TIFF *tif)
+static int tiff_not_configured_error(TIFF *tif)
 {
     const TIFFCodec *c = TIFFFindCODEC(tif->tif_dir.td_compression);
     char compression_code[20];
@@ -124,15 +124,15 @@ static int _notConfigured(TIFF *tif)
     return (0);
 }
 
-static int NotConfigured(TIFF *tif, int scheme)
+static int tiff_not_configured(TIFF *tif, int scheme)
 {
     (void)scheme;
 
-    tif->tif_fixuptags = _notConfigured;
+    tif->tif_fixuptags = tiff_not_configured_error;
     tif->tif_decodestatus = FALSE;
-    tif->tif_setupdecode = _notConfigured;
+    tif->tif_setupdecode = tiff_not_configured_error;
     tif->tif_encodestatus = FALSE;
-    tif->tif_setupencode = _notConfigured;
+    tif->tif_setupencode = tiff_not_configured_error;
     return (1);
 }
 
@@ -159,7 +159,7 @@ int TIFFIsCODECConfigured(uint16_t scheme)
     {
         return 0;
     }
-    if (codec->init != NotConfigured)
+    if (codec->init != tiff_not_configured)
     {
         return 1;
     }

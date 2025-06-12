@@ -43,6 +43,7 @@
 #endif
 
 #include "tiffio.h"
+#include "tiffutil.h"
 
 #ifndef EXIT_SUCCESS
 #define EXIT_SUCCESS 0
@@ -60,10 +61,10 @@ static int quality = 75; /* JPEG quality */
 static int jpegcolormode = JPEGCOLORMODE_RGB;
 static uint32_t g3opts;
 
-static void usage(int code);
-static int processCompressOptions(char *);
+static void tiff_usage(int code);
+static int tiff_process_compress_options(char *);
 
-static void pack_none(unsigned char *buf, unsigned int smpls, uint16_t bps)
+static void tiff_pack_none(unsigned char *buf, unsigned int smpls, uint16_t bps)
 {
     (void)buf;
     (void)smpls;
@@ -71,7 +72,7 @@ static void pack_none(unsigned char *buf, unsigned int smpls, uint16_t bps)
     return;
 }
 
-static void pack_swab(unsigned char *buf, unsigned int smpls, uint16_t bps)
+static void tiff_pack_swab(unsigned char *buf, unsigned int smpls, uint16_t bps)
 {
     unsigned int s;
     unsigned char h;
@@ -90,7 +91,8 @@ static void pack_swab(unsigned char *buf, unsigned int smpls, uint16_t bps)
     return;
 }
 
-static void pack_bytes(unsigned char *buf, unsigned int smpls, uint16_t bps)
+static void tiff_pack_bytes(unsigned char *buf, unsigned int smpls,
+                            uint16_t bps)
 {
     unsigned int s;
     unsigned int in;
@@ -121,7 +123,8 @@ static void pack_bytes(unsigned char *buf, unsigned int smpls, uint16_t bps)
         buf[out] = (t << (8 - bits)) & 0xFF;
 }
 
-static void pack_words(unsigned char *buf, unsigned int smpls, uint16_t bps)
+static void tiff_pack_words(unsigned char *buf, unsigned int smpls,
+                            uint16_t bps)
 {
     unsigned int s;
     unsigned int in;
@@ -160,13 +163,13 @@ static void pack_words(unsigned char *buf, unsigned int smpls, uint16_t bps)
     }
 }
 
-static void BadPPM(char *file)
+static void tiff_bad_ppm(char *file)
 {
-    fprintf(stderr, "%s: Not a PPM file.\n", file);
+    TIFF_TOOL_ERROR(file, "Not a PPM file.");
     exit(EXIT_FAILURE);
 }
 
-static tmsize_t multiply_ms(tmsize_t m1, tmsize_t m2)
+static tmsize_t tiff_multiply_ms(tmsize_t m1, tmsize_t m2)
 {
     if (m1 == 0 || m2 > TIFF_TMSIZE_T_MAX / m1)
         return 0;
@@ -197,15 +200,15 @@ int main(int argc, char *argv[])
 
     if (argc < 2)
     {
-        fprintf(stderr, "%s: Too few arguments\n", argv[0]);
-        usage(EXIT_FAILURE);
+        TIFF_TOOL_ERROR(argv[0], "Too few arguments");
+        tiff_usage(EXIT_FAILURE);
     }
     while ((c = getopt(argc, argv, "c:r:R:h")) != -1)
         switch (c)
         {
             case 'c': /* compression scheme */
-                if (!processCompressOptions(optarg))
-                    usage(EXIT_FAILURE);
+                if (!tiff_process_compress_options(optarg))
+                    tiff_usage(EXIT_FAILURE);
                 break;
             case 'r': /* rows/strip */
                 rowsperstrip = atoi(optarg);
@@ -214,17 +217,17 @@ int main(int argc, char *argv[])
                 resolution = atof(optarg);
                 break;
             case 'h':
-                usage(EXIT_SUCCESS);
+                tiff_usage(EXIT_SUCCESS);
                 break;
             case '?':
-                usage(EXIT_FAILURE);
+                tiff_usage(EXIT_FAILURE);
                 /*NOTREACHED*/
         }
 
     if (optind + 2 < argc)
     {
-        fprintf(stderr, "%s: Too many arguments\n", argv[0]);
-        usage(EXIT_FAILURE);
+        TIFF_TOOL_ERROR(argv[0], "Too many arguments");
+        tiff_usage(EXIT_FAILURE);
     }
 
     /*
@@ -237,7 +240,7 @@ int main(int argc, char *argv[])
         in = fopen(infile, "rb");
         if (in == NULL)
         {
-            fprintf(stderr, "%s: Can not open.\n", infile);
+            TIFF_TOOL_ERROR(infile, "Can not open.");
             return (EXIT_FAILURE);
         }
     }
@@ -251,7 +254,7 @@ int main(int argc, char *argv[])
     }
 
     if (fgetc(in) != 'P')
-        BadPPM(infile);
+        tiff_bad_ppm(infile);
     switch (fgetc(in))
     {
         case '4': /* it's a PBM file */
@@ -273,14 +276,14 @@ int main(int argc, char *argv[])
                 photometric = PHOTOMETRIC_YCBCR;
             break;
         default:
-            BadPPM(infile);
+            tiff_bad_ppm(infile);
     }
 
     /* Parse header */
     while (1)
     {
         if (feof(in))
-            BadPPM(infile);
+            tiff_bad_ppm(infile);
         c = fgetc(in);
         /* Skip whitespaces (blanks, TABs, CRs, LFs) */
         if (strchr(" \t\r\n", c))
@@ -302,22 +305,22 @@ int main(int argc, char *argv[])
     if (pbm)
     {
         if (fscanf(in, " %u %u", &w, &h) != 2)
-            BadPPM(infile);
+            tiff_bad_ppm(infile);
         if (fgetc(in) != '\n')
-            BadPPM(infile);
+            tiff_bad_ppm(infile);
         bpp = 1;
-        pack_func = pack_none;
+        pack_func = tiff_pack_none;
     }
     else
     {
         if (fscanf(in, " %u %u %u", &w, &h, &prec) != 3)
-            BadPPM(infile);
+            tiff_bad_ppm(infile);
         if (fgetc(in) != '\n' || 0 == prec || 65535 < prec)
-            BadPPM(infile);
+            tiff_bad_ppm(infile);
 
         if (0 != (prec & (prec + 1)))
         {
-            fprintf(stderr, "%s: unsupported maxval %u.\n", infile, prec);
+            TIFF_TOOL_ERROR(infile, "unsupported maxval %u.", prec);
             exit(EXIT_FAILURE);
         }
         bpp = 0;
@@ -335,23 +338,23 @@ int main(int argc, char *argv[])
         switch (bpp)
         {
             case 8:
-                pack_func = pack_none;
+                pack_func = tiff_pack_none;
                 break;
             case 16:
             {
                 const unsigned short i = 0x0100;
 
                 if (0 == *(unsigned char *)&i)
-                    pack_func = pack_swab;
+                    pack_func = tiff_pack_swab;
                 else
-                    pack_func = pack_none;
+                    pack_func = tiff_pack_none;
             }
             break;
             default:
                 if (8 >= bpp)
-                    pack_func = pack_bytes;
+                    pack_func = tiff_pack_bytes;
                 else
-                    pack_func = pack_words;
+                    pack_func = tiff_pack_words;
                 break;
         }
     }
@@ -385,15 +388,15 @@ int main(int argc, char *argv[])
     if (pbm)
     {
         /* if round-up overflows, result will be zero, OK */
-        linebytes = (multiply_ms(spp, w) + (8 - 1)) / 8;
+        linebytes = (tiff_multiply_ms(spp, w) + (8 - 1)) / 8;
     }
     else if (bpp <= 8)
     {
-        linebytes = multiply_ms(spp, w);
+        linebytes = tiff_multiply_ms(spp, w);
     }
     else
     {
-        linebytes = multiply_ms(2 * spp, w);
+        linebytes = tiff_multiply_ms(2 * spp, w);
     }
     if (rowsperstrip == (uint32_t)-1)
     {
@@ -406,7 +409,7 @@ int main(int argc, char *argv[])
     }
     if (linebytes == 0)
     {
-        fprintf(stderr, "%s: scanline size overflow\n", infile);
+        TIFF_TOOL_ERROR(infile, "scanline size overflow");
         (void)TIFFClose(out);
         exit(EXIT_FAILURE);
     }
@@ -423,7 +426,7 @@ int main(int argc, char *argv[])
         buf = (unsigned char *)_TIFFmalloc(scanline_size);
     if (buf == NULL)
     {
-        fprintf(stderr, "%s: Not enough memory\n", infile);
+        TIFF_TOOL_ERROR(infile, "Not enough memory");
         (void)TIFFClose(out);
         exit(EXIT_FAILURE);
     }
@@ -437,7 +440,7 @@ int main(int argc, char *argv[])
     {
         if (fread(buf, linebytes, 1, in) != 1)
         {
-            fprintf(stderr, "%s: scanline %u: Read error.\n", infile, row);
+            TIFF_TOOL_ERROR(infile, "scanline %u: Read error.", row);
             break;
         }
         pack_func(buf, w * spp, bpp);
@@ -452,7 +455,7 @@ int main(int argc, char *argv[])
     return (EXIT_SUCCESS);
 }
 
-static void processG3Options(char *cp)
+static void tiff_process_g3_options(char *cp)
 {
     g3opts = 0;
     if ((cp = strchr(cp, ':')))
@@ -467,12 +470,12 @@ static void processG3Options(char *cp)
             else if (strneq(cp, "fill", 4))
                 g3opts |= GROUP3OPT_FILLBITS;
             else
-                usage(EXIT_FAILURE);
+                tiff_usage(EXIT_FAILURE);
         } while ((cp = strchr(cp, ':')));
     }
 }
 
-static int processCompressOptions(char *opt)
+static int tiff_process_compress_options(char *opt)
 {
     if (streq(opt, "none"))
         compression = COMPRESSION_NONE;
@@ -490,14 +493,14 @@ static int processCompressOptions(char *opt)
             else if (cp[1] == 'r')
                 jpegcolormode = JPEGCOLORMODE_RAW;
             else
-                usage(EXIT_FAILURE);
+                tiff_usage(EXIT_FAILURE);
 
             cp = strchr(cp + 1, ':');
         }
     }
     else if (strneq(opt, "g3", 2))
     {
-        processG3Options(opt);
+        tiff_process_g3_options(opt);
         compression = COMPRESSION_CCITTFAX3;
     }
     else if (streq(opt, "g4"))
@@ -561,7 +564,7 @@ static const char usage_info[] =
 #endif
     ;
 
-static void usage(int code)
+static void tiff_usage(int code)
 {
     FILE *out = (code == EXIT_SUCCESS) ? stdout : stderr;
 

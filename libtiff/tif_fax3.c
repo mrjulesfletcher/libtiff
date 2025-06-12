@@ -1637,7 +1637,7 @@ static int Fax4Decode(TIFF *tif, uint8_t *buf, tmsize_t occ, uint16_t s)
     BADG4:
 #ifdef FAX3_DEBUG
         if (GetBits(13) != 0x1001)
-            fputs("Bad EOFB\n", stderr);
+            TIFFErrorExtR(tif, module, "Bad EOFB");
 #endif
         ClrBits(13);
         if (((lastx + 7) >> 3) > (int)occ) /* check for buffer overrun */

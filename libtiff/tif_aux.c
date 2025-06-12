@@ -125,7 +125,7 @@ void *_TIFFCheckMalloc(TIFF *tif, tmsize_t nmemb, tmsize_t elem_size,
     return _TIFFCheckRealloc(tif, NULL, nmemb, elem_size, what);
 }
 
-static int TIFFDefaultTransferFunction(TIFF *tif, TIFFDirectory *td)
+static int tiff_default_transfer_function(TIFF *tif, TIFFDirectory *td)
 {
     uint16_t **tf = td->td_transferfunction;
     tmsize_t i, n, nbytes;
@@ -173,7 +173,7 @@ bad:
     return 0;
 }
 
-static int TIFFDefaultRefBlackWhite(TIFF *tif, TIFFDirectory *td)
+static int tiff_default_ref_black_white(TIFF *tif, TIFFDirectory *td)
 {
     int i;
 
@@ -351,7 +351,7 @@ int TIFFVGetFieldDefaulted(TIFF *tif, uint32_t tag, va_list ap)
         }
         case TIFFTAG_TRANSFERFUNCTION:
             if (!td->td_transferfunction[0] &&
-                !TIFFDefaultTransferFunction(tif, td))
+                !tiff_default_transfer_function(tif, td))
             {
                 TIFFErrorExtR(tif, tif->tif_name,
                               "No space for \"TransferFunction\" tag");
@@ -365,7 +365,7 @@ int TIFFVGetFieldDefaulted(TIFF *tif, uint32_t tag, va_list ap)
             }
             return (1);
         case TIFFTAG_REFERENCEBLACKWHITE:
-            if (!td->td_refblackwhite && !TIFFDefaultRefBlackWhite(tif, td))
+            if (!td->td_refblackwhite && !tiff_default_ref_black_white(tif, td))
                 return (0);
             *va_arg(ap, const float **) = td->td_refblackwhite;
             return (1);
