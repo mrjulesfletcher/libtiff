@@ -228,6 +228,17 @@ ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
 `TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`. `TIFFSwabArrayOfLong8` is
 around 3× faster than the scalar implementation on the same device.
 
+On a Raspberry Pi 5 you can enable the thread pool and io_uring backends and run
+additional benchmarks:
+
+```bash
+$ cmake -Dthreadpool=ON -Dio-uring=ON -DCMAKE_BUILD_TYPE=Release ..
+$ cmake --build . -j$(nproc)
+
+$ ./test/predictor_threadpool_benchmark 4 50
+$ ./test/pack_uring_benchmark
+```
+
 ## Testing and Validation
 Configure with testing enabled and run the full suite:
 ```bash
