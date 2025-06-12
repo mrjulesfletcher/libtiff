@@ -298,6 +298,11 @@ target_sources(threadpool_alloc_fail PRIVATE threadpool_alloc_fail.c)
 target_link_libraries(threadpool_alloc_fail PRIVATE tiff tiff_port failalloc)
 list(APPEND simple_tests threadpool_alloc_fail)
 
+add_executable(grow_strips_alloc_fail ../placeholder.h)
+target_sources(grow_strips_alloc_fail PRIVATE grow_strips_alloc_fail.c)
+target_link_libraries(grow_strips_alloc_fail PRIVATE tiff tiff_port failalloc)
+list(APPEND simple_tests grow_strips_alloc_fail)
+
 if(WEBP_SUPPORT AND EMSCRIPTEN)
   # Emscripten is pretty finnicky about linker flags.
   # It needs --shared-memory if and only if atomics or bulk-memory is used.

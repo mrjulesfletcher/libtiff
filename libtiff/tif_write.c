@@ -102,8 +102,14 @@ int TIFFWriteScanline(TIFF *tif, void *buf, uint32_t row, uint16_t sample)
      * the imagelength be set properly before the first write (so that the
      * strips array will be fully allocated above).
      */
-    if (strip >= td->td_nstrips && !TIFFGrowStrips(tif, 1, module))
-        return (-1);
+    if (strip >= td->td_nstrips)
+    {
+        uint32_t grow = 1;
+        if (td->td_stripoffsetbyteallocsize <= td->td_nstrips)
+            grow = TIFFmax(1U, td->td_nstrips / 2);
+        if (!TIFFGrowStrips(tif, grow, module))
+            return (-1);
+    }
     if (strip != tif->tif_curstrip)
     {
         /*
@@ -239,7 +245,10 @@ tmsize_t TIFFWriteEncodedStrip(TIFF *tif, uint32_t strip, void *data,
                 "Can not grow image by strips when using separate planes");
             return ((tmsize_t)-1);
         }
-        if (!TIFFGrowStrips(tif, 1, module))
+        uint32_t grow = 1;
+        if (td->td_stripoffsetbyteallocsize <= td->td_nstrips)
+            grow = TIFFmax(1U, td->td_nstrips / 2);
+        if (!TIFFGrowStrips(tif, grow, module))
             return ((tmsize_t)-1);
         td->td_stripsperimage =
             TIFFhowmany_32(td->td_imagelength, td->td_rowsperstrip);
@@ -590,6 +599,7 @@ int TIFFSetupStrips(TIFF *tif)
      */
     _TIFFmemset(td->td_stripoffset_p, 0, td->td_nstrips * sizeof(uint64_t));
     _TIFFmemset(td->td_stripbytecount_p, 0, td->td_nstrips * sizeof(uint64_t));
+    td->td_stripoffsetbyteallocsize = td->td_nstrips;
     TIFFSetFieldBit(tif, FIELD_STRIPOFFSETS);
     TIFFSetFieldBit(tif, FIELD_STRIPBYTECOUNTS);
     return (1);
@@ -729,25 +739,50 @@ static int TIFFGrowStrips(TIFF *tif, uint32_t delta, const char *module)
     TIFFDirectory *td = &tif->tif_dir;
     uint64_t *new_stripoffset;
     uint64_t *new_stripbytecount;
+    uint32_t alloc = td->td_stripoffsetbyteallocsize;
 
     assert(td->td_planarconfig == PLANARCONFIG_CONTIG);
-    new_stripoffset = (uint64_t *)_TIFFreallocExt(
-        tif, td->td_stripoffset_p, (td->td_nstrips + delta) * sizeof(uint64_t));
-    new_stripbytecount = (uint64_t *)_TIFFreallocExt(
-        tif, td->td_stripbytecount_p,
-        (td->td_nstrips + delta) * sizeof(uint64_t));
-    if (new_stripoffset == NULL || new_stripbytecount == NULL)
+
+    if (alloc == 0)
+        alloc = td->td_nstrips;
+
+    if (td->td_nstrips + delta > alloc)
     {
-        if (new_stripoffset)
-            _TIFFfreeExt(tif, new_stripoffset);
-        if (new_stripbytecount)
-            _TIFFfreeExt(tif, new_stripbytecount);
-        td->td_nstrips = 0;
-        TIFFErrorExtR(tif, module, "No space to expand strip arrays");
-        return (0);
+        uint32_t growth = delta;
+        if (delta == 1)
+            growth = TIFFmax(delta, td->td_nstrips / 2);
+
+        if (alloc > UINT32_MAX - growth)
+        {
+            TIFFErrorExtR(tif, module, "Too many strips");
+            return (0);
+        }
+        alloc += growth;
+
+        new_stripoffset = (uint64_t *)_TIFFreallocExt(
+            tif, td->td_stripoffset_p, (uint64_t)alloc * sizeof(uint64_t));
+        new_stripbytecount = (uint64_t *)_TIFFreallocExt(
+            tif, td->td_stripbytecount_p, (uint64_t)alloc * sizeof(uint64_t));
+        if (new_stripoffset == NULL || new_stripbytecount == NULL)
+        {
+            if (new_stripoffset)
+                _TIFFfreeExt(tif, new_stripoffset);
+            if (new_stripbytecount)
+                _TIFFfreeExt(tif, new_stripbytecount);
+            td->td_nstrips = 0;
+            td->td_stripoffsetbyteallocsize = 0;
+            TIFFErrorExtR(tif, module, "No space to expand strip arrays");
+            return (0);
+        }
+        td->td_stripoffset_p = new_stripoffset;
+        td->td_stripbytecount_p = new_stripbytecount;
+        _TIFFmemset(td->td_stripoffset_p + td->td_stripoffsetbyteallocsize, 0,
+                    (alloc - td->td_stripoffsetbyteallocsize) * sizeof(uint64_t));
+        _TIFFmemset(td->td_stripbytecount_p + td->td_stripoffsetbyteallocsize, 0,
+                    (alloc - td->td_stripoffsetbyteallocsize) * sizeof(uint64_t));
+        td->td_stripoffsetbyteallocsize = alloc;
     }
-    td->td_stripoffset_p = new_stripoffset;
-    td->td_stripbytecount_p = new_stripbytecount;
+
     _TIFFmemset(td->td_stripoffset_p + td->td_nstrips, 0,
                 delta * sizeof(uint64_t));
     _TIFFmemset(td->td_stripbytecount_p + td->td_nstrips, 0,
