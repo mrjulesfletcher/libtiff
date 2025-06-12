@@ -3671,6 +3671,7 @@ int _TIFFRewriteField(TIFF *tif, uint16_t tag, TIFFDataType in_datatype,
     else
     {
         TIFFErrorExtR(tif, module, "Unhandled type conversion.");
+        _TIFFfreeExt(tif, buf_to_write);
         return 0;
     }
 
