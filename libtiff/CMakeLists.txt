@@ -92,6 +92,7 @@ target_sources(tiff PRIVATE
         tif_strip.c
         tif_swab.c
         tif_strip_neon.c
+        tiff_simd.c
         tif_thunder.c
         tif_tile.c
         tif_version.c

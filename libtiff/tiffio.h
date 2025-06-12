@@ -254,7 +254,7 @@ struct _TIFFRGBAImage
  * Macros for extracting components from the
  * packed ABGR form returned by TIFFReadRGBAImage.
  */
-#define TIFFGetR(abgr) ((abgr)&0xff)
+#define TIFFGetR(abgr) ((abgr) & 0xff)
 #define TIFFGetG(abgr) (((abgr) >> 8) & 0xff)
 #define TIFFGetB(abgr) (((abgr) >> 16) & 0xff)
 #define TIFFGetA(abgr) (((abgr) >> 24) & 0xff)
@@ -569,6 +569,7 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     /* Thread pool management */
     extern void TIFFSetThreadCount(int);
     extern int TIFFGetThreadCount(void);
+    extern void TIFFInitSIMD(void);
     extern tmsize_t TIFFReadEncodedStrip(TIFF *tif, uint32_t strip, void *buf,
                                          tmsize_t size);
     extern tmsize_t TIFFReadRawStrip(TIFF *tif, uint32_t strip, void *buf,
