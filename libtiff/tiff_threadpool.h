@@ -7,9 +7,9 @@
 extern "C" {
 #endif
 
-void _TIFFThreadPoolInit(int workers);
+int _TIFFThreadPoolInit(int workers);
 void _TIFFThreadPoolShutdown(void);
-void _TIFFThreadPoolSubmit(void (*func)(void*), void* arg);
+int _TIFFThreadPoolSubmit(void (*func)(void*), void* arg);
 void _TIFFThreadPoolWait(void);
 
 #ifdef __cplusplus

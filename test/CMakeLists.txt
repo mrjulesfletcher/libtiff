@@ -285,6 +285,13 @@ set_target_properties(uring_thread_stress PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(uring_thread_stress PRIVATE tiff tiff_port)
 list(APPEND simple_tests uring_thread_stress)
 
+add_library(failalloc STATIC failalloc.c)
+
+add_executable(threadpool_alloc_fail ../placeholder.h)
+target_sources(threadpool_alloc_fail PRIVATE threadpool_alloc_fail.c)
+target_link_libraries(threadpool_alloc_fail PRIVATE tiff tiff_port failalloc)
+list(APPEND simple_tests threadpool_alloc_fail)
+
 if(WEBP_SUPPORT AND EMSCRIPTEN)
   # Emscripten is pretty finnicky about linker flags.
   # It needs --shared-memory if and only if atomics or bulk-memory is used.
