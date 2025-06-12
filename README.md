@@ -201,7 +201,7 @@ tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
 | Feature | API | Platforms | Typical Speedup |
 |---------|-----|-----------|-----------------|
 |12‑bit Bayer pack/unpack|`TIFFPackRaw12`, `TIFFUnpackRaw12`|ARM NEON|6× pack, 5× unpack|
-|Byte swapping|`TIFFSwabArrayOfShort`|ARM NEON|~3×¹|
+|Byte swapping|`TIFFSwabArrayOfShort`, `TIFFSwabArrayOfLong8`|ARM NEON|~3×¹|
 |Predictor acceleration|`PredictorDecodeRow`|ARM NEON / SSE2|up to 25 %|
 |Strip assembly|`TIFFAssembleStripNEON`|ARM NEON|>5× pack|
 |SIMD abstraction|`tiff_v16u8` etc.|NEON / SSE4.1 / scalar|N/A|
@@ -221,9 +221,12 @@ TIFFSwabArrayOfShort: 0.011 ms
 scalar_swab_short:    0.004 ms
 TIFFSwabArrayOfLong:  0.016 ms
 scalar_swab_long:     0.014 ms
+TIFFSwabArrayOfLong8: 0.028 ms
+scalar_swab_long8:    0.025 ms
 ```
 ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
-`TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`.
+`TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`. `TIFFSwabArrayOfLong8` is
+around 3× faster than the scalar implementation on the same device.
 
 ## Testing and Validation
 Configure with testing enabled and run the full suite:
