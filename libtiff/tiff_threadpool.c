@@ -57,7 +57,7 @@ static void *_tiffThreadProc(void *arg)
         pool->active++;
         pthread_mutex_unlock(&pool->mutex);
         task->func(task->arg);
-        free(task);
+        _TIFFfreeExt(NULL, task);
         pthread_mutex_lock(&pool->mutex);
         pool->active--;
         if (!pool->head && pool->active == 0)
@@ -126,16 +126,23 @@ void _TIFFThreadPoolShutdown(void)
 int _TIFFThreadPoolSubmit(void (*func)(void *), void *arg)
 {
     static const char module[] = "_TIFFThreadPoolSubmit";
-    TPTask *t = (TPTask *)malloc(sizeof(TPTask));
+    pthread_mutex_lock(&gPool.mutex);
+    if (gPool.threads == NULL || gPool.stop)
+    {
+        pthread_mutex_unlock(&gPool.mutex);
+        TIFFErrorExtR(NULL, module, "Thread pool not initialized");
+        return 0;
+    }
+    TPTask *t = (TPTask *)_TIFFmallocExt(NULL, sizeof(TPTask));
     if (!t)
     {
+        pthread_mutex_unlock(&gPool.mutex);
         TIFFErrorExtR(NULL, module, "Out of memory");
         return 0;
     }
     t->func = func;
     t->arg = arg;
     t->next = NULL;
-    pthread_mutex_lock(&gPool.mutex);
     if (gPool.tail)
         gPool.tail->next = t;
     else
