@@ -262,8 +262,8 @@ struct tiff
     tmsize_t tif_max_cumulated_mem_alloc; /* in bytes. 0 for unlimited */
     tmsize_t tif_cur_cumulated_mem_alloc; /* in bytes */
 #ifdef USE_IO_URING
-    struct io_uring *tif_uring; /* persistent io_uring handle */
-    int tif_uring_async;        /* async flush/wait semantics */
+    struct io_uring *tif_uring;   /* persistent io_uring handle */
+    int tif_uring_async;          /* async flush/wait semantics */
     unsigned int tif_uring_depth; /* queue depth. 0 for default */
 #endif
     int tif_warn_about_unknown_tags;
@@ -279,7 +279,7 @@ struct TIFFOpenOptions
     tmsize_t max_cumulated_mem_alloc;  /* in bytes. 0 for unlimited */
     int warn_about_unknown_tags;
 #ifdef USE_IO_URING
-    unsigned int uring_queue_depth;    /* 0 for default */
+    unsigned int uring_queue_depth; /* 0 for default */
 #endif
 };
 
@@ -563,6 +563,9 @@ extern "C"
     extern void _tiffUringFlush(TIFF *tif);
     extern void _tiffUringWait(TIFF *tif);
 #endif
+
+    extern int _TIFFCopyFileRange(TIFF *tif, uint64_t offsetRead,
+                                  uint64_t offsetWrite, uint64_t toCopy);
 
 #if defined(__cplusplus)
 }
