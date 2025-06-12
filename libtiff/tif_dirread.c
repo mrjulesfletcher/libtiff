@@ -5766,6 +5766,7 @@ int _TIFFCheckDirNumberAndOffset(TIFF *tif, tdir_t dirn, uint64_t diroff)
                 TIFFErrorExtR(
                     tif, "_TIFFCheckDirNumberAndOffset",
                     "Insertion in tif_map_dir_offset_to_number failed");
+                _TIFFfree(entryPtr);
                 return 0;
             }
             if (!TIFFHashSetInsert(tif->tif_map_dir_number_to_offset, entryPtr))
@@ -5773,6 +5774,7 @@ int _TIFFCheckDirNumberAndOffset(TIFF *tif, tdir_t dirn, uint64_t diroff)
                 TIFFErrorExtR(
                     tif, "_TIFFCheckDirNumberAndOffset",
                     "Insertion in tif_map_dir_number_to_offset failed");
+                _TIFFfree(entryPtr);
                 return 0;
             }
         }
@@ -5805,12 +5807,14 @@ int _TIFFCheckDirNumberAndOffset(TIFF *tif, tdir_t dirn, uint64_t diroff)
     {
         TIFFErrorExtR(tif, "_TIFFCheckDirNumberAndOffset",
                       "Insertion in tif_map_dir_offset_to_number failed");
+        _TIFFfree(entryPtr);
         return 0;
     }
     if (!TIFFHashSetInsert(tif->tif_map_dir_number_to_offset, entryPtr))
     {
         TIFFErrorExtR(tif, "_TIFFCheckDirNumberAndOffset",
                       "Insertion in tif_map_dir_number_to_offset failed");
+        _TIFFfree(entryPtr);
         return 0;
     }
 
