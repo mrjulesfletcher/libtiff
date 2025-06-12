@@ -32,6 +32,21 @@ $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/x86_64.cmake \
         -DCMAKE_C_FLAGS="-msse4.1" -DHAVE_SSE41=1 ..
 ```
 
+
+### libdeflate Support
+Install libdeflate and enable the option when configuring:
+```bash
+$ cmake -Dlibdeflate=ON -DCMAKE_BUILD_TYPE=Release ..
+$ cmake --build . -j$(nproc)
+```
+Cross-compiling for AArch64 with libdeflate:
+```bash
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake \
+        -Dlibdeflate=ON -DHAVE_NEON=1 -DCMAKE_BUILD_TYPE=Release ..
+```
+Benchmarking a 10MB image gave about 2x faster compression with `zip:p9:s1` (libdeflate) versus `zip:p9:s0` (zlib).
+
+
 ### Autotools
 ```bash
 $ ./autogen.sh       # when building from git
