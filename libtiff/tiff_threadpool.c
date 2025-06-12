@@ -24,17 +24,6 @@ typedef struct
     pthread_cond_t cond;
 } TIFFThreadPool;
 
-static TIFFThreadPool gPool = {0,
-                               NULL,
-                               NULL,
-                               NULL,
-                               0,
-                               0,
-                               PTHREAD_MUTEX_INITIALIZER,
-                               PTHREAD_COND_INITIALIZER};
-static int gThreadCount = 1;
-static pthread_mutex_t gThreadCountMutex = PTHREAD_MUTEX_INITIALIZER;
-
 static void *_tiffThreadProc(void *arg)
 {
     TIFFThreadPool *pool = (TIFFThreadPool *)arg;
@@ -67,131 +56,149 @@ static void *_tiffThreadProc(void *arg)
     return NULL;
 }
 
-int _TIFFThreadPoolInit(int workers)
+TIFFThreadPool *_TIFFThreadPoolInit(int workers)
 {
     if (workers <= 0)
         workers = 1;
-    pthread_mutex_lock(&gPool.mutex);
-    pthread_mutex_lock(&gThreadCountMutex);
-    gThreadCount = workers;
-    pthread_mutex_unlock(&gThreadCountMutex);
-    if (gPool.threads)
+    TIFFThreadPool *pool = (TIFFThreadPool *)calloc(1, sizeof(TIFFThreadPool));
+    if (!pool)
+        return NULL;
+    pthread_mutex_init(&pool->mutex, NULL);
+    pthread_cond_init(&pool->cond, NULL);
+    pool->workers = workers;
+    pool->threads = (pthread_t *)calloc(workers, sizeof(pthread_t));
+    if (!pool->threads)
     {
-        pthread_mutex_unlock(&gPool.mutex);
-        return 1;
-    }
-    gPool.workers = workers;
-    gPool.threads = (pthread_t *)calloc(workers, sizeof(pthread_t));
-    if (!gPool.threads)
-    {
-        pthread_mutex_unlock(&gPool.mutex);
-        return 0;
+        pthread_mutex_destroy(&pool->mutex);
+        pthread_cond_destroy(&pool->cond);
+        free(pool);
+        return NULL;
     }
     for (int i = 0; i < workers; i++)
     {
-        if (pthread_create(&gPool.threads[i], NULL, _tiffThreadProc, &gPool) !=
-            0)
+        if (pthread_create(&pool->threads[i], NULL, _tiffThreadProc, pool) != 0)
         {
             for (int j = 0; j < i; j++)
-                pthread_join(gPool.threads[j], NULL);
-            free(gPool.threads);
-            gPool.threads = NULL;
-            pthread_mutex_unlock(&gPool.mutex);
-            return 0;
+                pthread_join(pool->threads[j], NULL);
+            free(pool->threads);
+            pthread_mutex_destroy(&pool->mutex);
+            pthread_cond_destroy(&pool->cond);
+            free(pool);
+            return NULL;
         }
     }
-    pthread_mutex_unlock(&gPool.mutex);
-    return 1;
+    return pool;
 }
 
-void _TIFFThreadPoolShutdown(void)
+void _TIFFThreadPoolShutdown(TIFFThreadPool *pool)
 {
-    pthread_mutex_lock(&gPool.mutex);
-    gPool.stop = 1;
-    pthread_cond_broadcast(&gPool.cond);
-    pthread_mutex_unlock(&gPool.mutex);
-    if (gPool.threads)
+    if (!pool)
+        return;
+    pthread_mutex_lock(&pool->mutex);
+    pool->stop = 1;
+    pthread_cond_broadcast(&pool->cond);
+    pthread_mutex_unlock(&pool->mutex);
+    if (pool->threads)
     {
-        for (int i = 0; i < gPool.workers; i++)
-            pthread_join(gPool.threads[i], NULL);
-        free(gPool.threads);
+        for (int i = 0; i < pool->workers; i++)
+            pthread_join(pool->threads[i], NULL);
+        free(pool->threads);
     }
-    pthread_mutex_lock(&gPool.mutex);
-    gPool.threads = NULL;
-    gPool.head = gPool.tail = NULL;
-    gPool.stop = 0;
-    pthread_mutex_unlock(&gPool.mutex);
+    pthread_mutex_lock(&pool->mutex);
+    pool->threads = NULL;
+    pool->head = pool->tail = NULL;
+    pool->stop = 0;
+    pthread_mutex_unlock(&pool->mutex);
+    pthread_mutex_destroy(&pool->mutex);
+    pthread_cond_destroy(&pool->cond);
+    free(pool);
 }
 
-int _TIFFThreadPoolSubmit(void (*func)(void *), void *arg)
+int _TIFFThreadPoolSubmit(TIFFThreadPool *pool, void (*func)(void *), void *arg)
 {
     static const char module[] = "_TIFFThreadPoolSubmit";
-    pthread_mutex_lock(&gPool.mutex);
-    if (gPool.threads == NULL || gPool.stop)
+    if (!pool)
     {
-        pthread_mutex_unlock(&gPool.mutex);
+        TIFFErrorExtR(NULL, module, "Thread pool not initialized");
+        return 0;
+    }
+    pthread_mutex_lock(&pool->mutex);
+    if (pool->threads == NULL || pool->stop)
+    {
+        pthread_mutex_unlock(&pool->mutex);
         TIFFErrorExtR(NULL, module, "Thread pool not initialized");
         return 0;
     }
     TPTask *t = (TPTask *)_TIFFmallocExt(NULL, sizeof(TPTask));
     if (!t)
     {
-        pthread_mutex_unlock(&gPool.mutex);
+        pthread_mutex_unlock(&pool->mutex);
         TIFFErrorExtR(NULL, module, "Out of memory");
         return 0;
     }
     t->func = func;
     t->arg = arg;
     t->next = NULL;
-    if (gPool.tail)
-        gPool.tail->next = t;
+    if (pool->tail)
+        pool->tail->next = t;
     else
-        gPool.head = t;
-    gPool.tail = t;
-    pthread_cond_signal(&gPool.cond);
-    pthread_mutex_unlock(&gPool.mutex);
+        pool->head = t;
+    pool->tail = t;
+    pthread_cond_signal(&pool->cond);
+    pthread_mutex_unlock(&pool->mutex);
     return 1;
 }
 
-void _TIFFThreadPoolWait(void)
+void _TIFFThreadPoolWait(TIFFThreadPool *pool)
 {
-    pthread_mutex_lock(&gPool.mutex);
-    while (gPool.head || gPool.active)
-        pthread_cond_wait(&gPool.cond, &gPool.mutex);
-    pthread_mutex_unlock(&gPool.mutex);
+    if (!pool)
+        return;
+    pthread_mutex_lock(&pool->mutex);
+    while (pool->head || pool->active)
+        pthread_cond_wait(&pool->cond, &pool->mutex);
+    pthread_mutex_unlock(&pool->mutex);
 }
 
-void TIFFSetThreadCount(int count)
+void TIFFSetThreadCount(TIFF *tif, int count)
 {
     if (count < 1)
         count = 1;
-    _TIFFThreadPoolShutdown();
-    _TIFFThreadPoolInit(count);
+    _TIFFThreadPoolShutdown(tif ? tif->tif_threadpool : NULL);
+    if (tif)
+        tif->tif_threadpool = _TIFFThreadPoolInit(count);
 }
 
-int TIFFGetThreadCount(void)
+int TIFFGetThreadCount(TIFF *tif)
 {
-    pthread_mutex_lock(&gThreadCountMutex);
-    int count = gThreadCount;
-    pthread_mutex_unlock(&gThreadCountMutex);
-    return count;
+    if (tif && tif->tif_threadpool)
+        return tif->tif_threadpool->workers;
+    return 1;
 }
 
 #else
 /* Stub implementations when thread pool disabled */
 #include "tiff_threadpool.h"
-int _TIFFThreadPoolInit(int workers)
+TIFFThreadPool *_TIFFThreadPoolInit(int workers)
 {
     (void)workers;
-    return 1;
+    return NULL;
 }
-void _TIFFThreadPoolShutdown(void) {}
-int _TIFFThreadPoolSubmit(void (*func)(void *), void *arg)
+void _TIFFThreadPoolShutdown(TIFFThreadPool *pool) { (void)pool; }
+int _TIFFThreadPoolSubmit(TIFFThreadPool *pool, void (*func)(void *), void *arg)
 {
+    (void)pool;
     func(arg);
     return 1;
 }
-void _TIFFThreadPoolWait(void) {}
-void TIFFSetThreadCount(int count) { (void)count; }
-int TIFFGetThreadCount(void) { return 1; }
+void _TIFFThreadPoolWait(TIFFThreadPool *pool) { (void)pool; }
+void TIFFSetThreadCount(TIFF *tif, int count)
+{
+    (void)tif;
+    (void)count;
+}
+int TIFFGetThreadCount(TIFF *tif)
+{
+    (void)tif;
+    return 1;
+}
 #endif

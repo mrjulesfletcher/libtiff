@@ -335,11 +335,11 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 static int ZIPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 {
 #ifdef TIFF_USE_THREADPOOL
-    if (TIFFGetThreadCount() > 1)
+    if (TIFFGetThreadCount(tif) > 1)
     {
         ZIPTask task = {tif, op, occ, s, 0};
-        _TIFFThreadPoolSubmit(ZIPDecodeTask, &task);
-        _TIFFThreadPoolWait();
+        _TIFFThreadPoolSubmit(tif->tif_threadpool, ZIPDecodeTask, &task);
+        _TIFFThreadPoolWait(tif->tif_threadpool);
         return task.result;
     }
 #endif
