@@ -264,6 +264,7 @@ struct tiff
 #ifdef USE_IO_URING
     struct io_uring *tif_uring; /* persistent io_uring handle */
     int tif_uring_async;        /* async flush/wait semantics */
+    unsigned int tif_uring_depth; /* queue depth. 0 for default */
 #endif
     int tif_warn_about_unknown_tags;
 };
@@ -277,6 +278,9 @@ struct TIFFOpenOptions
     tmsize_t max_single_mem_alloc;     /* in bytes. 0 for unlimited */
     tmsize_t max_cumulated_mem_alloc;  /* in bytes. 0 for unlimited */
     int warn_about_unknown_tags;
+#ifdef USE_IO_URING
+    unsigned int uring_queue_depth;    /* 0 for default */
+#endif
 };
 
 #define isPseudoTag(t) (t > 0xffff) /* is tag value normal or pseudo */

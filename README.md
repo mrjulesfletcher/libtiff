@@ -256,6 +256,10 @@ $ ./test/predictor_threadpool_benchmark 4 50
 $ ./test/pack_uring_benchmark
 ```
 
+The io_uring backend uses a queue depth of 8 by default.  Set the
+`TIFF_URING_DEPTH` environment variable or call
+`TIFFOpenOptionsSetURingQueueDepth()` to override it.
+
 ## Testing and Validation
 Configure with testing enabled and run the full suite:
 ```bash

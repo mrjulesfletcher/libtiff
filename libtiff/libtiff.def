@@ -86,10 +86,11 @@ EXPORTS	TIFFAccessTagMethods
 	TIFFOpenOptionsAlloc
 	TIFFOpenOptionsFree
 	TIFFOpenOptionsSetMaxCumulatedMemAlloc
-	TIFFOpenOptionsSetMaxSingleMemAlloc
-	TIFFOpenOptionsSetErrorHandlerExtR
-	TIFFOpenOptionsSetWarnAboutUnknownTags
-	TIFFOpenOptionsSetWarningHandlerExtR
+        TIFFOpenOptionsSetMaxSingleMemAlloc
+        TIFFOpenOptionsSetErrorHandlerExtR
+        TIFFOpenOptionsSetWarnAboutUnknownTags
+        TIFFOpenOptionsSetURingQueueDepth
+        TIFFOpenOptionsSetWarningHandlerExtR
 	TIFFPrintDirectory
 	TIFFRGBAImageBegin
 	TIFFRGBAImageEnd

@@ -134,6 +134,13 @@ void TIFFOpenOptionsSetWarningHandlerExtR(TIFFOpenOptions *opts,
     opts->warnhandler_user_data = warnhandler_user_data;
 }
 
+#ifdef USE_IO_URING
+void TIFFOpenOptionsSetURingQueueDepth(TIFFOpenOptions *opts, unsigned int depth)
+{
+    opts->uring_queue_depth = depth;
+}
+#endif
+
 static void _TIFFEmitErrorAboveMaxSingleMemAlloc(TIFF *tif,
                                                  const char *pszFunction,
                                                  tmsize_t s)
@@ -396,6 +403,9 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
         tif->tif_max_single_mem_alloc = opts->max_single_mem_alloc;
         tif->tif_max_cumulated_mem_alloc = opts->max_cumulated_mem_alloc;
         tif->tif_warn_about_unknown_tags = opts->warn_about_unknown_tags;
+#ifdef USE_IO_URING
+        tif->tif_uring_depth = opts->uring_queue_depth;
+#endif
     }
 
     if (!readproc || !writeproc || !seekproc || !closeproc || !sizeproc)
