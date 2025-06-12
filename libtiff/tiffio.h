@@ -533,6 +533,11 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     TIFFOpenOptionsSetWarningHandlerExtR(TIFFOpenOptions *opts,
                                          TIFFErrorHandlerExtR handler,
                                          void *warnhandler_user_data);
+#ifdef USE_IO_URING
+    extern void
+    TIFFOpenOptionsSetURingQueueDepth(TIFFOpenOptions *opts,
+                                      unsigned int depth);
+#endif
 
     extern TIFF *TIFFOpen(const char *, const char *);
     extern TIFF *TIFFOpenExt(const char *, const char *, TIFFOpenOptions *opts);

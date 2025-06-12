@@ -4,6 +4,7 @@
 #include <errno.h>
 #include <liburing.h>
 #include <pthread.h>
+#include <stdlib.h>
 
 /*
  * Mapping between file descriptors and their io_uring.  Access to this list
@@ -78,7 +79,15 @@ int _tiffUringInit(TIFF *tif)
         (struct io_uring *)_TIFFmallocExt(tif, sizeof(struct io_uring));
     if (!tif->tif_uring)
         return 0;
-    if (io_uring_queue_init(8, tif->tif_uring, 0) < 0)
+    unsigned int depth = 8;
+    const char *env = getenv("TIFF_URING_DEPTH");
+    if (tif->tif_uring_depth > 0)
+        depth = tif->tif_uring_depth;
+    else if (env)
+        depth = (unsigned int)atoi(env);
+    if (depth == 0)
+        depth = 1;
+    if (io_uring_queue_init(depth, tif->tif_uring, 0) < 0)
     {
         _TIFFfreeExt(tif, tif->tif_uring);
         tif->tif_uring = NULL;
