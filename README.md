@@ -165,12 +165,12 @@ typedef uint8x16_t tiff_v16u8;
 A placeholder codec integrates with CharLS when available. Configure with `-Djpegls=ON` or `--with-jpegls` to experiment.
 
 ### Lazy Strile Loading
-`TIFFOpen()` accepts `'D'` (defer) and `'O'` (on‑demand) mode flags.  `'D'`
-postpones loading the `StripOffsets`/`StripByteCounts` or
-`TileOffsets`/`TileByteCounts` arrays until first use.  `'O'` implies `'D'` and
-only fetches the requested strip or tile entry.  These flags enable lazy
-metadata access and can significantly reduce startup time when files reside on
-slow storage.
+`TIFFOpen()` accepts `'D'` (defer) and `'O'` (on‑demand) mode flags. Append
+them to the mode string like `"rD"` or `"rO"`. `'D'` postpones loading the
+`StripOffsets`/`StripByteCounts` or `TileOffsets`/`TileByteCounts` arrays until
+first use. `'O'` implies `'D'` and only fetches the requested strip or tile
+entry. These flags enable lazy metadata access and can significantly reduce
+startup time when files reside on slow storage.
 
 See [doc/functions/TIFFStrileQuery.rst](doc/functions/TIFFStrileQuery.rst) for
 details on querying per‑strile information.

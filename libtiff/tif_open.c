@@ -255,7 +255,12 @@ void *_TIFFreallocExt(TIFF *tif, void *p, tmsize_t s)
         {
             oldPtr = (char *)p - LEADING_AREA_TO_STORE_ALLOC_SIZE;
             memcpy(&oldSize, oldPtr, sizeof(oldSize));
-            assert(oldSize <= tif->tif_cur_cumulated_mem_alloc);
+            if (oldSize <= 0 || oldSize > tif->tif_cur_cumulated_mem_alloc)
+            {
+                TIFFErrorExtR(tif, "_TIFFreallocExt",
+                              "Corrupt size header in buffer");
+                return NULL;
+            }
         }
         if (s > oldSize &&
             (s > tif->tif_max_cumulated_mem_alloc -
@@ -286,7 +291,12 @@ void _TIFFfreeExt(TIFF *tif, void *p)
         void *oldPtr = (char *)p - LEADING_AREA_TO_STORE_ALLOC_SIZE;
         tmsize_t oldSize;
         memcpy(&oldSize, oldPtr, sizeof(oldSize));
-        assert(oldSize <= tif->tif_cur_cumulated_mem_alloc);
+        if (oldSize <= 0 || oldSize > tif->tif_cur_cumulated_mem_alloc)
+        {
+            TIFFErrorExtR(tif, "_TIFFfreeExt",
+                          "Corrupt size header in buffer");
+            return;
+        }
         tif->tif_cur_cumulated_mem_alloc -= oldSize;
         p = oldPtr;
     }
@@ -320,14 +330,14 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
      * should not compile to any actual code in an optimised release build
      * anyway. If any of them fail, (makefile-based or other) configuration is
      * not correct */
-    assert(sizeof(uint8_t) == 1);
-    assert(sizeof(int8_t) == 1);
-    assert(sizeof(uint16_t) == 2);
-    assert(sizeof(int16_t) == 2);
-    assert(sizeof(uint32_t) == 4);
-    assert(sizeof(int32_t) == 4);
-    assert(sizeof(uint64_t) == 8);
-    assert(sizeof(int64_t) == 8);
+    if (sizeof(uint8_t) != 1 || sizeof(int8_t) != 1 || sizeof(uint16_t) != 2 ||
+        sizeof(int16_t) != 2 || sizeof(uint32_t) != 4 || sizeof(int32_t) != 4 ||
+        sizeof(uint64_t) != 8 || sizeof(int64_t) != 8)
+    {
+        TIFFErrorExtR(NULL, module,
+                      "Unexpected integer type sizes. Check build settings.");
+        goto bad2;
+    }
     {
         union
         {
@@ -338,10 +348,15 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
         n.a8[1] = 0;
         (void)n;
 #ifdef WORDS_BIGENDIAN
-        assert(n.a16 == 256);
+        if (n.a16 != 256)
 #else
-        assert(n.a16 == 1);
+        if (n.a16 != 1)
 #endif
+        {
+            TIFFErrorExtR(NULL, module,
+                          "Unexpected byte order configuration");
+            goto bad2;
+        }
     }
 
     m = _TIFFgetMode(opts, clientdata, mode, module);
@@ -548,6 +563,9 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
                     tif->tif_flags |=
                         (TIFF_LAZYSTRILELOAD | TIFF_DEFERSTRILELOAD);
                 break;
+            default:
+                TIFFErrorExtR(tif, module, "Unknown mode flag '%c'", *cp);
+                goto bad;
         }
 
 #ifdef DEFER_STRILE_LOAD
