@@ -5,6 +5,8 @@
 #include <pthread.h>
 #include <stdlib.h>
 
+#define TIFF_THREADPOOL_MAX_QUEUE 256
+
 typedef struct _TPTask
 {
     void (*func)(void *);
@@ -20,6 +22,7 @@ typedef struct TIFFThreadPool
     TPTask *tail;
     int stop;
     int active;
+    int queued;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
 } TIFFThreadPool;
@@ -43,6 +46,7 @@ static void *_tiffThreadProc(void *arg)
         pool->head = task->next;
         if (pool->head == NULL)
             pool->tail = NULL;
+        pool->queued--;
         pool->active++;
         pthread_mutex_unlock(&pool->mutex);
         task->func(task->arg);
@@ -80,6 +84,7 @@ TIFFThreadPool *_TIFFThreadPoolInit(int workers)
         return NULL;
     }
     pool->workers = workers;
+    pool->queued = 0;
     pool->threads = (pthread_t *)calloc(workers, sizeof(pthread_t));
     if (!pool->threads)
     {
@@ -93,7 +98,11 @@ TIFFThreadPool *_TIFFThreadPoolInit(int workers)
         if (pthread_create(&pool->threads[i], NULL, _tiffThreadProc, pool) != 0)
         {
             for (int j = 0; j < i; j++)
-                pthread_join(pool->threads[j], NULL);
+            {
+                int rc = pthread_join(pool->threads[j], NULL);
+                if (rc != 0)
+                    TIFFErrorExtR(NULL, module, "pthread_join failed: %d", rc);
+            }
             free(pool->threads);
             pthread_mutex_destroy(&pool->mutex);
             pthread_cond_destroy(&pool->cond);
@@ -115,7 +124,11 @@ void _TIFFThreadPoolShutdown(TIFFThreadPool *pool)
     if (pool->threads)
     {
         for (int i = 0; i < pool->workers; i++)
-            pthread_join(pool->threads[i], NULL);
+        {
+            int rc = pthread_join(pool->threads[i], NULL);
+            if (rc != 0)
+                TIFFErrorExtR(NULL, "_TIFFThreadPoolShutdown", "pthread_join failed: %d", rc);
+        }
         free(pool->threads);
     }
     pthread_mutex_lock(&pool->mutex);
@@ -143,6 +156,12 @@ int _TIFFThreadPoolSubmit(TIFFThreadPool *pool, void (*func)(void *), void *arg)
         TIFFErrorExtR(NULL, module, "Thread pool not initialized");
         return 0;
     }
+    if (pool->queued >= TIFF_THREADPOOL_MAX_QUEUE)
+    {
+        pthread_mutex_unlock(&pool->mutex);
+        TIFFErrorExtR(NULL, module, "Thread pool queue limit exceeded");
+        return 0;
+    }
     TPTask *t = (TPTask *)_TIFFmallocExt(NULL, sizeof(TPTask));
     if (!t)
     {
@@ -158,6 +177,7 @@ int _TIFFThreadPoolSubmit(TIFFThreadPool *pool, void (*func)(void *), void *arg)
     else
         pool->head = t;
     pool->tail = t;
+    pool->queued++;
     pthread_cond_signal(&pool->cond);
     pthread_mutex_unlock(&pool->mutex);
     return 1;
@@ -168,7 +188,7 @@ void _TIFFThreadPoolWait(TIFFThreadPool *pool)
     if (!pool)
         return;
     pthread_mutex_lock(&pool->mutex);
-    while (pool->head || pool->active)
+    while (pool->queued || pool->active)
         pthread_cond_wait(&pool->cond, &pool->mutex);
     pthread_mutex_unlock(&pool->mutex);
 }
