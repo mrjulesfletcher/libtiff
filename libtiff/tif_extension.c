@@ -99,10 +99,19 @@ void TIFFSetClientInfo(TIFF *tif, void *data, const char *name)
 
     psLink =
         (TIFFClientInfoLink *)_TIFFmallocExt(tif, sizeof(TIFFClientInfoLink));
-    assert(psLink != NULL);
+    if (psLink == NULL)
+    {
+        TIFFErrorExtR(tif, "TIFFSetClientInfo", "Out of memory");
+        return;
+    }
     psLink->next = tif->tif_clientinfo;
     psLink->name = (char *)_TIFFmallocExt(tif, (tmsize_t)(strlen(name) + 1));
-    assert(psLink->name != NULL);
+    if (psLink->name == NULL)
+    {
+        TIFFErrorExtR(tif, "TIFFSetClientInfo", "Out of memory");
+        _TIFFfreeExt(tif, psLink);
+        return;
+    }
     strcpy(psLink->name, name);
     psLink->data = data;
 

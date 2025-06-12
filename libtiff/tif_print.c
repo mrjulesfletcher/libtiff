@@ -681,6 +681,12 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
                      */
                     int tv_size = TIFFFieldSetGetSize(fip);
                     raw_data = _TIFFmallocExt(tif, tv_size * value_count);
+                    if (raw_data == NULL)
+                    {
+                        TIFFErrorExtR(tif, "TIFFPrintDirectory",
+                                      "Out of memory");
+                        continue;
+                    }
                     mem_alloc = 1;
                     if (TIFFGetField(tif, tag, raw_data) != 1)
                     {
