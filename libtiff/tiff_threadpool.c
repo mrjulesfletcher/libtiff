@@ -67,7 +67,7 @@ static void *_tiffThreadProc(void *arg)
     return NULL;
 }
 
-void _TIFFThreadPoolInit(int workers)
+int _TIFFThreadPoolInit(int workers)
 {
     if (workers <= 0)
         workers = 1;
@@ -78,13 +78,30 @@ void _TIFFThreadPoolInit(int workers)
     if (gPool.threads)
     {
         pthread_mutex_unlock(&gPool.mutex);
-        return;
+        return 1;
     }
     gPool.workers = workers;
     gPool.threads = (pthread_t *)calloc(workers, sizeof(pthread_t));
+    if (!gPool.threads)
+    {
+        pthread_mutex_unlock(&gPool.mutex);
+        return 0;
+    }
     for (int i = 0; i < workers; i++)
-        pthread_create(&gPool.threads[i], NULL, _tiffThreadProc, &gPool);
+    {
+        if (pthread_create(&gPool.threads[i], NULL, _tiffThreadProc, &gPool) !=
+            0)
+        {
+            for (int j = 0; j < i; j++)
+                pthread_join(gPool.threads[j], NULL);
+            free(gPool.threads);
+            gPool.threads = NULL;
+            pthread_mutex_unlock(&gPool.mutex);
+            return 0;
+        }
+    }
     pthread_mutex_unlock(&gPool.mutex);
+    return 1;
 }
 
 void _TIFFThreadPoolShutdown(void)
@@ -106,9 +123,15 @@ void _TIFFThreadPoolShutdown(void)
     pthread_mutex_unlock(&gPool.mutex);
 }
 
-void _TIFFThreadPoolSubmit(void (*func)(void *), void *arg)
+int _TIFFThreadPoolSubmit(void (*func)(void *), void *arg)
 {
+    static const char module[] = "_TIFFThreadPoolSubmit";
     TPTask *t = (TPTask *)malloc(sizeof(TPTask));
+    if (!t)
+    {
+        TIFFErrorExtR(NULL, module, "Out of memory");
+        return 0;
+    }
     t->func = func;
     t->arg = arg;
     t->next = NULL;
@@ -120,6 +143,7 @@ void _TIFFThreadPoolSubmit(void (*func)(void *), void *arg)
     gPool.tail = t;
     pthread_cond_signal(&gPool.cond);
     pthread_mutex_unlock(&gPool.mutex);
+    return 1;
 }
 
 void _TIFFThreadPoolWait(void)
@@ -149,9 +173,17 @@ int TIFFGetThreadCount(void)
 #else
 /* Stub implementations when thread pool disabled */
 #include "tiff_threadpool.h"
-void _TIFFThreadPoolInit(int workers) { (void)workers; }
+int _TIFFThreadPoolInit(int workers)
+{
+    (void)workers;
+    return 1;
+}
 void _TIFFThreadPoolShutdown(void) {}
-void _TIFFThreadPoolSubmit(void (*func)(void *), void *arg) { func(arg); }
+int _TIFFThreadPoolSubmit(void (*func)(void *), void *arg)
+{
+    func(arg);
+    return 1;
+}
 void _TIFFThreadPoolWait(void) {}
 void TIFFSetThreadCount(int count) { (void)count; }
 int TIFFGetThreadCount(void) { return 1; }
