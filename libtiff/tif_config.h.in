@@ -127,6 +127,9 @@
 /* define to use win32 IO system */
 #undef USE_WIN32_FILEIO
 
+/* define to build with io_uring support */
+#undef USE_IO_URING
+
 /* Support webp compression */
 #undef WEBP_SUPPORT
 

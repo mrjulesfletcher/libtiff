@@ -104,7 +104,7 @@ if TIFF_TESTS
 check_PROGRAMS = \
         ascii_tag long_tag short_tag strip_rw rewrite custom_dir custom_dir_EXIF_231 \
         defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
-        test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test swab_benchmark testtypes test_signed_tags $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
+        test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test swab_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS)
 endif
 
 # Test scripts to execute
@@ -281,6 +281,8 @@ raw_decode_SOURCES = raw_decode.c
 raw_decode_LDADD = $(LIBTIFF)
 custom_dir_SOURCES = custom_dir.c
 custom_dir_LDADD = $(LIBTIFF)
+uring_rw_SOURCES = uring_rw.c
+uring_rw_LDADD = $(LIBTIFF)
 
 if BUILD_STATIC
 rational_precision2double_SOURCES = rational_precision2double.c

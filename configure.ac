@@ -1113,6 +1113,29 @@ fi
 AM_CONDITIONAL([WIN32_IO], [test "$win32_io_ok" = yes])
 
 dnl ---------------------------------------------------------------------------
+dnl Optional io_uring backend
+dnl ---------------------------------------------------------------------------
+
+AC_ARG_ENABLE(io-uring,
+              AS_HELP_STRING([--enable-io-uring],
+                             [enable io_uring based async I/O backend]),,)
+
+if test "x$enable_io_uring" = "xyes" ; then
+  AC_CHECK_LIB(uring, io_uring_queue_init, [have_io_uring_lib=yes], [have_io_uring_lib=no])
+  AC_CHECK_HEADER(liburing.h, [have_io_uring_header=yes], [have_io_uring_header=no])
+  if test "$have_io_uring_lib" = yes -a "$have_io_uring_header" = yes; then
+    AC_DEFINE(USE_IO_URING,1,[use io_uring for async I/O])
+    LIBS="-luring $LIBS"
+    tiff_libs_private="-luring ${tiff_libs_private}"
+    have_io_uring=yes
+  else
+    AC_MSG_ERROR([io_uring requested but liburing not found])
+  fi
+fi
+
+AM_CONDITIONAL([HAVE_IO_URING], [test "$have_io_uring" = yes])
+
+dnl ---------------------------------------------------------------------------
 dnl Check for X Athena Widgets
 dnl ---------------------------------------------------------------------------
 

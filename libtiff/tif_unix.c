@@ -65,8 +65,16 @@ typedef union fd_as_handle_union
     thandle_t h;
 } fd_as_handle_union_t;
 
+#ifdef USE_IO_URING
+extern tmsize_t _tiffUringReadProc(thandle_t fd, void *buf, tmsize_t size);
+extern tmsize_t _tiffUringWriteProc(thandle_t fd, void *buf, tmsize_t size);
+#endif
+
 static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
 {
+#ifdef USE_IO_URING
+    return _tiffUringReadProc(fd, buf, size);
+#else
     fd_as_handle_union_t fdh;
     const size_t bytes_total = (size_t)size;
     size_t bytes_read;
@@ -94,10 +102,14 @@ static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
     /* Silence Coverity Scan warning about unsigned to signed underflow. */
     /* coverity[return_overflow:SUPPRESS] */
     return (tmsize_t)bytes_read;
+#endif
 }
 
 static tmsize_t _tiffWriteProc(thandle_t fd, void *buf, tmsize_t size)
 {
+#ifdef USE_IO_URING
+    return _tiffUringWriteProc(fd, buf, size);
+#else
     fd_as_handle_union_t fdh;
     const size_t bytes_total = (size_t)size;
     size_t bytes_written;
@@ -126,6 +138,7 @@ static tmsize_t _tiffWriteProc(thandle_t fd, void *buf, tmsize_t size)
     /* coverity[return_overflow:SUPPRESS] */
     return (tmsize_t)bytes_written;
     /* return ((tmsize_t) write(fdh.fd, buf, bytes_total)); */
+#endif
 }
 
 static uint64_t _tiffSeekProc(thandle_t fd, uint64_t off, int whence)

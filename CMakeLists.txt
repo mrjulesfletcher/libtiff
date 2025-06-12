@@ -137,6 +137,7 @@ include(OpenGLChecks)
 
 # Windows support
 include(WindowsSupport)
+include(IOURing)
 
 # Orthogonal features
 include(LibraryFeatures)
@@ -191,6 +192,7 @@ message(STATUS "  Build deprecated features:          ${tiff-deprecated}")
 message(STATUS "  Enable linker symbol versioning:    ${HAVE_LD_VERSION_SCRIPT}")
 message(STATUS "  Support Microsoft Document Imaging: ${mdi}")
 message(STATUS "  Use win32 IO:                       ${USE_WIN32_FILEIO}")
+message(STATUS "  Use io_uring:                       ${USE_IO_URING}")
 message(STATUS "")
 message(STATUS " Support for internal codecs:")
 message(STATUS "  CCITT Group 3 & 4 algorithms:       ${ccitt}")
