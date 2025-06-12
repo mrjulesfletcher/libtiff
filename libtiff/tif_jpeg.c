@@ -1554,6 +1554,11 @@ static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
             line_work_buf = (TIFF_JSAMPROW)_TIFFmallocExt(
                 tif, sizeof(short) * sp->cinfo.d.output_width *
                          sp->cinfo.d.num_components);
+            if (line_work_buf == NULL)
+            {
+                TIFFErrorExtR(tif, "JPEGDecodeInternal", "Out of memory");
+                return 0;
+            }
         }
 
         do
