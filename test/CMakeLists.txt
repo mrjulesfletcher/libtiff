@@ -261,6 +261,18 @@ set_target_properties(swab_benchmark PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(swab_benchmark PRIVATE tiff tiff_port)
 list(APPEND simple_tests swab_benchmark)
 
+add_executable(predictor_threadpool_benchmark ../placeholder.h)
+target_sources(predictor_threadpool_benchmark PRIVATE predictor_threadpool_benchmark.c)
+set_target_properties(predictor_threadpool_benchmark PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(predictor_threadpool_benchmark PRIVATE tiff tiff_port)
+list(APPEND simple_tests predictor_threadpool_benchmark)
+
+add_executable(pack_uring_benchmark ../placeholder.h)
+target_sources(pack_uring_benchmark PRIVATE pack_uring_benchmark.c)
+set_target_properties(pack_uring_benchmark PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(pack_uring_benchmark PRIVATE tiff tiff_port)
+list(APPEND simple_tests pack_uring_benchmark)
+
 if(WEBP_SUPPORT AND EMSCRIPTEN)
   # Emscripten is pretty finnicky about linker flags.
   # It needs --shared-memory if and only if atomics or bulk-memory is used.
