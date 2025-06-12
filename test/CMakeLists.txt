@@ -135,6 +135,12 @@ set_target_properties(strip_rw PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(strip_rw PRIVATE tiff tiff_port)
 list(APPEND simple_tests strip_rw)
 
+add_executable(uring_rw ../placeholder.h)
+target_sources(uring_rw PRIVATE uring_rw.c)
+set_target_properties(uring_rw PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(uring_rw PRIVATE tiff tiff_port)
+list(APPEND simple_tests uring_rw)
+
 add_executable(rewrite ../placeholder.h)
 target_sources(rewrite PRIVATE rewrite_tag.c)
 set_target_properties(rewrite PROPERTIES LINKER_LANGUAGE CXX)

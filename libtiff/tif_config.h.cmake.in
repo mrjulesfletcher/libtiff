@@ -124,6 +124,9 @@
 /* define to use win32 IO system */
 #cmakedefine USE_WIN32_FILEIO 1
 
+/* define to build with io_uring support */
+#cmakedefine USE_IO_URING 1
+
 /* Support WEBP compression */
 #cmakedefine WEBP_SUPPORT 1
 

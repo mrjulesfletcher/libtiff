@@ -120,6 +120,11 @@ else()
   set_property(SOURCE tif_unix.c APPEND PROPERTY COMPILE_DEFINITIONS ALLOW_TIFF_NON_EXT_ALLOC_FUNCTIONS)
 endif()
 
+if(USE_IO_URING)
+  target_sources(tiff PRIVATE tif_uring.c)
+  target_link_libraries(tiff PRIVATE ${IOURING_LIBRARY})
+endif()
+
 target_include_directories(tiff
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>

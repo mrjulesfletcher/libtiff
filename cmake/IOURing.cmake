@@ -1,0 +1,14 @@
+# io_uring optional support
+option(io-uring "Use io_uring for async I/O" OFF)
+set(USE_IO_URING ${io-uring})
+
+if(USE_IO_URING)
+    find_path(IOURING_INCLUDE_DIR liburing.h)
+    find_library(IOURING_LIBRARY uring)
+    if(IOURING_INCLUDE_DIR AND IOURING_LIBRARY)
+        list(APPEND TIFF_INCLUDES ${IOURING_INCLUDE_DIR})
+        list(APPEND tiff_libs_private_list "${IOURING_LIBRARY}")
+    else()
+        message(FATAL_ERROR "io_uring requested but liburing not found")
+    endif()
+endif()
