@@ -66,6 +66,108 @@ static int swabHorDiff32(TIFF *tif, uint8_t *cp0, tmsize_t cc);
 static int swabHorDiff64(TIFF *tif, uint8_t *cp0, tmsize_t cc);
 static int fpAcc(TIFF *tif, uint8_t *cp0, tmsize_t cc);
 static int fpDiff(TIFF *tif, uint8_t *cp0, tmsize_t cc);
+#if defined(__AVX2__)
+static void interleave4_avx2(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int order[4]);
+static void interleave8_avx2(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int oh[4], const int ol[4]);
+#endif
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void interleave4_neon(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int order[4]);
+static void interleave8_neon(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int oh[4], const int ol[4]);
+#endif
+
+#if defined(__AVX2__)
+static void interleave4_avx2(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int order[4])
+{
+    tmsize_t i = 0;
+    for (; i + 31 < wc; i += 32)
+    {
+        __m256i v0 =
+            _mm256_loadu_si256((const __m256i *)(src + i + order[0] * wc));
+        __m256i v1 =
+            _mm256_loadu_si256((const __m256i *)(src + i + order[1] * wc));
+        __m256i v2 =
+            _mm256_loadu_si256((const __m256i *)(src + i + order[2] * wc));
+        __m256i v3 =
+            _mm256_loadu_si256((const __m256i *)(src + i + order[3] * wc));
+        __m256i t0 = _mm256_unpacklo_epi8(v0, v1);
+        __m256i t1 = _mm256_unpackhi_epi8(v0, v1);
+        __m256i t2 = _mm256_unpacklo_epi8(v2, v3);
+        __m256i t3 = _mm256_unpackhi_epi8(v2, v3);
+        __m256i r0 = _mm256_unpacklo_epi16(t0, t2);
+        __m256i r1 = _mm256_unpackhi_epi16(t0, t2);
+        __m256i r2 = _mm256_unpacklo_epi16(t1, t3);
+        __m256i r3 = _mm256_unpackhi_epi16(t1, t3);
+        _mm256_storeu_si256((__m256i *)(dst + 4 * i + 0 * 32), r0);
+        _mm256_storeu_si256((__m256i *)(dst + 4 * i + 1 * 32), r1);
+        _mm256_storeu_si256((__m256i *)(dst + 4 * i + 2 * 32), r2);
+        _mm256_storeu_si256((__m256i *)(dst + 4 * i + 3 * 32), r3);
+    }
+    for (; i < wc; i++)
+    {
+        for (int b = 0; b < 4; b++)
+            dst[4 * i + b] = src[i + order[b] * wc];
+    }
+}
+
+static void interleave8_avx2(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int oh[4], const int ol[4])
+{
+    tmsize_t i = 0;
+    for (; i + 31 < wc; i += 32)
+    {
+        interleave4_avx2(dst + 8 * i, src + 0, wc, oh);
+        interleave4_avx2(dst + 8 * i + 4 * 32, src + 0, wc, ol);
+    }
+    for (; i < wc; i++)
+    {
+        for (int b = 0; b < 8; b++)
+            dst[8 * i + b] = src[i + (b < 4 ? oh[b] : ol[b - 4]) * wc];
+    }
+}
+#endif
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void interleave4_neon(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int order[4])
+{
+    tmsize_t i = 0;
+    for (; i + 16 <= wc; i += 16)
+    {
+        uint8x16_t v0 = vld1q_u8(src + i + order[0] * wc);
+        uint8x16_t v1 = vld1q_u8(src + i + order[1] * wc);
+        uint8x16_t v2 = vld1q_u8(src + i + order[2] * wc);
+        uint8x16_t v3 = vld1q_u8(src + i + order[3] * wc);
+        uint8x16x4_t v = {v0, v1, v2, v3};
+        vst4q_u8(dst + 4 * i, v);
+    }
+    for (; i < wc; i++)
+    {
+        for (int b = 0; b < 4; b++)
+            dst[4 * i + b] = src[i + order[b] * wc];
+    }
+}
+
+static void interleave8_neon(uint8_t *dst, const uint8_t *src, tmsize_t wc,
+                             const int oh[4], const int ol[4])
+{
+    tmsize_t i = 0;
+    for (; i + 16 <= wc; i += 16)
+    {
+        interleave4_neon(dst + 8 * i, src, wc, oh);
+        interleave4_neon(dst + 8 * i + 4 * 16, src, wc, ol);
+    }
+    for (; i < wc; i++)
+    {
+        for (int b = 0; b < 8; b++)
+            dst[8 * i + b] = src[i + (b < 4 ? oh[b] : ol[b - 4]) * wc];
+    }
+}
+#endif
 static int PredictorDecodeRow(TIFF *tif, uint8_t *op0, tmsize_t occ0,
                               uint16_t s);
 static int PredictorDecodeTile(TIFF *tif, uint8_t *op0, tmsize_t occ0,
@@ -698,32 +800,104 @@ static int fpAcc(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     cp = (uint8_t *)cp0;
     count = 0;
 
+#if defined(__AVX2__)
+    if (bps == 4 && stride == 1)
+    {
+        const int order[4] =
+#if WORDS_BIGENDIAN
+            {0, 1, 2, 3};
+#else
+            {3, 2, 1, 0};
+#endif
+        interleave4_avx2(cp, tmp, wc, order);
+        count = wc;
+    }
+    else if (bps == 8 && stride == 1)
+    {
+        const int oh[4] =
+#if WORDS_BIGENDIAN
+            {0, 1, 2, 3};
+#else
+            {7, 6, 5, 4};
+#endif
+        const int ol[4] =
+#if WORDS_BIGENDIAN
+            {4, 5, 6, 7};
+#else
+            {3, 2, 1, 0};
+#endif
+        interleave8_avx2(cp, tmp, wc, oh, ol);
+        count = wc;
+    }
+#endif
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    if (count == 0 && bps == 4 && stride == 1)
+    {
+        const int order[4] =
+#if WORDS_BIGENDIAN
+            {0, 1, 2, 3};
+#else
+            {3, 2, 1, 0};
+#endif
+        interleave4_neon(cp, tmp, wc, order);
+        count = wc;
+    }
+    else if (count == 0 && bps == 8 && stride == 1)
+    {
+        const int oh[4] =
+#if WORDS_BIGENDIAN
+            {0, 1, 2, 3};
+#else
+            {7, 6, 5, 4};
+#endif
+        const int ol[4] =
+#if WORDS_BIGENDIAN
+            {4, 5, 6, 7};
+#else
+            {3, 2, 1, 0};
+#endif
+        interleave8_neon(cp, tmp, wc, oh, ol);
+        count = wc;
+    }
+#endif
 #if defined(__x86_64__) || defined(_M_X64)
-    if (bps == 4)
+    if (count == 0 && bps == 4)
     {
         /* Optimization of general case */
         for (; count + 15 < wc; count += 16)
         {
-            /* Interlace 4*16 byte values */
-
-            __m128i xmm0 =
-                _mm_loadu_si128((const __m128i *)(tmp + count + 3 * wc));
-            __m128i xmm1 =
-                _mm_loadu_si128((const __m128i *)(tmp + count + 2 * wc));
-            __m128i xmm2 =
-                _mm_loadu_si128((const __m128i *)(tmp + count + 1 * wc));
-            __m128i xmm3 =
-                _mm_loadu_si128((const __m128i *)(tmp + count + 0 * wc));
-            /* (xmm0_0, xmm1_0, xmm0_1, xmm1_1, xmm0_2, xmm1_2, ...) */
+            __m128i xmm0 = _mm_loadu_si128((const __m128i *)(tmp + count +
+#if WORDS_BIGENDIAN
+                                                             0
+#else
+                                                             3
+#endif
+                                                                 * wc));
+            __m128i xmm1 = _mm_loadu_si128((const __m128i *)(tmp + count +
+#if WORDS_BIGENDIAN
+                                                             1
+#else
+                                                             2
+#endif
+                                                                 * wc));
+            __m128i xmm2 = _mm_loadu_si128((const __m128i *)(tmp + count +
+#if WORDS_BIGENDIAN
+                                                             2
+#else
+                                                             1
+#endif
+                                                                 * wc));
+            __m128i xmm3 = _mm_loadu_si128((const __m128i *)(tmp + count +
+#if WORDS_BIGENDIAN
+                                                             3
+#else
+                                                             0
+#endif
+                                                                 * wc));
             __m128i tmp0 = _mm_unpacklo_epi8(xmm0, xmm1);
-            /* (xmm0_8, xmm1_8, xmm0_9, xmm1_9, xmm0_10, xmm1_10, ...) */
             __m128i tmp1 = _mm_unpackhi_epi8(xmm0, xmm1);
-            /* (xmm2_0, xmm3_0, xmm2_1, xmm3_1, xmm2_2, xmm3_2, ...) */
             __m128i tmp2 = _mm_unpacklo_epi8(xmm2, xmm3);
-            /* (xmm2_8, xmm3_8, xmm2_9, xmm3_9, xmm2_10, xmm3_10, ...) */
             __m128i tmp3 = _mm_unpackhi_epi8(xmm2, xmm3);
-            /* (xmm0_0, xmm1_0, xmm2_0, xmm3_0, xmm0_1, xmm1_1, xmm2_1, xmm3_1,
-             * ...) */
             __m128i tmp2_0 = _mm_unpacklo_epi16(tmp0, tmp2);
             __m128i tmp2_1 = _mm_unpackhi_epi16(tmp0, tmp2);
             __m128i tmp2_2 = _mm_unpacklo_epi16(tmp1, tmp3);
@@ -1124,48 +1298,72 @@ static int fpDiff(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         return 0;
 
     _TIFFmemcpy(tmp, cp0, cc);
-#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    count = 0;
+#if defined(__AVX2__)
     if (bps == 4 && stride == 1)
     {
-        tmsize_t i = 0;
+        const int order[4] =
 #if WORDS_BIGENDIAN
-        for (; i + 16 <= wc; i += 16)
-        {
-            uint8x16x4_t v = vld4q_u8(tmp + 4 * i);
-            vst1q_u8(cp + 0 * wc + i, v.val[0]);
-            vst1q_u8(cp + 1 * wc + i, v.val[1]);
-            vst1q_u8(cp + 2 * wc + i, v.val[2]);
-            vst1q_u8(cp + 3 * wc + i, v.val[3]);
-        }
+            {0, 1, 2, 3};
 #else
-        for (; i + 16 <= wc; i += 16)
-        {
-            uint8x16x4_t v = vld4q_u8(tmp + 4 * i);
-            vst1q_u8(cp + 0 * wc + i, v.val[3]);
-            vst1q_u8(cp + 1 * wc + i, v.val[2]);
-            vst1q_u8(cp + 2 * wc + i, v.val[1]);
-            vst1q_u8(cp + 3 * wc + i, v.val[0]);
-        }
+            {3, 2, 1, 0};
 #endif
-        for (; i < wc; i++)
-        {
-            for (uint32_t byte = 0; byte < bps; byte++)
-            {
-#if WORDS_BIGENDIAN
-                cp[byte * wc + i] = tmp[bps * i + byte];
-#else
-                cp[(bps - byte - 1) * wc + i] = tmp[bps * i + byte];
-#endif
-            }
-        }
+        interleave4_avx2(cp, tmp, wc, order);
+        count = wc;
     }
-    else
+    else if (bps == 8 && stride == 1)
+    {
+        const int oh[4] =
+#if WORDS_BIGENDIAN
+            {0, 1, 2, 3};
+#else
+            {7, 6, 5, 4};
 #endif
+        const int ol[4] =
+#if WORDS_BIGENDIAN
+            {4, 5, 6, 7};
+#else
+            {3, 2, 1, 0};
+#endif
+        interleave8_avx2(cp, tmp, wc, oh, ol);
+        count = wc;
+    }
+#endif
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    if (count == 0 && bps == 4 && stride == 1)
+    {
+        const int order[4] =
+#if WORDS_BIGENDIAN
+            {0, 1, 2, 3};
+#else
+            {3, 2, 1, 0};
+#endif
+        interleave4_neon(cp, tmp, wc, order);
+        count = wc;
+    }
+    else if (count == 0 && bps == 8 && stride == 1)
+    {
+        const int oh[4] =
+#if WORDS_BIGENDIAN
+            {0, 1, 2, 3};
+#else
+            {7, 6, 5, 4};
+#endif
+        const int ol[4] =
+#if WORDS_BIGENDIAN
+            {4, 5, 6, 7};
+#else
+            {3, 2, 1, 0};
+#endif
+        interleave8_neon(cp, tmp, wc, oh, ol);
+        count = wc;
+    }
+#endif
+    if (count == 0)
     {
         for (count = 0; count < wc; count++)
         {
-            uint32_t byte;
-            for (byte = 0; byte < bps; byte++)
+            for (uint32_t byte = 0; byte < bps; byte++)
             {
 #if WORDS_BIGENDIAN
                 cp[byte * wc + count] = tmp[bps * count + byte];
