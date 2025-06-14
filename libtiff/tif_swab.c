@@ -32,6 +32,12 @@
 #include <arm_neon.h>
 #endif
 
+#if defined(__GNUC__) || defined(__clang__)
+#define TIFF_PREFETCH(ptr) __builtin_prefetch(ptr)
+#else
+#define TIFF_PREFETCH(ptr) ((void)0)
+#endif
+
 #if defined(DISABLE_CHECK_TIFFSWABMACROS) || !defined(TIFFSwabShort)
 void TIFFSwabShort(uint16_t *wp)
 {
@@ -102,6 +108,7 @@ static void TIFFSwabArrayOfShortNeon(uint16_t *wp, tmsize_t n)
     size_t i = 0;
     for (; i + 8 <= (size_t)n; i += 8)
     {
+        TIFF_PREFETCH(wp + i + 32);
         uint16x8_t v = vld1q_u16(wp + i);
         v = vreinterpretq_u16_u8(vrev16q_u8(vreinterpretq_u8_u16(v)));
         vst1q_u16(wp + i, v);
@@ -164,6 +171,7 @@ static void TIFFSwabArrayOfLongNeon(uint32_t *lp, tmsize_t n)
     size_t i = 0;
     for (; i + 4 <= (size_t)n; i += 4)
     {
+        TIFF_PREFETCH(lp + i + 32);
         uint32x4_t v = vld1q_u32(lp + i);
         uint8x16_t b = vreinterpretq_u8_u32(v);
         b = vrev32q_u8(b);
@@ -215,6 +223,7 @@ static void TIFFSwabArrayOfLong8Neon(uint64_t *lp, tmsize_t n)
     size_t i = 0;
     for (; i + 2 <= (size_t)n; i += 2)
     {
+        TIFF_PREFETCH(lp + i + 32);
         uint64x2_t v = vld1q_u64(lp + i);
         uint8x16_t b = vreinterpretq_u8_u64(v);
         b = vrev64q_u8(b);
