@@ -30,6 +30,39 @@
  * PackBits Compression Algorithm Support
  */
 #include <stdio.h>
+#include <string.h>
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
+#if defined(HAVE_SSE41)
+#include <smmintrin.h>
+#endif
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static inline void memcpy_neon(uint8_t *dst, const uint8_t *src, size_t n)
+{
+    size_t i = 0;
+    for (; i + 16 <= n; i += 16)
+    {
+        vst1q_u8(dst + i, vld1q_u8(src + i));
+    }
+    if (i < n)
+        memcpy(dst + i, src + i, n - i);
+}
+#endif
+#if defined(HAVE_SSE41)
+static inline void memcpy_sse41(uint8_t *dst, const uint8_t *src, size_t n)
+{
+    size_t i = 0;
+    for (; i + 16 <= n; i += 16)
+    {
+        __m128i v = _mm_loadu_si128((const __m128i *)(src + i));
+        _mm_storeu_si128((__m128i *)(dst + i), v);
+    }
+    if (i < n)
+        memcpy(dst + i, src + i, n - i);
+}
+#endif
 
 #ifndef PACKBITS_READ_ONLY
 
@@ -273,8 +306,46 @@ static int PackBitsDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             occ -= n;
             b = *bp++;
             cc--;
-            while (n-- > 0)
-                *op++ = (uint8_t)b;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+            if (n >= 16)
+            {
+                uint8x16_t v = vdupq_n_u8((uint8_t)b);
+                long i = 0;
+                for (; i + 16 <= n; i += 16)
+                {
+                    vst1q_u8(op + i, v);
+                }
+                if (i < n)
+                    memset(op + i, b, (size_t)(n - i));
+                op += n;
+            }
+            else
+            {
+                memset(op, b, (size_t)n);
+                op += n;
+            }
+#elif defined(HAVE_SSE41)
+            if (n >= 16)
+            {
+                __m128i v = _mm_set1_epi8((char)b);
+                long i = 0;
+                for (; i + 16 <= n; i += 16)
+                {
+                    _mm_storeu_si128((__m128i *)(op + i), v);
+                }
+                if (i < n)
+                    memset(op + i, b, (size_t)(n - i));
+                op += n;
+            }
+            else
+            {
+                memset(op, b, (size_t)n);
+                op += n;
+            }
+#else
+            memset(op, b, (size_t)n);
+            op += n;
+#endif
         }
         else
         { /* copy next n+1 bytes literally */
@@ -293,7 +364,40 @@ static int PackBitsDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                     "Terminating PackBitsDecode due to lack of data.");
                 break;
             }
-            _TIFFmemcpy(op, bp, ++n);
+            n++;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+            if (n >= 16)
+            {
+                size_t i = 0;
+                for (; i + 16 <= (size_t)n; i += 16)
+                    vst1q_u8(op + i, vld1q_u8((const uint8_t *)bp + i));
+                if (i < (size_t)n)
+                    memcpy(op + i, (const uint8_t *)bp + i, (size_t)n - i);
+            }
+            else
+            {
+                memcpy(op, bp, (size_t)n);
+            }
+#elif defined(HAVE_SSE41)
+            if (n >= 16)
+            {
+                size_t i = 0;
+                for (; i + 16 <= (size_t)n; i += 16)
+                {
+                    __m128i v = _mm_loadu_si128(
+                        (const __m128i *)((const uint8_t *)bp + i));
+                    _mm_storeu_si128((__m128i *)(op + i), v);
+                }
+                if (i < (size_t)n)
+                    memcpy(op + i, (const uint8_t *)bp + i, (size_t)n - i);
+            }
+            else
+            {
+                memcpy(op, bp, (size_t)n);
+            }
+#else
+            memcpy(op, bp, (size_t)n);
+#endif
             op += n;
             occ -= n;
             bp += n;
