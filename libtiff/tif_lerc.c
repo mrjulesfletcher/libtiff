@@ -22,6 +22,7 @@
  * OF THIS SOFTWARE.
  */
 
+#include "tiff_simd.h"
 #include "tiffiop.h"
 #ifdef LERC_SUPPORT
 /*
@@ -621,8 +622,9 @@ static int LERCPreDecode(TIFF *tif, uint16_t s)
             i--;
             sp->uncompressed_buffer[i * dst_stride + td->td_samplesperpixel -
                                     1] = 255 * sp->mask_buffer[i];
-            memmove(sp->uncompressed_buffer + i * dst_stride,
-                    sp->uncompressed_buffer + i * src_stride, src_stride);
+            tiff_memmove_u8(sp->uncompressed_buffer + i * dst_stride,
+                            sp->uncompressed_buffer + i * src_stride,
+                            src_stride);
         }
     }
     else if (use_mask && td->td_sampleformat == SAMPLEFORMAT_IEEEFP)
@@ -890,8 +892,9 @@ static int LERCPostEncode(TIFF *tif)
             /* First pixels must use memmove due to overlapping areas */
             for (i = 0; i < dst_nbands && i < nb_pixels; i++)
             {
-                memmove(sp->uncompressed_buffer + i * dst_stride,
-                        sp->uncompressed_buffer + i * src_stride, dst_stride);
+                tiff_memmove_u8(sp->uncompressed_buffer + i * dst_stride,
+                                sp->uncompressed_buffer + i * src_stride,
+                                dst_stride);
                 sp->mask_buffer[i] =
                     sp->uncompressed_buffer[i * src_stride +
                                             td->td_samplesperpixel - 1];

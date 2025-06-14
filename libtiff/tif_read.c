@@ -26,6 +26,7 @@
  * TIFF Library.
  * Scanline-oriented Read Support
  */
+#include "tiff_simd.h"
 #include "tiffiop.h"
 #include <stdio.h>
 
@@ -214,7 +215,7 @@ static int TIFFFillStripPartial(TIFF *tif, int strip, tmsize_t read_ahead,
     if (unused_data > 0)
     {
         assert((tif->tif_flags & TIFF_BUFFERMMAP) == 0);
-        memmove(tif->tif_rawdata, tif->tif_rawcp, unused_data);
+        tiff_memmove_u8(tif->tif_rawdata, tif->tif_rawcp, unused_data);
     }
 
     /*

@@ -1,7 +1,9 @@
 #ifndef TIFF_SIMD_H
 #define TIFF_SIMD_H
 
+#include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
@@ -66,6 +68,53 @@ extern "C"
     static inline tiff_v16u8 tiff_sub_u8(tiff_v16u8 a, tiff_v16u8 b)
     {
         return tiff_simd.sub_u8(a, b);
+    }
+
+    static inline void tiff_memmove_u8(uint8_t *dst, const uint8_t *src,
+                                       size_t n)
+    {
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+        if (dst == src || n == 0)
+            return;
+        if (dst < src)
+        {
+            while (((uintptr_t)dst & 15) && n)
+            {
+                *dst++ = *src++;
+                n--;
+            }
+            for (; n >= 16; n -= 16, dst += 16, src += 16)
+                vst1q_u8(dst, vld1q_u8(src));
+            while (n--)
+                *dst++ = *src++;
+        }
+        else
+        {
+            dst += n;
+            src += n;
+            while (((uintptr_t)dst & 15) && n)
+            {
+                dst--;
+                src--;
+                *dst = *src;
+                n--;
+            }
+            for (; n >= 16; n -= 16)
+            {
+                dst -= 16;
+                src -= 16;
+                vst1q_u8(dst, vld1q_u8(src));
+            }
+            while (n--)
+            {
+                dst--;
+                src--;
+                *dst = *src;
+            }
+        }
+#else
+    memmove(dst, src, n);
+#endif
     }
 
 #ifdef __cplusplus
