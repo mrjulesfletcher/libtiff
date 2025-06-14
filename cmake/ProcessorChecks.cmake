@@ -47,6 +47,14 @@ if(HAVE_NEON)
 endif()
 
 check_c_source_compiles(
+  "#include <emmintrin.h>
+   int main(){ __m128i v = _mm_setzero_si128(); return _mm_cvtsi128_si32(v); }"
+  HAVE_SSE2)
+if(HAVE_SSE2)
+  add_compile_definitions(HAVE_SSE2=1)
+endif()
+
+check_c_source_compiles(
   "#include <smmintrin.h>
    int main(){ __m128i v = _mm_setzero_si128(); return _mm_extract_epi8(v,0); }"
   HAVE_SSE41)
