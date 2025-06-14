@@ -771,8 +771,10 @@ static int PixarLogSetupDecode(TIFF *tif)
     /* add one more stride in case input ends mid-stride */
     tbuf_size = add_ms(tbuf_size, sizeof(uint16_t) * sp->stride);
     if (tbuf_size == 0)
-        return (0); /* TODO: this is an error return without error report
-                       through TIFFErrorExt */
+    {
+        TIFFErrorExtR(tif, module, "PixarLog tbuf_size overflow");
+        return (0);
+    }
     sp->tbuf = (uint16_t *)_TIFFmallocExt(tif, tbuf_size);
     if (sp->tbuf == NULL)
         return (0);
