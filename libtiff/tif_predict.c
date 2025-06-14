@@ -40,6 +40,14 @@
 #include <arm_neon.h>
 #endif
 
+static inline uint16_t add_sat_u16(uint16_t a, uint16_t b)
+{
+    uint32_t sum = (uint32_t)a + (uint32_t)b;
+    if (sum > 65535U)
+        sum = 65535U;
+    return (uint16_t)sum;
+}
+
 #define PredictorState(tif) ((TIFFPredictorState *)(tif)->tif_data)
 
 static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc);
@@ -492,15 +500,70 @@ static int horAcc16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 
     if (wc > stride)
     {
-        wc -= stride;
-        do
+        if (stride == 1)
         {
-            REPEAT4(stride, wp[stride] = (uint16_t)(((unsigned int)wp[stride] +
-                                                     (unsigned int)wp[0]) &
-                                                    0xffff);
-                    wp++)
+            uint32_t acc = wp[0];
+            tmsize_t i = stride;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+            if (wc - i >= 8)
+            {
+                uint16_t *p = wp + i;
+                tmsize_t remaining = wc - i;
+                uint16_t acc16 = (uint16_t)acc;
+                while (remaining >= 8)
+                {
+                    uint16x8_t v = vld1q_u16(p);
+                    v = vqaddq_u16(v, vextq_u16(vdupq_n_u16(0), v, 7));
+                    v = vqaddq_u16(v, vextq_u16(vdupq_n_u16(0), v, 6));
+                    v = vqaddq_u16(v, vextq_u16(vdupq_n_u16(0), v, 4));
+                    v = vqaddq_u16(v, vdupq_n_u16(acc16));
+                    vst1q_u16(p, v);
+                    acc16 = vgetq_lane_u16(v, 7);
+                    p += 8;
+                    remaining -= 8;
+                }
+                acc = acc16;
+                i = wc - remaining;
+            }
+#endif
+#if defined(HAVE_SSE41)
+            if (wc - i >= 8)
+            {
+                uint16_t *p = wp + i;
+                tmsize_t remaining = wc - i;
+                uint16_t acc16 = (uint16_t)acc;
+                while (remaining >= 8)
+                {
+                    __m128i v = _mm_loadu_si128((const __m128i *)p);
+                    v = _mm_adds_epu16(v, _mm_slli_si128(v, 2));
+                    v = _mm_adds_epu16(v, _mm_slli_si128(v, 4));
+                    v = _mm_adds_epu16(v, _mm_slli_si128(v, 8));
+                    v = _mm_adds_epu16(v, _mm_set1_epi16(acc16));
+                    _mm_storeu_si128((__m128i *)p, v);
+                    acc16 = (uint16_t)_mm_extract_epi16(v, 7);
+                    p += 8;
+                    remaining -= 8;
+                }
+                acc = acc16;
+                i = wc - remaining;
+            }
+#endif
+            for (; i < wc; i++)
+            {
+                acc = add_sat_u16((uint16_t)acc, wp[i]);
+                wp[i] = (uint16_t)acc;
+            }
+        }
+        else
+        {
             wc -= stride;
-        } while (wc > 0);
+            do
+            {
+                REPEAT4(stride, wp[stride] = add_sat_u16(wp[stride], wp[0]);
+                        wp++)
+                wc -= stride;
+            } while (wc > 0);
+        }
     }
     return 1;
 }
