@@ -182,6 +182,9 @@
 /* Define to 1 if ARM NEON intrinsics are available */
 #undef HAVE_NEON
 
+/* Define to 1 if SSE2 intrinsics are available */
+#undef HAVE_SSE2
+
 /* Define to 1 if SSE4.1 intrinsics are available */
 #undef HAVE_SSE41
 

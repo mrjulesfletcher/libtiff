@@ -300,6 +300,23 @@ AC_COMPILE_IFELSE([
 ])
 AC_SUBST(HAVE_NEON)
 
+dnl Check for SSE2 intrinsics
+AC_MSG_CHECKING([for SSE2 support])
+AC_COMPILE_IFELSE([
+  AC_LANG_PROGRAM([
+    #include <emmintrin.h>
+  ],[
+    __m128i v = _mm_setzero_si128(); return _mm_cvtsi128_si32(v);
+  ])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_SSE2],[1],[Define if SSE2 intrinsics are available])
+  HAVE_SSE2=1
+],[
+  AC_MSG_RESULT(no)
+  HAVE_SSE2=0
+])
+AC_SUBST(HAVE_SSE2)
+
 dnl Check for SSE4.1 intrinsics
 AC_MSG_CHECKING([for SSE4.1 support])
 AC_COMPILE_IFELSE([

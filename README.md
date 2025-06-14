@@ -110,7 +110,7 @@ Horizontal differencing used by the predictor tag includes NEON implementations 
 【F:libtiff/tif_predict.c†L1078-L1094】
 
 ### SSE2 Predictor Optimization
-Float32 predictor decoding on x86‑64 interleaves four vectors at once, yielding about a **25 %** improvement:
+Float32 predictor decoding on x86‑64 interleaves four vectors at once and now prefetches upcoming data. The 8‑bit and 16‑bit accumulators also fall back to SSE2 when SSE4.1 is unavailable. This yields about a **25 %** improvement:
 ```c
 #if defined(__x86_64__) || defined(_M_X64)
     if (bps == 4)
@@ -232,6 +232,9 @@ on an Intel Xeon Platinum 8370C with GCC and `-msse4.1`.
 $ ./tools/bayerbench 50
 pack:   2177.78 MPix/s
 unpack: 1661.60 MPix/s
+# with SSE2 only
+pack:   757.83 MPix/s
+unpack: 1188.53 MPix/s
 
 $ ./test/swab_benchmark
 TIFFSwabArrayOfShort: 0.011 ms

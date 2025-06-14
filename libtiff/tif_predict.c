@@ -30,7 +30,7 @@
 #include "tif_predict.h"
 #include "tiffiop.h"
 
-#if defined(__x86_64__) || defined(_M_X64)
+#if defined(HAVE_SSE2)
 #include <emmintrin.h>
 #endif
 #if defined(HAVE_SSE41)
@@ -493,6 +493,7 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 16)
                 {
                     uint8x16_t v = vld1q_u8(p);
+                    __builtin_prefetch(p + 64);
                     v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 15));
                     v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 14));
                     v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 12));
@@ -516,6 +517,7 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 16)
                 {
                     __m128i v = _mm_loadu_si128((const __m128i *)p);
+                    _mm_prefetch((const char *)(p + 64), _MM_HINT_T0);
                     v = _mm_add_epi8(v, _mm_slli_si128(v, 1));
                     v = _mm_add_epi8(v, _mm_slli_si128(v, 2));
                     v = _mm_add_epi8(v, _mm_slli_si128(v, 4));
@@ -523,6 +525,30 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                     v = _mm_add_epi8(v, _mm_set1_epi8((char)acc8));
                     _mm_storeu_si128((__m128i *)p, v);
                     acc8 = (uint8_t)_mm_extract_epi8(v, 15);
+                    p += 16;
+                    remaining -= 16;
+                }
+                acc = acc8;
+                i = cc - remaining;
+            }
+#endif
+#if defined(HAVE_SSE2) && !defined(HAVE_SSE41)
+            if (cc - i >= 16)
+            {
+                uint8_t *p = cp + i;
+                tmsize_t remaining = cc - i;
+                uint8_t acc8 = (uint8_t)acc;
+                while (remaining >= 16)
+                {
+                    __m128i v = _mm_loadu_si128((const __m128i *)p);
+                    _mm_prefetch((const char *)(p + 64), _MM_HINT_T0);
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 1));
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 2));
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 4));
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 8));
+                    v = _mm_add_epi8(v, _mm_set1_epi8((char)acc8));
+                    _mm_storeu_si128((__m128i *)p, v);
+                    acc8 = (uint8_t)_mm_cvtsi128_si32(_mm_srli_si128(v, 15));
                     p += 16;
                     remaining -= 16;
                 }
@@ -615,6 +641,7 @@ static int horAcc16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 8)
                 {
                     uint16x8_t v = vld1q_u16(p);
+                    __builtin_prefetch(p + 16);
                     v = vqaddq_u16(v, vextq_u16(vdupq_n_u16(0), v, 7));
                     v = vqaddq_u16(v, vextq_u16(vdupq_n_u16(0), v, 6));
                     v = vqaddq_u16(v, vextq_u16(vdupq_n_u16(0), v, 4));
@@ -637,12 +664,36 @@ static int horAcc16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 8)
                 {
                     __m128i v = _mm_loadu_si128((const __m128i *)p);
+                    _mm_prefetch((const char *)(p + 32), _MM_HINT_T0);
                     v = _mm_adds_epu16(v, _mm_slli_si128(v, 2));
                     v = _mm_adds_epu16(v, _mm_slli_si128(v, 4));
                     v = _mm_adds_epu16(v, _mm_slli_si128(v, 8));
                     v = _mm_adds_epu16(v, _mm_set1_epi16(acc16));
                     _mm_storeu_si128((__m128i *)p, v);
                     acc16 = (uint16_t)_mm_extract_epi16(v, 7);
+                    p += 8;
+                    remaining -= 8;
+                }
+                acc = acc16;
+                i = wc - remaining;
+            }
+#endif
+#if defined(HAVE_SSE2) && !defined(HAVE_SSE41)
+            if (wc - i >= 8)
+            {
+                uint16_t *p = wp + i;
+                tmsize_t remaining = wc - i;
+                uint16_t acc16 = (uint16_t)acc;
+                while (remaining >= 8)
+                {
+                    __m128i v = _mm_loadu_si128((const __m128i *)p);
+                    _mm_prefetch((const char *)(p + 32), _MM_HINT_T0);
+                    v = _mm_adds_epu16(v, _mm_slli_si128(v, 2));
+                    v = _mm_adds_epu16(v, _mm_slli_si128(v, 4));
+                    v = _mm_adds_epu16(v, _mm_slli_si128(v, 8));
+                    v = _mm_adds_epu16(v, _mm_set1_epi16(acc16));
+                    _mm_storeu_si128((__m128i *)p, v);
+                    acc16 = (uint16_t)_mm_cvtsi128_si32(_mm_srli_si128(v, 14));
                     p += 8;
                     remaining -= 8;
                 }
@@ -1014,6 +1065,7 @@ static int horDiff8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 16)
                 {
                     uint8x16_t cur = vld1q_u8(p);
+                    __builtin_prefetch(p + 64);
                     uint8x16_t prev = vld1q_u8(p - 1);
                     uint8x16_t diff = vsubq_u8(cur, prev);
                     vst1q_u8(p, diff);
@@ -1114,6 +1166,7 @@ static int horDiff16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
             while (remaining >= 8)
             {
                 uint16x8_t cur = vld1q_u16(p);
+                __builtin_prefetch(p + 16);
                 uint16x8_t prev = vld1q_u16(p - 1);
                 uint16x8_t diff = vsubq_u16(cur, prev);
                 vst1q_u16(p, diff);
@@ -1385,6 +1438,7 @@ static int fpDiff(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         while (remaining >= 16)
         {
             uint8x16_t cur = vld1q_u8(p);
+            __builtin_prefetch(p + 64);
             uint8x16_t prev = vld1q_u8(p - 1);
             uint8x16_t diff = vsubq_u8(cur, prev);
             vst1q_u8(p, diff);
