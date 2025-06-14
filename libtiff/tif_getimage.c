@@ -27,8 +27,8 @@
  *
  * Read and return a packed RGBA image.
  */
-#include "tiffiop.h"
 #include "tiff_simd.h"
+#include "tiffiop.h"
 #include <limits.h>
 #include <stdio.h>
 
@@ -1585,7 +1585,8 @@ DECLAREContigPutFunc(putagreytile)
 #if TIFF_SIMD_NEON
 static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
                              uint32_t y, uint32_t w, uint32_t h,
-                             int32_t fromskew, int32_t toskew, unsigned char *pp)
+                             int32_t fromskew, int32_t toskew,
+                             unsigned char *pp)
 {
     int samplesperpixel = img->samplesperpixel;
     int invert = (img->photometric == PHOTOMETRIC_MINISWHITE);
@@ -1620,8 +1621,8 @@ static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
             uint8_t v = *pp++;
             if (invert)
                 v = (uint8_t)(255 - v);
-            *cp++ = ((uint32_t)v) | ((uint32_t)v << 8) | ((uint32_t)v << 16) |
-                     A1;
+            *cp++ =
+                ((uint32_t)v) | ((uint32_t)v << 8) | ((uint32_t)v << 16) | A1;
         }
         cp += toskew;
         pp += fromskew;
@@ -1671,7 +1672,7 @@ static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
             if (invert)
                 g = (uint8_t)(255 - g);
             *cp++ = ((uint32_t)g) | ((uint32_t)g << 8) | ((uint32_t)g << 16) |
-                     ((uint32_t)a << 24);
+                    ((uint32_t)a << 24);
         }
         cp += toskew;
         pp += fromskew;
@@ -3489,9 +3490,11 @@ int TIFFReadRGBATileExt(TIFF *tif, uint32_t col, uint32_t row, uint32_t *raster,
 
     for (i_row = 0; i_row < read_ysize; i_row++)
     {
-        memmove(raster + (size_t)(tile_ysize - i_row - 1) * tile_xsize,
-                raster + (size_t)(read_ysize - i_row - 1) * read_xsize,
-                read_xsize * sizeof(uint32_t));
+        tiff_memmove_u8(
+            (uint8_t *)(raster + (size_t)(tile_ysize - i_row - 1) * tile_xsize),
+            (const uint8_t *)(raster +
+                              (size_t)(read_ysize - i_row - 1) * read_xsize),
+            read_xsize * sizeof(uint32_t));
         _TIFFmemset(raster + (size_t)(tile_ysize - i_row - 1) * tile_xsize +
                         read_xsize,
                     0, sizeof(uint32_t) * (tile_xsize - read_xsize));

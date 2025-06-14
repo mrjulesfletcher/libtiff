@@ -46,6 +46,7 @@
 
 #include "libport.h"
 #include "tif_config.h"
+#include "tiff_simd.h"
 #include "tiffio.h"
 #include "tiffiop.h"
 
@@ -4199,10 +4200,9 @@ void t2p_tile_collapse_left(tdata_t buffer, tsize_t scanwidth,
     edgescanwidth = (scanwidth * edgetilewidth + (tilewidth - 1)) / tilewidth;
     for (i = 0; i < tilelength; i++)
     {
-        /* We use memmove() since there can be overlaps in src and dst buffers
-         * for the first items */
-        memmove(&(((char *)buffer)[edgescanwidth * i]),
-                &(((char *)buffer)[scanwidth * i]), edgescanwidth);
+        /* Use vectorized copy to handle potential overlap */
+        tiff_memmove_u8((uint8_t *)buffer + edgescanwidth * i,
+                        (uint8_t *)buffer + scanwidth * i, edgescanwidth);
     }
 
     return;
@@ -4321,18 +4321,41 @@ tsize_t t2p_sample_abgr_to_rgb(tdata_t data, uint32_t samplecount)
 
 tsize_t t2p_sample_rgbaa_to_rgb(tdata_t data, uint32_t samplecount)
 {
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    uint8_t *buf = (uint8_t *)data;
+    uint8_t *src = buf + samplecount * 4;
+    uint8_t *dst = buf + samplecount * 3;
+    uint32_t count = samplecount;
+    while (count >= 16)
+    {
+        src -= 64;
+        dst -= 48;
+        uint8x16x4_t rgba = vld4q_u8(src);
+        uint8x16x3_t rgb = {{rgba.val[0], rgba.val[1], rgba.val[2]}};
+        vst3q_u8(dst, rgb);
+        count -= 16;
+    }
+    while (count--)
+    {
+        src -= 4;
+        dst -= 3;
+        dst[0] = src[0];
+        dst[1] = src[1];
+        dst[2] = src[2];
+    }
+    return samplecount * 3;
+#else
     uint32_t i;
-
     /* For the 3 first samples, there is overlap between source and
      * destination, so use memmove().
      * See http://bugzilla.maptools.org/show_bug.cgi?id=2577
      */
     for (i = 0; i < 3 && i < samplecount; i++)
-        memmove((uint8_t *)data + i * 3, (uint8_t *)data + i * 4, 3);
+        tiff_memmove_u8((uint8_t *)data + i * 3, (uint8_t *)data + i * 4, 3);
     for (; i < samplecount; i++)
         memcpy((uint8_t *)data + i * 3, (uint8_t *)data + i * 4, 3);
-
     return (i * 3);
+#endif
 }
 
 /*
