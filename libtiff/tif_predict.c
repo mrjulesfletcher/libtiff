@@ -33,6 +33,9 @@
 #if defined(__x86_64__) || defined(_M_X64)
 #include <emmintrin.h>
 #endif
+#if defined(HAVE_SSE41)
+#include <smmintrin.h>
+#endif
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
@@ -371,16 +374,55 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         {
             uint32_t acc = cp[0];
             tmsize_t i = stride;
-            for (; i < cc - 3; i += 4)
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+            if (cc - i >= 16)
             {
-                cp[i + 0] = (uint8_t)((acc += cp[i + 0]) & 0xff);
-                cp[i + 1] = (uint8_t)((acc += cp[i + 1]) & 0xff);
-                cp[i + 2] = (uint8_t)((acc += cp[i + 2]) & 0xff);
-                cp[i + 3] = (uint8_t)((acc += cp[i + 3]) & 0xff);
+                uint8_t *p = cp + i;
+                tmsize_t remaining = cc - i;
+                uint8_t acc8 = (uint8_t)acc;
+                while (remaining >= 16)
+                {
+                    uint8x16_t v = vld1q_u8(p);
+                    v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 15));
+                    v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 14));
+                    v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 12));
+                    v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 8));
+                    v = vaddq_u8(v, vdupq_n_u8(acc8));
+                    vst1q_u8(p, v);
+                    acc8 = vgetq_lane_u8(v, 15);
+                    p += 16;
+                    remaining -= 16;
+                }
+                acc = acc8;
+                i = cc - remaining;
             }
+#endif
+#if defined(HAVE_SSE41)
+            if (cc - i >= 16)
+            {
+                uint8_t *p = cp + i;
+                tmsize_t remaining = cc - i;
+                uint8_t acc8 = (uint8_t)acc;
+                while (remaining >= 16)
+                {
+                    __m128i v = _mm_loadu_si128((const __m128i *)p);
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 1));
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 2));
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 4));
+                    v = _mm_add_epi8(v, _mm_slli_si128(v, 8));
+                    v = _mm_add_epi8(v, _mm_set1_epi8((char)acc8));
+                    _mm_storeu_si128((__m128i *)p, v);
+                    acc8 = (uint8_t)_mm_extract_epi8(v, 15);
+                    p += 16;
+                    remaining -= 16;
+                }
+                acc = acc8;
+                i = cc - remaining;
+            }
+#endif
             for (; i < cc; i++)
             {
-                cp[i + 0] = (uint8_t)((acc += cp[i + 0]) & 0xff);
+                cp[i] = (uint8_t)((acc += cp[i]) & 0xff);
             }
         }
         else if (stride == 3)
