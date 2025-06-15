@@ -23,6 +23,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #ifdef ZSTD_SUPPORT
 /*
  * TIFF Library.

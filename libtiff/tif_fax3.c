@@ -23,6 +23,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #ifdef CCITT_SUPPORT
 /*
  * TIFF Library.

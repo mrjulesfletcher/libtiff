@@ -23,6 +23,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #ifdef PACKBITS_SUPPORT
 /*
  * TIFF Library.

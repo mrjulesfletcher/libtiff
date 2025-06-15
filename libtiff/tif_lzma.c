@@ -22,6 +22,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #ifdef LZMA_SUPPORT
 /*
  * TIFF Library.

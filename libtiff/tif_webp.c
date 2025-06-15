@@ -23,6 +23,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #ifdef WEBP_SUPPORT
 /*
  * TIFF Library.
