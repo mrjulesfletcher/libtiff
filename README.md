@@ -299,9 +299,10 @@ pool automatically based on the queued tasks.
 
 io_uring support requires Linux 5.1 and liburing. Enable it with
 `-Dio-uring=ON` (CMake) or `--enable-io-uring` (Autotools). The queue depth
-defaults to 8 but can be modified through the `TIFF_URING_DEPTH`
-environment variable or by calling
-`TIFFOpenOptionsSetURingQueueDepth()`.
+defaults to 8 but may be tuned through the `TIFF_URING_DEPTH` environment
+variable, via `TIFFOpenOptionsSetURingQueueDepth()` before opening a file, or at
+runtime with `TIFFSetURingQueueDepth()`. Any positive value accepted by the
+kernel is allowed.
 
 ## Memory Mapping Tuning
 

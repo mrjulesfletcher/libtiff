@@ -246,4 +246,6 @@ LIBTIFF_4.7.1 {
     TIFFSetUseSSE41;
     TIFFSetMapSize;
     TIFFSetMapAdvice;
+    TIFFSetURingQueueDepth;
+    TIFFGetURingQueueDepth;
 } LIBTIFF_4.6.1;
