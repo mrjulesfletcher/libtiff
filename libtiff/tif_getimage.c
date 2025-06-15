@@ -1466,9 +1466,9 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 #define W2B(v) (((v) >> 8) & 0xff)
 
 #define DECLAREContigPutFunc(name)                                             \
-    static void name(TIFFRGBAImage *img, uint32_t *cp, uint32_t x, uint32_t y, \
+    static void name(TIFFRGBAImage *img, uint32_t *dest, uint32_t x, uint32_t y, \
                      uint32_t w, uint32_t h, int32_t fromskew, int32_t toskew, \
-                     unsigned char *pp)
+                     unsigned char *src)
 
 /*
  * 8-bit palette => colormap/RGB
@@ -1483,11 +1483,11 @@ DECLAREContigPutFunc(put8bitcmaptile)
     {
         for (x = w; x > 0; --x)
         {
-            *cp++ = PALmap[*pp][0];
-            pp += samplesperpixel;
+            *dest++ = PALmap[*src][0];
+            src += samplesperpixel;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1504,9 +1504,9 @@ DECLAREContigPutFunc(put4bitcmaptile)
     for (; h > 0; --h)
     {
         uint32_t *bw;
-        UNROLL2(w, bw = PALmap[*pp++], *cp++ = *bw++);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL2(w, bw = PALmap[*src++], *dest++ = *bw++);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1523,9 +1523,9 @@ DECLAREContigPutFunc(put2bitcmaptile)
     for (; h > 0; --h)
     {
         uint32_t *bw;
-        UNROLL4(w, bw = PALmap[*pp++], *cp++ = *bw++);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL4(w, bw = PALmap[*src++], *dest++ = *bw++);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1542,9 +1542,9 @@ DECLAREContigPutFunc(put1bitcmaptile)
     for (; h > 0; --h)
     {
         uint32_t *bw;
-        UNROLL8(w, bw = PALmap[*pp++], *cp++ = *bw++);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL8(w, bw = PALmap[*src++], *dest++ = *bw++);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1561,11 +1561,11 @@ DECLAREContigPutFunc(putgreytile)
     {
         for (x = w; x > 0; --x)
         {
-            *cp++ = BWmap[*pp][0];
-            pp += samplesperpixel;
+            *dest++ = BWmap[*src][0];
+            src += samplesperpixel;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1582,19 +1582,19 @@ DECLAREContigPutFunc(putagreytile)
     {
         for (x = w; x > 0; --x)
         {
-            *cp++ = BWmap[*pp][0] & ((uint32_t) * (pp + 1) << 24 | ~A1);
-            pp += samplesperpixel;
+            *dest++ = BWmap[*src][0] & ((uint32_t) * (src + 1) << 24 | ~A1);
+            src += samplesperpixel;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
 #if TIFF_SIMD_NEON
-static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
+static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *dest, uint32_t x,
                              uint32_t y, uint32_t w, uint32_t h,
                              int32_t fromskew, int32_t toskew,
-                             unsigned char *pp)
+                             unsigned char *src)
 {
     int samplesperpixel = img->samplesperpixel;
     int invert = (img->photometric == PHOTOMETRIC_MINISWHITE);
@@ -1602,7 +1602,7 @@ static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
     (void)y;
     if (samplesperpixel != 1)
     {
-        putgreytile(img, cp, x, y, w, h, fromskew, toskew, pp);
+        putgreytile(img, dest, x, y, w, h, fromskew, toskew, src);
         return;
     }
     uint8x16_t maxv = vdupq_n_u8(255);
@@ -1611,8 +1611,8 @@ static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
         uint32_t ww = w;
         while (ww >= 16)
         {
-            __builtin_prefetch(pp + 64);
-            uint8x16_t g = vld1q_u8(pp);
+            __builtin_prefetch(src + 64);
+            uint8x16_t g = vld1q_u8(src);
             if (invert)
                 g = vsubq_u8(maxv, g);
             uint8x16x4_t outv;
@@ -1620,28 +1620,28 @@ static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
             outv.val[1] = g;
             outv.val[2] = g;
             outv.val[3] = maxv;
-            vst4q_u8((uint8_t *)cp, outv);
-            pp += 16;
-            cp += 16;
+            vst4q_u8((uint8_t *)dest, outv);
+            src += 16;
+            dest += 16;
             ww -= 16;
         }
         for (; ww > 0; --ww)
         {
-            uint8_t v = *pp++;
+            uint8_t v = *src++;
             if (invert)
                 v = (uint8_t)(255 - v);
-            *cp++ =
+            *dest++ =
                 ((uint32_t)v) | ((uint32_t)v << 8) | ((uint32_t)v << 16) | A1;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
-static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
+static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *dest, uint32_t x,
                               uint32_t y, uint32_t w, uint32_t h,
                               int32_t fromskew, int32_t toskew,
-                              unsigned char *pp)
+                              unsigned char *src)
 {
     int samplesperpixel = img->samplesperpixel;
     int invert = (img->photometric == PHOTOMETRIC_MINISWHITE);
@@ -1649,7 +1649,7 @@ static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
     (void)y;
     if (samplesperpixel != 2)
     {
-        putagreytile(img, cp, x, y, w, h, fromskew, toskew, pp);
+        putagreytile(img, dest, x, y, w, h, fromskew, toskew, src);
         return;
     }
     uint8x16_t maxv = vdupq_n_u8(255);
@@ -1658,7 +1658,7 @@ static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
         uint32_t ww = w;
         while (ww >= 16)
         {
-            uint8x16x2_t src = vld2q_u8(pp);
+            uint8x16x2_t src = vld2q_u8(src);
             uint8x16_t g = src.val[0];
             uint8x16_t a = src.val[1];
             if (invert)
@@ -1668,30 +1668,30 @@ static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
             outv.val[1] = g;
             outv.val[2] = g;
             outv.val[3] = a;
-            vst4q_u8((uint8_t *)cp, outv);
-            pp += 32;
-            cp += 16;
+            vst4q_u8((uint8_t *)dest, outv);
+            src += 32;
+            dest += 16;
             ww -= 16;
         }
         for (; ww > 0; --ww)
         {
-            uint8_t g = pp[0];
-            uint8_t a = pp[1];
-            pp += 2;
+            uint8_t g = src[0];
+            uint8_t a = src[1];
+            src += 2;
             if (invert)
                 g = (uint8_t)(255 - g);
-            *cp++ = ((uint32_t)g) | ((uint32_t)g << 8) | ((uint32_t)g << 16) |
+            *dest++ = ((uint32_t)g) | ((uint32_t)g << 8) | ((uint32_t)g << 16) |
                     ((uint32_t)a << 24);
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
-static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *cp,
+static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *dest,
                                           uint32_t x, uint32_t y, uint32_t w,
                                           uint32_t h, int32_t fromskew,
-                                          int32_t toskew, unsigned char *pp)
+                                          int32_t toskew, unsigned char *src)
 {
     (void)x;
     (void)y;
@@ -1703,7 +1703,7 @@ static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *cp,
         uint32_t ww = w;
         while (ww >= 16)
         {
-            uint8x16x3_t src = vld3q_u8(pp);
+            uint8x16x3_t src = vld3q_u8(src);
             uint8x16_t yv = src.val[0];
             uint8x16_t cbv = src.val[1];
             uint8x16_t crv = src.val[2];
@@ -1771,19 +1771,19 @@ static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *cp,
             outv.val[1] = gv;
             outv.val[2] = bv;
             outv.val[3] = maxv;
-            vst4q_u8((uint8_t *)cp, outv);
+            vst4q_u8((uint8_t *)dest, outv);
 
-            pp += 48;
-            cp += 16;
+            src += 48;
+            dest += 16;
             ww -= 16;
         }
         for (; ww > 0; --ww)
         {
-            YCbCrtoRGB(*cp++, pp[0]);
-            pp += 3;
+            YCbCrtoRGB(*dest++, src[0]);
+            src += 3;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 #endif
@@ -1799,18 +1799,18 @@ DECLAREContigPutFunc(put16bitbwtile)
     (void)y;
     for (; h > 0; --h)
     {
-        uint16_t *wp = (uint16_t *)pp;
+        uint16_t *wp = (uint16_t *)src;
 
         for (x = w; x > 0; --x)
         {
             /* use high order byte of 16bit value */
 
-            *cp++ = BWmap[*wp >> 8][0];
-            pp += 2 * samplesperpixel;
+            *dest++ = BWmap[*wp >> 8][0];
+            src += 2 * samplesperpixel;
             wp += samplesperpixel;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1827,9 +1827,9 @@ DECLAREContigPutFunc(put1bitbwtile)
     for (; h > 0; --h)
     {
         uint32_t *bw;
-        UNROLL8(w, bw = BWmap[*pp++], *cp++ = *bw++);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL8(w, bw = BWmap[*src++], *dest++ = *bw++);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1846,9 +1846,9 @@ DECLAREContigPutFunc(put2bitbwtile)
     for (; h > 0; --h)
     {
         uint32_t *bw;
-        UNROLL4(w, bw = BWmap[*pp++], *cp++ = *bw++);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL4(w, bw = BWmap[*src++], *dest++ = *bw++);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1865,9 +1865,9 @@ DECLAREContigPutFunc(put4bitbwtile)
     for (; h > 0; --h)
     {
         uint32_t *bw;
-        UNROLL2(w, bw = BWmap[*pp++], *cp++ = *bw++);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL2(w, bw = BWmap[*src++], *dest++ = *bw++);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1885,18 +1885,18 @@ DECLAREContigPutFunc(putRGBcontig8bittile)
     {
         for (; h > 0; --h)
         {
-            TIFFPackRGB24(pp, cp, w);
-            cp += w + toskew;
-            pp += w * 3 + fromskew;
+            TIFFPackRGB24(src, dest, w);
+            dest += w + toskew;
+            src += w * 3 + fromskew;
         }
         return;
     }
     for (; h > 0; --h)
     {
-        UNROLL8(w, NOP, *cp++ = PACK(pp[0], pp[1], pp[2]);
-                pp += samplesperpixel);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL8(w, NOP, *dest++ = PACK(src[0], src[1], src[2]);
+                src += samplesperpixel);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1915,18 +1915,18 @@ DECLAREContigPutFunc(putRGBAAcontig8bittile)
     {
         for (; h > 0; --h)
         {
-            TIFFPackRGBA32(pp, cp, w);
-            cp += w + toskew;
-            pp += w * 4 + fromskew;
+            TIFFPackRGBA32(src, dest, w);
+            dest += w + toskew;
+            src += w * 4 + fromskew;
         }
         return;
     }
     for (; h > 0; --h)
     {
-        UNROLL8(w, NOP, *cp++ = PACK4(pp[0], pp[1], pp[2], pp[3]);
-                pp += samplesperpixel);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL8(w, NOP, *dest++ = PACK4(src[0], src[1], src[2], src[3]);
+                src += samplesperpixel);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1945,16 +1945,16 @@ DECLAREContigPutFunc(putRGBUAcontig8bittile)
         uint8_t *m;
         for (x = w; x > 0; --x)
         {
-            a = pp[3];
+            a = src[3];
             m = img->UaToAa + ((size_t)a << 8);
-            r = m[pp[0]];
-            g = m[pp[1]];
-            b = m[pp[2]];
-            *cp++ = PACK4(r, g, b, a);
-            pp += samplesperpixel;
+            r = m[src[0]];
+            g = m[src[1]];
+            b = m[src[2]];
+            *dest++ = PACK4(r, g, b, a);
+            src += samplesperpixel;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -1964,15 +1964,15 @@ DECLAREContigPutFunc(putRGBUAcontig8bittile)
 DECLAREContigPutFunc(putRGBcontig16bittile)
 {
     int samplesperpixel = img->samplesperpixel;
-    uint16_t *wp = (uint16_t *)pp;
+    uint16_t *wp = (uint16_t *)src;
     (void)y;
     fromskew *= samplesperpixel;
     if (samplesperpixel == 3)
     {
         for (; h > 0; --h)
         {
-            TIFFPackRGB48(wp, cp, w);
-            cp += w + toskew;
+            TIFFPackRGB48(wp, dest, w);
+            dest += w + toskew;
             wp += w * 3 + fromskew;
         }
         return;
@@ -1981,11 +1981,11 @@ DECLAREContigPutFunc(putRGBcontig16bittile)
     {
         for (x = w; x > 0; --x)
         {
-            *cp++ = PACK(img->Bitdepth16To8[wp[0]], img->Bitdepth16To8[wp[1]],
+            *dest++ = PACK(img->Bitdepth16To8[wp[0]], img->Bitdepth16To8[wp[1]],
                          img->Bitdepth16To8[wp[2]]);
             wp += samplesperpixel;
         }
-        cp += toskew;
+        dest += toskew;
         wp += fromskew;
     }
 }
@@ -1997,15 +1997,15 @@ DECLAREContigPutFunc(putRGBcontig16bittile)
 DECLAREContigPutFunc(putRGBAAcontig16bittile)
 {
     int samplesperpixel = img->samplesperpixel;
-    uint16_t *wp = (uint16_t *)pp;
+    uint16_t *wp = (uint16_t *)src;
     (void)y;
     fromskew *= samplesperpixel;
     if (samplesperpixel == 4)
     {
         for (; h > 0; --h)
         {
-            TIFFPackRGBA64(wp, cp, w);
-            cp += w + toskew;
+            TIFFPackRGBA64(wp, dest, w);
+            dest += w + toskew;
             wp += w * 4 + fromskew;
         }
         return;
@@ -2014,11 +2014,11 @@ DECLAREContigPutFunc(putRGBAAcontig16bittile)
     {
         for (x = w; x > 0; --x)
         {
-            *cp++ = PACK4(img->Bitdepth16To8[wp[0]], img->Bitdepth16To8[wp[1]],
+            *dest++ = PACK4(img->Bitdepth16To8[wp[0]], img->Bitdepth16To8[wp[1]],
                           img->Bitdepth16To8[wp[2]], img->Bitdepth16To8[wp[3]]);
             wp += samplesperpixel;
         }
-        cp += toskew;
+        dest += toskew;
         wp += fromskew;
     }
 }
@@ -2030,7 +2030,7 @@ DECLAREContigPutFunc(putRGBAAcontig16bittile)
 DECLAREContigPutFunc(putRGBUAcontig16bittile)
 {
     int samplesperpixel = img->samplesperpixel;
-    uint16_t *wp = (uint16_t *)pp;
+    uint16_t *wp = (uint16_t *)src;
     (void)y;
     fromskew *= samplesperpixel;
     for (; h > 0; --h)
@@ -2044,10 +2044,10 @@ DECLAREContigPutFunc(putRGBUAcontig16bittile)
             r = m[img->Bitdepth16To8[wp[0]]];
             g = m[img->Bitdepth16To8[wp[1]]];
             b = m[img->Bitdepth16To8[wp[2]]];
-            *cp++ = PACK4(r, g, b, a);
+            *dest++ = PACK4(r, g, b, a);
             wp += samplesperpixel;
         }
-        cp += toskew;
+        dest += toskew;
         wp += fromskew;
     }
 }
@@ -2067,11 +2067,11 @@ DECLAREContigPutFunc(putRGBcontig8bitCMYKtile)
     fromskew *= samplesperpixel;
     for (; h > 0; --h)
     {
-        UNROLL8(w, NOP, k = 255 - pp[3]; r = (k * (255 - pp[0])) / 255;
-                g = (k * (255 - pp[1])) / 255; b = (k * (255 - pp[2])) / 255;
-                *cp++ = PACK(r, g, b); pp += samplesperpixel);
-        cp += toskew;
-        pp += fromskew;
+        UNROLL8(w, NOP, k = 255 - src[3]; r = (k * (255 - src[0])) / 255;
+                g = (k * (255 - src[1])) / 255; b = (k * (255 - src[2])) / 255;
+                *dest++ = PACK(r, g, b); src += samplesperpixel);
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -2092,20 +2092,20 @@ DECLAREContigPutFunc(putRGBcontig8bitCMYKMaptile)
     {
         for (x = w; x > 0; --x)
         {
-            k = 255 - pp[3];
-            r = (k * (255 - pp[0])) / 255;
-            g = (k * (255 - pp[1])) / 255;
-            b = (k * (255 - pp[2])) / 255;
-            *cp++ = PACK(Map[r], Map[g], Map[b]);
-            pp += samplesperpixel;
+            k = 255 - src[3];
+            r = (k * (255 - src[0])) / 255;
+            g = (k * (255 - src[1])) / 255;
+            b = (k * (255 - src[2])) / 255;
+            *dest++ = PACK(Map[r], Map[g], Map[b]);
+            src += samplesperpixel;
         }
-        pp += fromskew;
-        cp += toskew;
+        src += fromskew;
+        dest += toskew;
     }
 }
 
 #define DECLARESepPutFunc(name)                                                \
-    static void name(TIFFRGBAImage *img, uint32_t *cp, uint32_t x, uint32_t y, \
+    static void name(TIFFRGBAImage *img, uint32_t *dest, uint32_t x, uint32_t y, \
                      uint32_t w, uint32_t h, int32_t fromskew, int32_t toskew, \
                      unsigned char *r, unsigned char *g, unsigned char *b,     \
                      unsigned char *a)
@@ -2121,9 +2121,9 @@ DECLARESepPutFunc(putRGBseparate8bittile)
     (void)a;
     for (; h > 0; --h)
     {
-        UNROLL8(w, NOP, *cp++ = PACK(*r++, *g++, *b++));
+        UNROLL8(w, NOP, *dest++ = PACK(*r++, *g++, *b++));
         SKEW(r, g, b, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 
@@ -2137,9 +2137,9 @@ DECLARESepPutFunc(putRGBAAseparate8bittile)
     (void)y;
     for (; h > 0; --h)
     {
-        UNROLL8(w, NOP, *cp++ = PACK4(*r++, *g++, *b++, *a++));
+        UNROLL8(w, NOP, *dest++ = PACK4(*r++, *g++, *b++, *a++));
         SKEW4(r, g, b, a, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 
@@ -2159,10 +2159,10 @@ DECLARESepPutFunc(putCMYKseparate8bittile)
             rv = (kv * (255 - *r++)) / 255;
             gv = (kv * (255 - *g++)) / 255;
             bv = (kv * (255 - *b++)) / 255;
-            *cp++ = PACK4(rv, gv, bv, 255);
+            *dest++ = PACK4(rv, gv, bv, 255);
         }
         SKEW4(r, g, b, a, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 
@@ -2184,10 +2184,10 @@ DECLARESepPutFunc(putRGBUAseparate8bittile)
             rv = m[*r++];
             gv = m[*g++];
             bv = m[*b++];
-            *cp++ = PACK4(rv, gv, bv, av);
+            *dest++ = PACK4(rv, gv, bv, av);
         }
         SKEW4(r, g, b, a, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 
@@ -2205,10 +2205,10 @@ DECLARESepPutFunc(putRGBseparate16bittile)
     for (; h > 0; --h)
     {
         for (x = 0; x < w; x++)
-            *cp++ = PACK(img->Bitdepth16To8[*wr++], img->Bitdepth16To8[*wg++],
+            *dest++ = PACK(img->Bitdepth16To8[*wr++], img->Bitdepth16To8[*wg++],
                          img->Bitdepth16To8[*wb++]);
         SKEW(wr, wg, wb, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 
@@ -2226,10 +2226,10 @@ DECLARESepPutFunc(putRGBAAseparate16bittile)
     for (; h > 0; --h)
     {
         for (x = 0; x < w; x++)
-            *cp++ = PACK4(img->Bitdepth16To8[*wr++], img->Bitdepth16To8[*wg++],
+            *dest++ = PACK4(img->Bitdepth16To8[*wr++], img->Bitdepth16To8[*wg++],
                           img->Bitdepth16To8[*wb++], img->Bitdepth16To8[*wa++]);
         SKEW4(wr, wg, wb, wa, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 
@@ -2255,10 +2255,10 @@ DECLARESepPutFunc(putRGBUAseparate16bittile)
             r2 = m[img->Bitdepth16To8[*wr++]];
             g2 = m[img->Bitdepth16To8[*wg++]];
             b2 = m[img->Bitdepth16To8[*wb++]];
-            *cp++ = PACK4(r2, g2, b2, a2);
+            *dest++ = PACK4(r2, g2, b2, a2);
         }
         SKEW4(wr, wg, wb, wa, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 
@@ -2275,14 +2275,14 @@ DECLAREContigPutFunc(putcontig8bitCIELab8)
     {
         for (x = w; x > 0; --x)
         {
-            TIFFCIELabToXYZ(img->cielab, (unsigned char)pp[0],
-                            (signed char)pp[1], (signed char)pp[2], &X, &Y, &Z);
+            TIFFCIELabToXYZ(img->cielab, (unsigned char)src[0],
+                            (signed char)src[1], (signed char)src[2], &X, &Y, &Z);
             TIFFXYZToRGB(img->cielab, X, Y, Z, &r, &g, &b);
-            *cp++ = PACK(r, g, b);
-            pp += 3;
+            *dest++ = PACK(r, g, b);
+            src += 3;
         }
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     }
 }
 
@@ -2293,7 +2293,7 @@ DECLAREContigPutFunc(putcontig8bitCIELab16)
 {
     float X, Y, Z;
     uint32_t r, g, b;
-    uint16_t *wp = (uint16_t *)pp;
+    uint16_t *wp = (uint16_t *)src;
     (void)y;
     fromskew *= 3;
     for (; h > 0; --h)
@@ -2303,10 +2303,10 @@ DECLAREContigPutFunc(putcontig8bitCIELab16)
             TIFFCIELab16ToXYZ(img->cielab, (uint16_t)wp[0], (int16_t)wp[1],
                               (int16_t)wp[2], &X, &Y, &Z);
             TIFFXYZToRGB(img->cielab, X, Y, Z, &r, &g, &b);
-            *cp++ = PACK(r, g, b);
+            *dest++ = PACK(r, g, b);
             wp += 3;
         }
-        cp += toskew;
+        dest += toskew;
         wp += fromskew;
     }
 }
@@ -2327,9 +2327,9 @@ DECLAREContigPutFunc(putcontig8bitCIELab16)
  */
 DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
 {
-    uint32_t *cp1 = cp + w + toskew;
-    uint32_t *cp2 = cp1 + w + toskew;
-    uint32_t *cp3 = cp2 + w + toskew;
+    uint32_t *dest1 = dest + w + toskew;
+    uint32_t *dest2 = dest1 + w + toskew;
+    uint32_t *dest3 = dest2 + w + toskew;
     int32_t incr = 3 * w + 4 * toskew;
 
     (void)y;
@@ -2342,37 +2342,37 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
             x = w >> 2;
             do
             {
-                int32_t Cb = pp[16];
-                int32_t Cr = pp[17];
+                int32_t Cb = src[16];
+                int32_t Cr = src[17];
 
-                YCbCrtoRGB(cp[0], pp[0]);
-                YCbCrtoRGB(cp[1], pp[1]);
-                YCbCrtoRGB(cp[2], pp[2]);
-                YCbCrtoRGB(cp[3], pp[3]);
-                YCbCrtoRGB(cp1[0], pp[4]);
-                YCbCrtoRGB(cp1[1], pp[5]);
-                YCbCrtoRGB(cp1[2], pp[6]);
-                YCbCrtoRGB(cp1[3], pp[7]);
-                YCbCrtoRGB(cp2[0], pp[8]);
-                YCbCrtoRGB(cp2[1], pp[9]);
-                YCbCrtoRGB(cp2[2], pp[10]);
-                YCbCrtoRGB(cp2[3], pp[11]);
-                YCbCrtoRGB(cp3[0], pp[12]);
-                YCbCrtoRGB(cp3[1], pp[13]);
-                YCbCrtoRGB(cp3[2], pp[14]);
-                YCbCrtoRGB(cp3[3], pp[15]);
+                YCbCrtoRGB(dest[0], src[0]);
+                YCbCrtoRGB(dest[1], src[1]);
+                YCbCrtoRGB(dest[2], src[2]);
+                YCbCrtoRGB(dest[3], src[3]);
+                YCbCrtoRGB(dest1[0], src[4]);
+                YCbCrtoRGB(dest1[1], src[5]);
+                YCbCrtoRGB(dest1[2], src[6]);
+                YCbCrtoRGB(dest1[3], src[7]);
+                YCbCrtoRGB(dest2[0], src[8]);
+                YCbCrtoRGB(dest2[1], src[9]);
+                YCbCrtoRGB(dest2[2], src[10]);
+                YCbCrtoRGB(dest2[3], src[11]);
+                YCbCrtoRGB(dest3[0], src[12]);
+                YCbCrtoRGB(dest3[1], src[13]);
+                YCbCrtoRGB(dest3[2], src[14]);
+                YCbCrtoRGB(dest3[3], src[15]);
 
-                cp += 4;
-                cp1 += 4;
-                cp2 += 4;
-                cp3 += 4;
-                pp += 18;
+                dest += 4;
+                dest1 += 4;
+                dest2 += 4;
+                dest3 += 4;
+                src += 18;
             } while (--x);
-            cp += incr;
-            cp1 += incr;
-            cp2 += incr;
-            cp3 += incr;
-            pp += fromskew;
+            dest += incr;
+            dest1 += incr;
+            dest2 += incr;
+            dest3 += incr;
+            src += fromskew;
         }
     }
     else
@@ -2381,85 +2381,85 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
         {
             for (x = w; x > 0;)
             {
-                int32_t Cb = pp[16];
-                int32_t Cr = pp[17];
+                int32_t Cb = src[16];
+                int32_t Cr = src[17];
                 switch (x)
                 {
                     default:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp3[3], pp[15]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest3[3], src[15]); /* FALLTHROUGH */
                             case 3:
-                                YCbCrtoRGB(cp2[3], pp[11]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest2[3], src[11]); /* FALLTHROUGH */
                             case 2:
-                                YCbCrtoRGB(cp1[3], pp[7]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[3], src[7]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[3], pp[3]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[3], src[3]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                     case 3:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp3[2], pp[14]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest3[2], src[14]); /* FALLTHROUGH */
                             case 3:
-                                YCbCrtoRGB(cp2[2], pp[10]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest2[2], src[10]); /* FALLTHROUGH */
                             case 2:
-                                YCbCrtoRGB(cp1[2], pp[6]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[2], src[6]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[2], pp[2]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[2], src[2]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                     case 2:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp3[1], pp[13]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest3[1], src[13]); /* FALLTHROUGH */
                             case 3:
-                                YCbCrtoRGB(cp2[1], pp[9]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest2[1], src[9]); /* FALLTHROUGH */
                             case 2:
-                                YCbCrtoRGB(cp1[1], pp[5]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[1], src[5]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[1], pp[1]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[1], src[1]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                     case 1:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp3[0], pp[12]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest3[0], src[12]); /* FALLTHROUGH */
                             case 3:
-                                YCbCrtoRGB(cp2[0], pp[8]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest2[0], src[8]); /* FALLTHROUGH */
                             case 2:
-                                YCbCrtoRGB(cp1[0], pp[4]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[0], src[4]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[0], pp[0]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[0], src[0]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                 }
                 if (x < 4)
                 {
-                    cp += x;
-                    cp1 += x;
-                    cp2 += x;
-                    cp3 += x;
+                    dest += x;
+                    dest1 += x;
+                    dest2 += x;
+                    dest3 += x;
                     x = 0;
                 }
                 else
                 {
-                    cp += 4;
-                    cp1 += 4;
-                    cp2 += 4;
-                    cp3 += 4;
+                    dest += 4;
+                    dest1 += 4;
+                    dest2 += 4;
+                    dest3 += 4;
                     x -= 4;
                 }
-                pp += 18;
+                src += 18;
             }
             if (h <= 4)
                 break;
             h -= 4;
-            cp += incr;
-            cp1 += incr;
-            cp2 += incr;
-            cp3 += incr;
-            pp += fromskew;
+            dest += incr;
+            dest1 += incr;
+            dest2 += incr;
+            dest3 += incr;
+            src += fromskew;
         }
     }
 }
@@ -2469,7 +2469,7 @@ DECLAREContigPutFunc(putcontig8bitYCbCr44tile)
  */
 DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
 {
-    uint32_t *cp1 = cp + w + toskew;
+    uint32_t *dest1 = dest + w + toskew;
     int32_t incr = 2 * toskew + w;
 
     (void)y;
@@ -2481,25 +2481,25 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
             x = w >> 2;
             do
             {
-                int32_t Cb = pp[8];
-                int32_t Cr = pp[9];
+                int32_t Cb = src[8];
+                int32_t Cr = src[9];
 
-                YCbCrtoRGB(cp[0], pp[0]);
-                YCbCrtoRGB(cp[1], pp[1]);
-                YCbCrtoRGB(cp[2], pp[2]);
-                YCbCrtoRGB(cp[3], pp[3]);
-                YCbCrtoRGB(cp1[0], pp[4]);
-                YCbCrtoRGB(cp1[1], pp[5]);
-                YCbCrtoRGB(cp1[2], pp[6]);
-                YCbCrtoRGB(cp1[3], pp[7]);
+                YCbCrtoRGB(dest[0], src[0]);
+                YCbCrtoRGB(dest[1], src[1]);
+                YCbCrtoRGB(dest[2], src[2]);
+                YCbCrtoRGB(dest[3], src[3]);
+                YCbCrtoRGB(dest1[0], src[4]);
+                YCbCrtoRGB(dest1[1], src[5]);
+                YCbCrtoRGB(dest1[2], src[6]);
+                YCbCrtoRGB(dest1[3], src[7]);
 
-                cp += 4;
-                cp1 += 4;
-                pp += 10;
+                dest += 4;
+                dest1 += 4;
+                src += 10;
             } while (--x);
-            cp += incr;
-            cp1 += incr;
-            pp += fromskew;
+            dest += incr;
+            dest1 += incr;
+            src += fromskew;
         }
     }
     else
@@ -2508,63 +2508,63 @@ DECLAREContigPutFunc(putcontig8bitYCbCr42tile)
         {
             for (x = w; x > 0;)
             {
-                int32_t Cb = pp[8];
-                int32_t Cr = pp[9];
+                int32_t Cb = src[8];
+                int32_t Cr = src[9];
                 switch (x)
                 {
                     default:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp1[3], pp[7]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[3], src[7]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[3], pp[3]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[3], src[3]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                     case 3:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp1[2], pp[6]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[2], src[6]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[2], pp[2]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[2], src[2]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                     case 2:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp1[1], pp[5]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[1], src[5]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[1], pp[1]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[1], src[1]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                     case 1:
                         switch (h)
                         {
                             default:
-                                YCbCrtoRGB(cp1[0], pp[4]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest1[0], src[4]); /* FALLTHROUGH */
                             case 1:
-                                YCbCrtoRGB(cp[0], pp[0]); /* FALLTHROUGH */
+                                YCbCrtoRGB(dest[0], src[0]); /* FALLTHROUGH */
                         }                                 /* FALLTHROUGH */
                 }
                 if (x < 4)
                 {
-                    cp += x;
-                    cp1 += x;
+                    dest += x;
+                    dest1 += x;
                     x = 0;
                 }
                 else
                 {
-                    cp += 4;
-                    cp1 += 4;
+                    dest += 4;
+                    dest1 += 4;
                     x -= 4;
                 }
-                pp += 10;
+                src += 10;
             }
             if (h <= 2)
                 break;
             h -= 2;
-            cp += incr;
-            cp1 += incr;
-            pp += fromskew;
+            dest += incr;
+            dest1 += incr;
+            src += fromskew;
         }
     }
 }
@@ -2581,42 +2581,42 @@ DECLAREContigPutFunc(putcontig8bitYCbCr41tile)
         x = w >> 2;
         while (x > 0)
         {
-            int32_t Cb = pp[4];
-            int32_t Cr = pp[5];
+            int32_t Cb = src[4];
+            int32_t Cr = src[5];
 
-            YCbCrtoRGB(cp[0], pp[0]);
-            YCbCrtoRGB(cp[1], pp[1]);
-            YCbCrtoRGB(cp[2], pp[2]);
-            YCbCrtoRGB(cp[3], pp[3]);
+            YCbCrtoRGB(dest[0], src[0]);
+            YCbCrtoRGB(dest[1], src[1]);
+            YCbCrtoRGB(dest[2], src[2]);
+            YCbCrtoRGB(dest[3], src[3]);
 
-            cp += 4;
-            pp += 6;
+            dest += 4;
+            src += 6;
             x--;
         }
 
         if ((w & 3) != 0)
         {
-            int32_t Cb = pp[4];
-            int32_t Cr = pp[5];
+            int32_t Cb = src[4];
+            int32_t Cr = src[5];
 
             switch ((w & 3))
             {
                 case 3:
-                    YCbCrtoRGB(cp[2], pp[2]); /*-fallthrough*/
+                    YCbCrtoRGB(dest[2], src[2]); /*-fallthrough*/
                 case 2:
-                    YCbCrtoRGB(cp[1], pp[1]); /*-fallthrough*/
+                    YCbCrtoRGB(dest[1], src[1]); /*-fallthrough*/
                 case 1:
-                    YCbCrtoRGB(cp[0], pp[0]); /*-fallthrough*/
+                    YCbCrtoRGB(dest[0], src[0]); /*-fallthrough*/
                 case 0:
                     break;
             }
 
-            cp += (w & 3);
-            pp += 6;
+            dest += (w & 3);
+            src += 6;
         }
 
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     } while (--h);
 }
 
@@ -2625,40 +2625,40 @@ DECLAREContigPutFunc(putcontig8bitYCbCr41tile)
  */
 DECLAREContigPutFunc(putcontig8bitYCbCr22tile)
 {
-    uint32_t *cp2;
+    uint32_t *dest2;
     int32_t incr = 2 * toskew + w;
     (void)y;
     fromskew = (fromskew / 2) * (2 * 2 + 2);
-    cp2 = cp + w + toskew;
+    dest2 = dest + w + toskew;
     while (h >= 2)
     {
         x = w;
         while (x >= 2)
         {
-            uint32_t Cb = pp[4];
-            uint32_t Cr = pp[5];
-            YCbCrtoRGB(cp[0], pp[0]);
-            YCbCrtoRGB(cp[1], pp[1]);
-            YCbCrtoRGB(cp2[0], pp[2]);
-            YCbCrtoRGB(cp2[1], pp[3]);
-            cp += 2;
-            cp2 += 2;
-            pp += 6;
+            uint32_t Cb = src[4];
+            uint32_t Cr = src[5];
+            YCbCrtoRGB(dest[0], src[0]);
+            YCbCrtoRGB(dest[1], src[1]);
+            YCbCrtoRGB(dest2[0], src[2]);
+            YCbCrtoRGB(dest2[1], src[3]);
+            dest += 2;
+            dest2 += 2;
+            src += 6;
             x -= 2;
         }
         if (x == 1)
         {
-            uint32_t Cb = pp[4];
-            uint32_t Cr = pp[5];
-            YCbCrtoRGB(cp[0], pp[0]);
-            YCbCrtoRGB(cp2[0], pp[2]);
-            cp++;
-            cp2++;
-            pp += 6;
+            uint32_t Cb = src[4];
+            uint32_t Cr = src[5];
+            YCbCrtoRGB(dest[0], src[0]);
+            YCbCrtoRGB(dest2[0], src[2]);
+            dest++;
+            dest2++;
+            src += 6;
         }
-        cp += incr;
-        cp2 += incr;
-        pp += fromskew;
+        dest += incr;
+        dest2 += incr;
+        src += fromskew;
         h -= 2;
     }
     if (h == 1)
@@ -2666,20 +2666,20 @@ DECLAREContigPutFunc(putcontig8bitYCbCr22tile)
         x = w;
         while (x >= 2)
         {
-            uint32_t Cb = pp[4];
-            uint32_t Cr = pp[5];
-            YCbCrtoRGB(cp[0], pp[0]);
-            YCbCrtoRGB(cp[1], pp[1]);
-            cp += 2;
-            cp2 += 2;
-            pp += 6;
+            uint32_t Cb = src[4];
+            uint32_t Cr = src[5];
+            YCbCrtoRGB(dest[0], src[0]);
+            YCbCrtoRGB(dest[1], src[1]);
+            dest += 2;
+            dest2 += 2;
+            src += 6;
             x -= 2;
         }
         if (x == 1)
         {
-            uint32_t Cb = pp[4];
-            uint32_t Cr = pp[5];
-            YCbCrtoRGB(cp[0], pp[0]);
+            uint32_t Cb = src[4];
+            uint32_t Cr = src[5];
+            YCbCrtoRGB(dest[0], src[0]);
         }
     }
 }
@@ -2696,30 +2696,30 @@ DECLAREContigPutFunc(putcontig8bitYCbCr21tile)
         x = w >> 1;
         while (x > 0)
         {
-            int32_t Cb = pp[2];
-            int32_t Cr = pp[3];
+            int32_t Cb = src[2];
+            int32_t Cr = src[3];
 
-            YCbCrtoRGB(cp[0], pp[0]);
-            YCbCrtoRGB(cp[1], pp[1]);
+            YCbCrtoRGB(dest[0], src[0]);
+            YCbCrtoRGB(dest[1], src[1]);
 
-            cp += 2;
-            pp += 4;
+            dest += 2;
+            src += 4;
             x--;
         }
 
         if ((w & 1) != 0)
         {
-            int32_t Cb = pp[2];
-            int32_t Cr = pp[3];
+            int32_t Cb = src[2];
+            int32_t Cr = src[3];
 
-            YCbCrtoRGB(cp[0], pp[0]);
+            YCbCrtoRGB(dest[0], src[0]);
 
-            cp += 1;
-            pp += 4;
+            dest += 1;
+            src += 4;
         }
 
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     } while (--h);
 }
 
@@ -2728,27 +2728,27 @@ DECLAREContigPutFunc(putcontig8bitYCbCr21tile)
  */
 DECLAREContigPutFunc(putcontig8bitYCbCr12tile)
 {
-    uint32_t *cp2;
+    uint32_t *dest2;
     int32_t incr = 2 * toskew + w;
     (void)y;
     fromskew = (fromskew / 1) * (1 * 2 + 2);
-    cp2 = cp + w + toskew;
+    dest2 = dest + w + toskew;
     while (h >= 2)
     {
         x = w;
         do
         {
-            uint32_t Cb = pp[2];
-            uint32_t Cr = pp[3];
-            YCbCrtoRGB(cp[0], pp[0]);
-            YCbCrtoRGB(cp2[0], pp[1]);
-            cp++;
-            cp2++;
-            pp += 4;
+            uint32_t Cb = src[2];
+            uint32_t Cr = src[3];
+            YCbCrtoRGB(dest[0], src[0]);
+            YCbCrtoRGB(dest2[0], src[1]);
+            dest++;
+            dest2++;
+            src += 4;
         } while (--x);
-        cp += incr;
-        cp2 += incr;
-        pp += fromskew;
+        dest += incr;
+        dest2 += incr;
+        src += fromskew;
         h -= 2;
     }
     if (h == 1)
@@ -2756,11 +2756,11 @@ DECLAREContigPutFunc(putcontig8bitYCbCr12tile)
         x = w;
         do
         {
-            uint32_t Cb = pp[2];
-            uint32_t Cr = pp[3];
-            YCbCrtoRGB(cp[0], pp[0]);
-            cp++;
-            pp += 4;
+            uint32_t Cb = src[2];
+            uint32_t Cr = src[3];
+            YCbCrtoRGB(dest[0], src[0]);
+            dest++;
+            src += 4;
         } while (--x);
     }
 }
@@ -2777,15 +2777,15 @@ DECLAREContigPutFunc(putcontig8bitYCbCr11tile)
         x = w; /* was x = w>>1; patched 2000/09/25 warmerda@home.com */
         do
         {
-            int32_t Cb = pp[1];
-            int32_t Cr = pp[2];
+            int32_t Cb = src[1];
+            int32_t Cr = src[2];
 
-            YCbCrtoRGB(*cp++, pp[0]);
+            YCbCrtoRGB(*dest++, src[0]);
 
-            pp += 3;
+            src += 3;
         } while (--x);
-        cp += toskew;
-        pp += fromskew;
+        dest += toskew;
+        src += fromskew;
     } while (--h);
 }
 
@@ -2805,10 +2805,10 @@ DECLARESepPutFunc(putseparate8bitYCbCr11tile)
         {
             uint32_t dr, dg, db;
             TIFFYCbCrtoRGB(img->ycbcr, *r++, *g++, *b++, &dr, &dg, &db);
-            *cp++ = PACK(dr, dg, db);
+            *dest++ = PACK(dr, dg, db);
         } while (--x);
         SKEW(r, g, b, fromskew);
-        cp += toskew;
+        dest += toskew;
     }
 }
 #undef YCbCrtoRGB
