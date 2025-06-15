@@ -66,14 +66,58 @@ typedef union fd_as_handle_union
 } fd_as_handle_union_t;
 
 #ifdef USE_IO_URING
+#include <sys/uio.h>
 extern tmsize_t _tiffUringReadProc(thandle_t fd, void *buf, tmsize_t size);
 extern tmsize_t _tiffUringWriteProc(thandle_t fd, void *buf, tmsize_t size);
+extern tmsize_t _tiffUringReadV(thandle_t fd, struct iovec *iov,
+                                unsigned int iovcnt, tmsize_t size);
+extern tmsize_t _tiffUringWriteV(thandle_t fd, struct iovec *iov,
+                                 unsigned int iovcnt, tmsize_t size);
 #endif
 
 static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
 {
 #ifdef USE_IO_URING
-    return _tiffUringReadProc(fd, buf, size);
+    const size_t bytes_total = (size_t)size;
+    if ((tmsize_t)bytes_total != size)
+    {
+        errno = EINVAL;
+        return (tmsize_t)-1;
+    }
+    if (bytes_total <= TIFF_IO_MAX)
+        return _tiffUringReadProc(fd, buf, size);
+
+    char *p = (char *)buf;
+    size_t remaining = bytes_total;
+    size_t bytes_read = 0;
+    while (remaining > 0)
+    {
+        struct iovec iov[IOV_MAX];
+        unsigned int iovcnt = 0;
+        size_t chunk_total = 0;
+        while (remaining > 0 && iovcnt < IOV_MAX)
+        {
+            size_t chunk = remaining > TIFF_IO_MAX ? TIFF_IO_MAX : remaining;
+            iov[iovcnt].iov_base = p;
+            iov[iovcnt].iov_len = chunk;
+            p += chunk;
+            remaining -= chunk;
+            chunk_total += chunk;
+            iovcnt++;
+        }
+        tmsize_t ret = _tiffUringReadV(fd, iov, iovcnt, (tmsize_t)chunk_total);
+        if (ret <= 0)
+            return bytes_read > 0 ? (tmsize_t)bytes_read : ret;
+        bytes_read += ret;
+        if ((size_t)ret < chunk_total)
+        {
+            size_t leftover = chunk_total - (size_t)ret;
+            p -= leftover;
+            remaining += leftover;
+            break;
+        }
+    }
+    return (tmsize_t)bytes_read;
 #else
     fd_as_handle_union_t fdh;
     const size_t bytes_total = (size_t)size;
@@ -111,7 +155,46 @@ static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
 static tmsize_t _tiffWriteProc(thandle_t fd, void *buf, tmsize_t size)
 {
 #ifdef USE_IO_URING
-    return _tiffUringWriteProc(fd, buf, size);
+    const size_t bytes_total = (size_t)size;
+    if ((tmsize_t)bytes_total != size)
+    {
+        errno = EINVAL;
+        return (tmsize_t)-1;
+    }
+    if (bytes_total <= TIFF_IO_MAX)
+        return _tiffUringWriteProc(fd, buf, size);
+
+    char *p = (char *)buf;
+    size_t remaining = bytes_total;
+    size_t bytes_written = 0;
+    while (remaining > 0)
+    {
+        struct iovec iov[IOV_MAX];
+        unsigned int iovcnt = 0;
+        size_t chunk_total = 0;
+        while (remaining > 0 && iovcnt < IOV_MAX)
+        {
+            size_t chunk = remaining > TIFF_IO_MAX ? TIFF_IO_MAX : remaining;
+            iov[iovcnt].iov_base = p;
+            iov[iovcnt].iov_len = chunk;
+            p += chunk;
+            remaining -= chunk;
+            chunk_total += chunk;
+            iovcnt++;
+        }
+        tmsize_t ret = _tiffUringWriteV(fd, iov, iovcnt, (tmsize_t)chunk_total);
+        if (ret <= 0)
+            return bytes_written > 0 ? (tmsize_t)bytes_written : ret;
+        bytes_written += ret;
+        if ((size_t)ret < chunk_total)
+        {
+            size_t leftover = chunk_total - (size_t)ret;
+            p -= leftover;
+            remaining += leftover;
+            break;
+        }
+    }
+    return (tmsize_t)bytes_written;
 #else
     fd_as_handle_union_t fdh;
     const size_t bytes_total = (size_t)size;

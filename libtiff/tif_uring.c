@@ -3,6 +3,7 @@
 #include "tiffiop.h"
 #include <errno.h>
 #include <liburing.h>
+#include <sys/uio.h>
 #include <pthread.h>
 #include <stdlib.h>
 
@@ -186,8 +187,8 @@ void _tiffUringWait(TIFF *tif)
     }
 }
 
-static tmsize_t io_uring_rw(int readflag, thandle_t fd, void *buf,
-                            tmsize_t size)
+static tmsize_t io_uring_rw(int readflag, thandle_t fd, struct iovec *iov,
+                            unsigned int iovcnt, tmsize_t total_size)
 {
     pthread_mutex_lock(&gUringMutex);
     _TIFFURingEntry *e = _tiffUringFind((int)(intptr_t)fd);
@@ -206,10 +207,9 @@ static tmsize_t io_uring_rw(int readflag, thandle_t fd, void *buf,
     }
 
     if (readflag)
-        io_uring_prep_read(sqe, (int)(intptr_t)fd, buf, (unsigned int)size, -1);
+        io_uring_prep_readv(sqe, (int)(intptr_t)fd, iov, iovcnt, -1);
     else
-        io_uring_prep_write(sqe, (int)(intptr_t)fd, buf, (unsigned int)size,
-                            -1);
+        io_uring_prep_writev(sqe, (int)(intptr_t)fd, iov, iovcnt, -1);
 
     if (io_uring_submit(ring) < 0)
     {
@@ -220,7 +220,7 @@ static tmsize_t io_uring_rw(int readflag, thandle_t fd, void *buf,
     if (e->async)
     {
         pthread_mutex_unlock(&gUringMutex);
-        return size;
+        return total_size;
     }
 
     struct io_uring_cqe *cqe;
@@ -242,12 +242,26 @@ static tmsize_t io_uring_rw(int readflag, thandle_t fd, void *buf,
 
 tmsize_t _tiffUringReadProc(thandle_t fd, void *buf, tmsize_t size)
 {
-    return io_uring_rw(1, fd, buf, size);
+    struct iovec iov = { buf, (size_t)size };
+    return io_uring_rw(1, fd, &iov, 1, size);
 }
 
 tmsize_t _tiffUringWriteProc(thandle_t fd, void *buf, tmsize_t size)
 {
-    return io_uring_rw(0, fd, buf, size);
+    struct iovec iov = { buf, (size_t)size };
+    return io_uring_rw(0, fd, &iov, 1, size);
+}
+
+tmsize_t _tiffUringReadV(thandle_t fd, struct iovec *iov, unsigned int iovcnt,
+                         tmsize_t size)
+{
+    return io_uring_rw(1, fd, iov, iovcnt, size);
+}
+
+tmsize_t _tiffUringWriteV(thandle_t fd, struct iovec *iov, unsigned int iovcnt,
+                          tmsize_t size)
+{
+    return io_uring_rw(0, fd, iov, iovcnt, size);
 }
 
 #endif /* USE_IO_URING */
