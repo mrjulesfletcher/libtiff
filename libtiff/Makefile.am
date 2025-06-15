@@ -54,7 +54,8 @@ noinst_HEADERS = \
         tiffiop.h \
         uvcode.h \
         tif_bayer.h \
-        strip_neon.h
+        strip_neon.h \
+        reverse_bits_neon.h
 
 nodist_libtiffinclude_HEADERS = \
 	tiffconf.h

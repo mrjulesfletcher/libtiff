@@ -446,7 +446,7 @@ const unsigned char *TIFFGetBitRevTable(int reversed)
     return (reversed ? TIFFBitRevTable : TIFFNoBitRevTable);
 }
 
-void TIFFReverseBits(uint8_t *cp, tmsize_t n)
+static void TIFFReverseBitsScalar(uint8_t *cp, tmsize_t n)
 {
     for (; n > 8; n -= 8)
     {
@@ -465,4 +465,47 @@ void TIFFReverseBits(uint8_t *cp, tmsize_t n)
         *cp = TIFFBitRevTable[*cp];
         cp++;
     }
+}
+
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+#include <arm_neon.h>
+static void TIFFReverseBitsNeonImpl(uint8_t *cp, tmsize_t n)
+{
+    static const uint8_t nibble_reverse[16] = {0x0, 0x8, 0x4, 0xc, 0x2, 0xa,
+                                               0x6, 0xe, 0x1, 0x9, 0x5, 0xd,
+                                               0x3, 0xb, 0x7, 0xf};
+    uint8x16_t table = vld1q_u8(nibble_reverse);
+    uint8x16_t mask = vdupq_n_u8(0x0f);
+    size_t i = 0;
+    for (; i + 16 <= (size_t)n; i += 16)
+    {
+        uint8x16_t v = vld1q_u8(cp + i);
+        uint8x16_t lo = vandq_u8(v, mask);
+        uint8x16_t hi = vshrq_n_u8(v, 4);
+        uint8x16_t rlo = vqtbl1q_u8(table, lo);
+        uint8x16_t rhi = vqtbl1q_u8(table, hi);
+        uint8x16_t out = vorrq_u8(vshlq_n_u8(rlo, 4), rhi);
+        vst1q_u8(cp + i, out);
+    }
+    if (i < (size_t)n)
+        TIFFReverseBitsScalar(cp + i, n - i);
+}
+#endif
+
+void TIFFReverseBitsNeon(uint8_t *cp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    TIFFReverseBitsNeonImpl(cp, n);
+#else
+    TIFFReverseBitsScalar(cp, n);
+#endif
+}
+
+void TIFFReverseBits(uint8_t *cp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    TIFFReverseBitsNeon(cp, n);
+#else
+    TIFFReverseBitsScalar(cp, n);
+#endif
 }
