@@ -74,8 +74,8 @@ void TIFFBuildOverviews(TIFF *, int, int *, int, const char *,
 int main(int argc, char **argv)
 
 {
-    int anOverviews[100]; /* TODO: un-hardwire array length, flexible allocate
-                           */
+    int *anOverviews = NULL; /* dynamically allocated overview list */
+    int nMaxOverviewCount = 0;
     int nOverviewCount = 0;
     int bUseSubIFD = 0;
     TIFF *hTIFF;
@@ -115,19 +115,28 @@ int main(int argc, char **argv)
         }
     }
 
+    nMaxOverviewCount = (argc > 2) ? (argc - 2) : 4;
+    anOverviews = (int *)calloc(nMaxOverviewCount, sizeof(int));
+    if (anOverviews == NULL)
+    {
+        fprintf(stderr, "Out of memory.\n");
+        return (1);
+    }
+
     /* TODO: resampling mode parameter needs to be encoded in an integer from
      * this point on */
 
     /* -------------------------------------------------------------------- */
     /*      Collect the user requested reduction factors.                   */
     /* -------------------------------------------------------------------- */
-    while (nOverviewCount < argc - 2 && nOverviewCount < 100)
+    while (nOverviewCount < argc - 2)
     {
         anOverviews[nOverviewCount] = atoi(argv[nOverviewCount + 2]);
         if ((anOverviews[nOverviewCount] <= 0) ||
             ((anOverviews[nOverviewCount] > 1024)))
         {
             fprintf(stderr, "Incorrect parameters\n");
+            free(anOverviews);
             return (1);
         }
         nOverviewCount++;
@@ -155,6 +164,7 @@ int main(int argc, char **argv)
     if (hTIFF == NULL)
     {
         fprintf(stderr, "TIFFOpen(%s) failed.\n", argv[1]);
+        free(anOverviews);
         return (1);
     }
 
@@ -170,5 +180,6 @@ int main(int argc, char **argv)
     malloc_dump(1);
 #endif
 
+    free(anOverviews);
     return (0);
 }
