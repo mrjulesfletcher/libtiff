@@ -71,7 +71,7 @@
 #define TIFF_DIR_MAX 65534
 
 void TIFFBuildOverviews(TIFF *, int, int *, int, OVRResampleMethod,
-                        int (*)(double, void *), void *);
+                        int (*)(double, void *), void *, int);
 
 /************************************************************************/
 /*                         TIFF_WriteOverview()                         */
@@ -89,7 +89,7 @@ uint32_t TIFF_WriteOverview(TIFF *hTIFF, uint32_t nXSize, uint32_t nYSize,
                             int nSampleFormat, unsigned short *panRed,
                             unsigned short *panGreen, unsigned short *panBlue,
                             int bUseSubIFDs, int nHorSubsampling,
-                            int nVerSubsampling)
+                            int nVerSubsampling, int nJpegQuality)
 
 {
     toff_t nBaseDirOffset;
@@ -145,8 +145,8 @@ uint32_t TIFF_WriteOverview(TIFF *hTIFF, uint32_t nXSize, uint32_t nYSize,
         if (pfYCbCrCoeffs)
             TIFFSetField(hTIFF, TIFFTAG_YCBCRCOEFFICIENTS, pfYCbCrCoeffs);
     }
-    /* TODO: add command-line parameter for selecting jpeg compression quality
-     * that gets ignored when compression isn't jpeg */
+    if (nCompressFlag == COMPRESSION_JPEG && nJpegQuality > 0)
+        TIFFSetField(hTIFF, TIFFTAG_JPEGQUALITY, nJpegQuality);
 
     /* -------------------------------------------------------------------- */
     /*	Write color table if one is present.				*/
@@ -734,7 +734,8 @@ void TIFF_ProcessFullResBlock(TIFF *hTIFF, int nPlanarConfig, int bSubsampled,
 
 void TIFFBuildOverviews(TIFF *hTIFF, int nOverviews, int *panOvList,
                         int bUseSubIFDs, OVRResampleMethod eResampleMethod,
-                        int (*pfnProgress)(double, void *), void *pProgressData)
+                        int (*pfnProgress)(double, void *), void *pProgressData,
+                        int nJpegQuality)
 
 {
     TIFFOvrCache **papoRawBIs;
@@ -885,7 +886,7 @@ void TIFFBuildOverviews(TIFF *hTIFF, int nOverviews, int *panOvList,
             hTIFF, nOXSize, nOYSize, nBitsPerPixel, nPlanarConfig, nSamples,
             nOBlockXSize, nOBlockYSize, bTiled, nCompressFlag, nPhotometric,
             nSampleFormat, panRedMap, panGreenMap, panBlueMap, bUseSubIFDs,
-            nHorSubsampling, nVerSubsampling);
+            nHorSubsampling, nVerSubsampling, nJpegQuality);
 
         papoRawBIs[i] = TIFFCreateOvrCache(hTIFF, nDirOffset);
     }

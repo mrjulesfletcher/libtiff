@@ -19,11 +19,15 @@ http://home.gdal.org/~warmerda/
 Usage
 -----
 
-Usage: addtiffo [-r {nearest,average,mode}] [-subifd]
+Usage: addtiffo [-r {nearest,average,mode}] [-j quality] [-subifd]
                 tiff_filename [resolution_reductions]
 
 Example:
  % addtiffo abc.tif 2 4 8 16
+
+The ``-j`` option sets the JPEG compression quality for the generated
+overviews (default is 75).  It is ignored if the source image is not
+compressed with JPEG.
 
 The numeric arguments are the list of reduction factors to 
 generate.  In this example a 1/2, 1/4 1/8 and 1/16 

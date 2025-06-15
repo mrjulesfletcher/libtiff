@@ -67,7 +67,7 @@
 #include <string.h>
 
 void TIFFBuildOverviews(TIFF *, int, int *, int, OVRResampleMethod,
-                        int (*)(double, void *), void *);
+                        int (*)(double, void *), void *, int);
 
 /************************************************************************/
 /*                                main()                                */
@@ -81,13 +81,14 @@ int main(int argc, char **argv)
     int bUseSubIFD = 0;
     TIFF *hTIFF;
     OVRResampleMethod eResampling = OVR_RESAMPLE_NEAREST;
+    int nJpegQuality = 75;
 
     /* -------------------------------------------------------------------- */
     /*      Usage:                                                          */
     /* -------------------------------------------------------------------- */
     if (argc < 2)
     {
-        printf("Usage: addtiffo [-r {nearest,average,mode}]\n"
+        printf("Usage: addtiffo [-r {nearest,average,mode}] [-j quality]\n"
                "                tiff_filename [resolution_reductions]\n"
                "\n"
                "Example:\n"
@@ -119,6 +120,12 @@ int main(int argc, char **argv)
                 free(anOverviews);
                 return (1);
             }
+        }
+        else if (strcmp(argv[1], "-j") == 0 && argc > 2)
+        {
+            nJpegQuality = atoi(argv[2]);
+            argv += 2;
+            argc -= 2;
         }
         else
         {
@@ -192,7 +199,7 @@ int main(int argc, char **argv)
     /* -------------------------------------------------------------------- */
     if (nOverviewCount > 0)
         TIFFBuildOverviews(hTIFF, nOverviewCount, anOverviews, bUseSubIFD,
-                           eResampling, NULL, NULL);
+                           eResampling, NULL, NULL, nJpegQuality);
 
     TIFFClose(hTIFF);
 
