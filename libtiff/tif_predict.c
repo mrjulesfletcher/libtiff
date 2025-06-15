@@ -1327,6 +1327,18 @@ static int horDiff64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         {
             uint64_t *p = wp + 1;
             tmsize_t remaining = wc - 1;
+#ifdef __aarch64__
+            while (remaining >= 4)
+            {
+                uint64x2x2_t cur = vld1q_u64_x2(p);
+                uint64x2x2_t prev = vld1q_u64_x2(p - 1);
+                cur.val[0] = vsubq_u64(cur.val[0], prev.val[0]);
+                cur.val[1] = vsubq_u64(cur.val[1], prev.val[1]);
+                vst1q_u64_x2(p, cur);
+                p += 4;
+                remaining -= 4;
+            }
+#endif
             while (remaining >= 2)
             {
                 uint64x2_t cur = vld1q_u64(p);
