@@ -779,8 +779,6 @@ void TIFFBuildOverviews(TIFF *hTIFF, int nOverviews, int *panOvList,
             nPlanarConfig != PLANARCONFIG_CONTIG ||
             nSampleFormat != SAMPLEFORMAT_UINT)
         {
-            /* TODO: use of TIFFError is inconsistent with use of fprintf in
-             * addtiffo.c, sort out */
             TIFFErrorExt(
                 TIFFClientdata(hTIFF), "TIFFBuildOverviews",
                 "File `%s' has an unsupported subsampling configuration.\n",
@@ -801,8 +799,6 @@ void TIFFBuildOverviews(TIFF *hTIFF, int nOverviews, int *panOvList,
     {
         if (nBitsPerSample < 8)
         {
-            /* TODO: use of TIFFError is inconsistent with use of fprintf in
-             * addtiffo.c, sort out */
             TIFFErrorExt(
                 TIFFClientdata(hTIFF), "TIFFBuildOverviews",
                 "File `%s' has samples of %d bits per sample.  Sample\n"
