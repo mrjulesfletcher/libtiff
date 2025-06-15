@@ -300,6 +300,23 @@ AC_COMPILE_IFELSE([
 ])
 AC_SUBST(HAVE_NEON)
 
+dnl Check for ARM CRC32 intrinsics
+AC_MSG_CHECKING([for ARM CRC32 support])
+AC_COMPILE_IFELSE([
+  AC_LANG_PROGRAM([
+    #include <arm_acle.h>
+  ],[
+    unsigned v = 0; v = __crc32d(v, 0); return v;
+  ])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_ARM_CRC32],[1],[Define if ARM CRC32 intrinsics are available])
+  HAVE_ARM_CRC32=1
+],[
+  AC_MSG_RESULT(no)
+  HAVE_ARM_CRC32=0
+])
+AC_SUBST(HAVE_ARM_CRC32)
+
 dnl Check for SSE2 intrinsics
 AC_MSG_CHECKING([for SSE2 support])
 AC_COMPILE_IFELSE([

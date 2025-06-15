@@ -47,6 +47,14 @@ if(HAVE_NEON)
 endif()
 
 check_c_source_compiles(
+  "#include <arm_acle.h>
+   int main(){ unsigned v = 0; v = __crc32d(v, 0); return (int)v; }"
+  HAVE_ARM_CRC32)
+if(HAVE_ARM_CRC32)
+  add_compile_definitions(HAVE_ARM_CRC32=1)
+endif()
+
+check_c_source_compiles(
   "#include <emmintrin.h>
    int main(){ __m128i v = _mm_setzero_si128(); return _mm_cvtsi128_si32(v); }"
   HAVE_SSE2)

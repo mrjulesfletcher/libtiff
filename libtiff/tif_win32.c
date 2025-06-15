@@ -31,7 +31,9 @@
 #undef TIFF_DO_NOT_USE_NON_EXT_ALLOC_FUNCTIONS
 #endif
 
+#include "tiff_simd.h"
 #include "tiffiop.h"
+#include <stdint.h>
 #include <stdlib.h>
 
 #include <windows.h>
@@ -399,7 +401,7 @@ void _TIFFmemset(void *p, int v, tmsize_t c) { memset(p, v, (size_t)c); }
 
 void _TIFFmemcpy(void *d, const void *s, tmsize_t c)
 {
-    memcpy(d, s, (size_t)c);
+    tiff_memcpy_u8((uint8_t *)d, (const uint8_t *)s, (size_t)c);
 }
 
 int _TIFFmemcmp(const void *p1, const void *p2, tmsize_t c)
