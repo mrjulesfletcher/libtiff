@@ -580,6 +580,8 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     extern int TIFFUseSSE41(void);
     extern void TIFFSetUseNEON(int);
     extern void TIFFSetUseSSE41(int);
+    extern void TIFFSetMapSize(tmsize_t size);
+    extern void TIFFSetMapAdvice(int fadvise_flags, int madvise_flags);
     extern tmsize_t TIFFReadEncodedStrip(TIFF *tif, uint32_t strip, void *buf,
                                          tmsize_t size);
     extern tmsize_t TIFFReadRawStrip(TIFF *tif, uint32_t strip, void *buf,

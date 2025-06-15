@@ -211,3 +211,5 @@ EXPORTS	TIFFAccessTagMethods
         TIFFUseSSE41
         TIFFSetUseNEON
         TIFFSetUseSSE41
+        TIFFSetMapSize
+        TIFFSetMapAdvice

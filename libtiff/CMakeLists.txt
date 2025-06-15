@@ -103,6 +103,7 @@ target_sources(tiff PRIVATE
         tif_bayer.c
         tif_write.c
         tiff_threadpool.c
+        tif_mmap.c
         tif_zip.c
         tif_zstd.c)
 

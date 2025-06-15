@@ -39,5 +39,11 @@ endif()
 # Check for mmap
 check_symbol_exists(mmap "sys/mman.h" HAVE_MMAP)
 
+# Check for posix_fadvise
+check_symbol_exists(posix_fadvise "fcntl.h" HAVE_POSIX_FADVISE)
+
+# Check for madvise
+check_symbol_exists(madvise "sys/mman.h" HAVE_MADVISE)
+
 # Check for setmode
 check_symbol_exists(setmode "unistd.h" HAVE_SETMODE)
