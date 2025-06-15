@@ -19,7 +19,7 @@ http://home.gdal.org/~warmerda/
 Usage
 -----
 
-Usage: addtiffo [-r {average/nearest} [-subifd] 
+Usage: addtiffo [-r {nearest,average,mode}] [-subifd]
                 tiff_filename [resolution_reductions]
 
 Example:

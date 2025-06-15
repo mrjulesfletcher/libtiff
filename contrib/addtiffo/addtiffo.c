@@ -60,11 +60,12 @@
  */
 
 #include "tiffio.h"
+#include "tif_ovrcache.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-void TIFFBuildOverviews(TIFF *, int, int *, int, const char *,
+void TIFFBuildOverviews(TIFF *, int, int *, int, OVRResampleMethod,
                         int (*)(double, void *), void *);
 
 /************************************************************************/
@@ -79,7 +80,7 @@ int main(int argc, char **argv)
     int nOverviewCount = 0;
     int bUseSubIFD = 0;
     TIFF *hTIFF;
-    const char *pszResampling = "nearest";
+    OVRResampleMethod eResampling = OVR_RESAMPLE_NEAREST;
 
     /* -------------------------------------------------------------------- */
     /*      Usage:                                                          */
@@ -106,7 +107,18 @@ int main(int argc, char **argv)
         {
             argv += 2;
             argc -= 2;
-            pszResampling = *argv;
+            if (strncmp(*argv, "nearest", 7) == 0)
+                eResampling = OVR_RESAMPLE_NEAREST;
+            else if (strncmp(*argv, "average", 7) == 0)
+                eResampling = OVR_RESAMPLE_AVERAGE;
+            else if (strncmp(*argv, "mode", 4) == 0)
+                eResampling = OVR_RESAMPLE_MODE;
+            else
+            {
+                fprintf(stderr, "Unknown resampling method: %s\n", *argv);
+                free(anOverviews);
+                return (1);
+            }
         }
         else
         {
@@ -123,8 +135,7 @@ int main(int argc, char **argv)
         return (1);
     }
 
-    /* TODO: resampling mode parameter needs to be encoded in an integer from
-     * this point on */
+    /* Resampling mode is now represented by an integer enum (eResampling) */
 
     /* -------------------------------------------------------------------- */
     /*      Collect the user requested reduction factors.                   */
@@ -169,7 +180,7 @@ int main(int argc, char **argv)
     }
 
     TIFFBuildOverviews(hTIFF, nOverviewCount, anOverviews, bUseSubIFD,
-                       pszResampling, NULL, NULL);
+                       eResampling, NULL, NULL);
 
     TIFFClose(hTIFF);
 
