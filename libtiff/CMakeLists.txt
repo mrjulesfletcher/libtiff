@@ -48,6 +48,7 @@ set(tiff_private_HEADERS
         uvcode.h
         tif_bayer.h
         strip_neon.h
+        reverse_bits_neon.h
         ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h)
 
 

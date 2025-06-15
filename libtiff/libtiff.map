@@ -86,6 +86,7 @@ LIBTIFF_4.0 {
     TIFFReadTile;
     TIFFRegisterCODEC;
     TIFFReverseBits;
+    TIFFReverseBitsNeon;
     TIFFRewriteDirectory;
     TIFFScanlineSize;
     TIFFScanlineSize64;

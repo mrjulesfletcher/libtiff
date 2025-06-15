@@ -267,6 +267,12 @@ set_target_properties(memmove_simd_test PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(memmove_simd_test PRIVATE tiff tiff_port)
 list(APPEND simple_tests memmove_simd_test)
 
+add_executable(reverse_bits_neon_test ../placeholder.h)
+target_sources(reverse_bits_neon_test PRIVATE reverse_bits_neon_test.c)
+set_target_properties(reverse_bits_neon_test PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(reverse_bits_neon_test PRIVATE tiff tiff_port)
+list(APPEND simple_tests reverse_bits_neon_test)
+
 add_executable(swab_benchmark ../placeholder.h)
 target_sources(swab_benchmark PRIVATE swab_benchmark.c)
 set_target_properties(swab_benchmark PROPERTIES LINKER_LANGUAGE CXX)

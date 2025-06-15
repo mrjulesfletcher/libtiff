@@ -119,8 +119,9 @@ EXPORTS	TIFFAccessTagMethods
 	TIFFReadScanline
 	TIFFReadTile
 	TIFFRegisterCODEC
-	TIFFReverseBits
-	TIFFRewriteDirectory
+        TIFFReverseBits
+        TIFFReverseBitsNeon
+        TIFFRewriteDirectory
 	TIFFScanlineSize
 	TIFFScanlineSize64
 	TIFFSetClientInfo
