@@ -350,6 +350,7 @@ static void pack16_neon(const uint16_t *src, uint8_t *dst, size_t count,
     size_t i = 0;
     for (; i + 8 <= count; i += 8)
     {
+        __builtin_prefetch(src + i + 16);
         uint16x8_t v = vld1q_u16(src + i);
         uint8x8_t lo = vmovn_u16(v);
         uint8x8_t hi = vshrn_n_u16(v, 8);
@@ -377,6 +378,7 @@ static void unpack16_neon(const uint8_t *src, uint16_t *dst, size_t count,
     size_t i = 0;
     for (; i + 8 <= count; i += 8)
     {
+        __builtin_prefetch(src + 16);
         uint8x8x2_t v = vld2_u8(src);
         uint16x8_t out;
         if (!bigendian)

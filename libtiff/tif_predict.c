@@ -1302,6 +1302,7 @@ static int horDiff32(TIFF *tif, uint8_t *cp0, tmsize_t cc)
             tmsize_t remaining = wc - 1;
             while (remaining >= 4)
             {
+                __builtin_prefetch(p + 8);
                 uint32x4_t cur = vld1q_u32(p);
                 uint32x4_t prev = vld1q_u32(p - 1);
                 uint32x4_t diff = vsubq_u32(cur, prev);
@@ -1364,6 +1365,7 @@ static int horDiff64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 #ifdef __aarch64__
             while (remaining >= 4)
             {
+                __builtin_prefetch(p + 8);
                 uint64x2x2_t cur = vld1q_u64_x2(p);
                 uint64x2x2_t prev = vld1q_u64_x2(p - 1);
                 cur.val[0] = vsubq_u64(cur.val[0], prev.val[0]);
@@ -1375,6 +1377,7 @@ static int horDiff64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
 #endif
             while (remaining >= 2)
             {
+                __builtin_prefetch(p + 4);
                 uint64x2_t cur = vld1q_u64(p);
                 uint64x2_t prev = vld1q_u64(p - 1);
                 uint64x2_t diff = vsubq_u64(cur, prev);
