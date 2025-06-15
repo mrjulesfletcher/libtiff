@@ -68,19 +68,20 @@ typedef union fd_as_handle_union
     thandle_t h;
 } fd_as_handle_union_t;
 
-#ifdef USE_IO_URING
+#include <limits.h>
 #include <sys/uio.h>
+#ifndef IOV_MAX
+#define IOV_MAX 1024
+#endif
 extern tmsize_t _tiffUringReadProc(thandle_t fd, void *buf, tmsize_t size);
 extern tmsize_t _tiffUringWriteProc(thandle_t fd, void *buf, tmsize_t size);
 extern tmsize_t _tiffUringReadV(thandle_t fd, struct iovec *iov,
                                 unsigned int iovcnt, tmsize_t size);
 extern tmsize_t _tiffUringWriteV(thandle_t fd, struct iovec *iov,
                                  unsigned int iovcnt, tmsize_t size);
-#endif
 
 static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
 {
-#ifdef USE_IO_URING
     const size_t bytes_total = (size_t)size;
     if ((tmsize_t)bytes_total != size)
     {
@@ -121,43 +122,10 @@ static tmsize_t _tiffReadProc(thandle_t fd, void *buf, tmsize_t size)
         }
     }
     return (tmsize_t)bytes_read;
-#else
-    fd_as_handle_union_t fdh;
-    const size_t bytes_total = (size_t)size;
-    size_t bytes_read;
-    tmsize_t count = -1;
-    if ((tmsize_t)bytes_total != size)
-    {
-        errno = EINVAL;
-        return (tmsize_t)-1;
-    }
-    fdh.h = fd;
-    for (bytes_read = 0; bytes_read < bytes_total; bytes_read += count)
-    {
-        char *buf_offset = (char *)buf + bytes_read;
-        size_t io_size = bytes_total - bytes_read;
-        if (io_size > TIFF_IO_MAX)
-            io_size = TIFF_IO_MAX;
-        /* Below is an obvious false positive of Coverity Scan */
-        /* coverity[overflow_sink] */
-        do
-        {
-            count = read(fdh.fd, buf_offset, (TIFFIOSize_t)io_size);
-        } while (count == -1 && errno == EINTR);
-        if (count <= 0)
-            break;
-    }
-    if (count < 0)
-        return (tmsize_t)-1;
-    /* Silence Coverity Scan warning about unsigned to signed underflow. */
-    /* coverity[return_overflow:SUPPRESS] */
-    return (tmsize_t)bytes_read;
-#endif
 }
 
 static tmsize_t _tiffWriteProc(thandle_t fd, void *buf, tmsize_t size)
 {
-#ifdef USE_IO_URING
     const size_t bytes_total = (size_t)size;
     if ((tmsize_t)bytes_total != size)
     {
@@ -198,39 +166,6 @@ static tmsize_t _tiffWriteProc(thandle_t fd, void *buf, tmsize_t size)
         }
     }
     return (tmsize_t)bytes_written;
-#else
-    fd_as_handle_union_t fdh;
-    const size_t bytes_total = (size_t)size;
-    size_t bytes_written;
-    tmsize_t count = -1;
-    if ((tmsize_t)bytes_total != size)
-    {
-        errno = EINVAL;
-        return (tmsize_t)-1;
-    }
-    fdh.h = fd;
-    for (bytes_written = 0; bytes_written < bytes_total; bytes_written += count)
-    {
-        const char *buf_offset = (char *)buf + bytes_written;
-        size_t io_size = bytes_total - bytes_written;
-        if (io_size > TIFF_IO_MAX)
-            io_size = TIFF_IO_MAX;
-        /* Below is an obvious false positive of Coverity Scan */
-        /* coverity[overflow_sink] */
-        do
-        {
-            count = write(fdh.fd, buf_offset, (TIFFIOSize_t)io_size);
-        } while (count == -1 && errno == EINTR);
-        if (count <= 0)
-            break;
-    }
-    if (count < 0)
-        return (tmsize_t)-1;
-    /* Silence Coverity Scan warning about unsigned to signed underflow. */
-    /* coverity[return_overflow:SUPPRESS] */
-    return (tmsize_t)bytes_written;
-    /* return ((tmsize_t) write(fdh.fd, buf, bytes_total)); */
-#endif
 }
 
 static uint64_t _tiffSeekProc(thandle_t fd, uint64_t off, int whence)
@@ -345,9 +280,7 @@ TIFF *TIFFFdOpenExt(int fd, const char *name, const char *mode,
     if (tif)
     {
         tif->tif_fd = fd;
-#ifdef USE_IO_URING
         _tiffUringInit(tif);
-#endif
     }
     return (tif);
 }

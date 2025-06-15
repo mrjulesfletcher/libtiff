@@ -52,9 +52,7 @@ void TIFFCleanup(TIFF *tif)
     _TIFFCleanupCustomValueMap(&tif->tif_dir);
 
     _TIFFCleanupIFDOffsetAndNumberMaps(tif);
-#ifdef USE_IO_URING
     _tiffUringTeardown(tif);
-#endif
 
     /*
      * Clean up client info links.
