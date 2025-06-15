@@ -28,6 +28,278 @@ static void pack12_scalar(const uint16_t *src, uint8_t *dst, size_t count,
     }
 }
 
+static void pack10_scalar(const uint16_t *src, uint8_t *dst, size_t count,
+                          int bigendian)
+{
+    size_t i = 0;
+    for (; i + 4 <= count; i += 4)
+    {
+        uint64_t v;
+        if (!bigendian)
+            v = ((uint64_t)src[i]) |
+                ((uint64_t)src[i + 1] << 10) |
+                ((uint64_t)src[i + 2] << 20) |
+                ((uint64_t)src[i + 3] << 30);
+        else
+            v = ((uint64_t)src[i] << 30) |
+                ((uint64_t)src[i + 1] << 20) |
+                ((uint64_t)src[i + 2] << 10) |
+                ((uint64_t)src[i + 3]);
+        if (!bigendian)
+        {
+            dst[0] = (uint8_t)(v & 0xff);
+            dst[1] = (uint8_t)((v >> 8) & 0xff);
+            dst[2] = (uint8_t)((v >> 16) & 0xff);
+            dst[3] = (uint8_t)((v >> 24) & 0xff);
+            dst[4] = (uint8_t)((v >> 32) & 0xff);
+        }
+        else
+        {
+            dst[0] = (uint8_t)((v >> 32) & 0xff);
+            dst[1] = (uint8_t)((v >> 24) & 0xff);
+            dst[2] = (uint8_t)((v >> 16) & 0xff);
+            dst[3] = (uint8_t)((v >> 8) & 0xff);
+            dst[4] = (uint8_t)(v & 0xff);
+        }
+        dst += 5;
+    }
+    if (i < count)
+    {
+        uint64_t v = 0;
+        size_t remain = count - i;
+        if (!bigendian)
+        {
+            for (size_t k = 0; k < remain; k++)
+                v |= ((uint64_t)src[i + k]) << (k * 10);
+            size_t bytes = (remain * 10 + 7) / 8;
+            for (size_t b = 0; b < bytes; b++)
+                dst[b] = (uint8_t)((v >> (8 * b)) & 0xff);
+        }
+        else
+        {
+            for (size_t k = 0; k < remain; k++)
+                v |= ((uint64_t)src[i + k]) << ((remain - 1 - k) * 10);
+            size_t bytes = (remain * 10 + 7) / 8;
+            for (size_t b = 0; b < bytes; b++)
+                dst[b] = (uint8_t)((v >> (8 * (bytes - 1 - b))) & 0xff);
+        }
+    }
+}
+
+static void unpack10_scalar(const uint8_t *src, uint16_t *dst, size_t count,
+                            int bigendian)
+{
+    size_t i = 0;
+    for (; i + 4 <= count; i += 4)
+    {
+        uint64_t v;
+        if (!bigendian)
+            v = ((uint64_t)src[0]) |
+                ((uint64_t)src[1] << 8) |
+                ((uint64_t)src[2] << 16) |
+                ((uint64_t)src[3] << 24) |
+                ((uint64_t)src[4] << 32);
+        else
+            v = ((uint64_t)src[0] << 32) |
+                ((uint64_t)src[1] << 24) |
+                ((uint64_t)src[2] << 16) |
+                ((uint64_t)src[3] << 8) |
+                ((uint64_t)src[4]);
+        if (!bigendian)
+        {
+            dst[i] = (uint16_t)(v & 0x3ff);
+            dst[i + 1] = (uint16_t)((v >> 10) & 0x3ff);
+            dst[i + 2] = (uint16_t)((v >> 20) & 0x3ff);
+            dst[i + 3] = (uint16_t)((v >> 30) & 0x3ff);
+        }
+        else
+        {
+            dst[i] = (uint16_t)((v >> 30) & 0x3ff);
+            dst[i + 1] = (uint16_t)((v >> 20) & 0x3ff);
+            dst[i + 2] = (uint16_t)((v >> 10) & 0x3ff);
+            dst[i + 3] = (uint16_t)(v & 0x3ff);
+        }
+        src += 5;
+    }
+    if (i < count)
+    {
+        size_t remain = count - i;
+        uint64_t v = 0;
+        if (!bigendian)
+        {
+            for (size_t b = 0; b < (remain * 10 + 7) / 8; b++)
+                v |= ((uint64_t)src[b]) << (8 * b);
+            for (size_t k = 0; k < remain; k++)
+                dst[i + k] = (uint16_t)((v >> (k * 10)) & 0x3ff);
+        }
+        else
+        {
+            size_t bytes = (remain * 10 + 7) / 8;
+            for (size_t b = 0; b < bytes; b++)
+                v |= ((uint64_t)src[b]) << (8 * (bytes - 1 - b));
+            for (size_t k = 0; k < remain; k++)
+                dst[i + k] = (uint16_t)((v >> ((remain - 1 - k) * 10)) & 0x3ff);
+        }
+    }
+}
+
+static void pack14_scalar(const uint16_t *src, uint8_t *dst, size_t count,
+                          int bigendian)
+{
+    size_t i = 0;
+    for (; i + 4 <= count; i += 4)
+    {
+        uint64_t v;
+        if (!bigendian)
+            v = ((uint64_t)src[i]) |
+                ((uint64_t)src[i + 1] << 14) |
+                ((uint64_t)src[i + 2] << 28) |
+                ((uint64_t)src[i + 3] << 42);
+        else
+            v = ((uint64_t)src[i] << 42) |
+                ((uint64_t)src[i + 1] << 28) |
+                ((uint64_t)src[i + 2] << 14) |
+                ((uint64_t)src[i + 3]);
+        if (!bigendian)
+        {
+            dst[0] = (uint8_t)(v & 0xff);
+            dst[1] = (uint8_t)((v >> 8) & 0xff);
+            dst[2] = (uint8_t)((v >> 16) & 0xff);
+            dst[3] = (uint8_t)((v >> 24) & 0xff);
+            dst[4] = (uint8_t)((v >> 32) & 0xff);
+            dst[5] = (uint8_t)((v >> 40) & 0xff);
+            dst[6] = (uint8_t)((v >> 48) & 0xff);
+        }
+        else
+        {
+            dst[0] = (uint8_t)((v >> 48) & 0xff);
+            dst[1] = (uint8_t)((v >> 40) & 0xff);
+            dst[2] = (uint8_t)((v >> 32) & 0xff);
+            dst[3] = (uint8_t)((v >> 24) & 0xff);
+            dst[4] = (uint8_t)((v >> 16) & 0xff);
+            dst[5] = (uint8_t)((v >> 8) & 0xff);
+            dst[6] = (uint8_t)(v & 0xff);
+        }
+        dst += 7;
+    }
+    if (i < count)
+    {
+        uint64_t v = 0;
+        size_t remain = count - i;
+        if (!bigendian)
+        {
+            for (size_t k = 0; k < remain; k++)
+                v |= ((uint64_t)src[i + k]) << (k * 14);
+            size_t bytes = (remain * 14 + 7) / 8;
+            for (size_t b = 0; b < bytes; b++)
+                dst[b] = (uint8_t)((v >> (8 * b)) & 0xff);
+        }
+        else
+        {
+            for (size_t k = 0; k < remain; k++)
+                v |= ((uint64_t)src[i + k]) << ((remain - 1 - k) * 14);
+            size_t bytes = (remain * 14 + 7) / 8;
+            for (size_t b = 0; b < bytes; b++)
+                dst[b] = (uint8_t)((v >> (8 * (bytes - 1 - b))) & 0xff);
+        }
+    }
+}
+
+static void unpack14_scalar(const uint8_t *src, uint16_t *dst, size_t count,
+                            int bigendian)
+{
+    size_t i = 0;
+    for (; i + 4 <= count; i += 4)
+    {
+        uint64_t v;
+        if (!bigendian)
+            v = ((uint64_t)src[0]) |
+                ((uint64_t)src[1] << 8) |
+                ((uint64_t)src[2] << 16) |
+                ((uint64_t)src[3] << 24) |
+                ((uint64_t)src[4] << 32) |
+                ((uint64_t)src[5] << 40) |
+                ((uint64_t)src[6] << 48);
+        else
+            v = ((uint64_t)src[0] << 48) |
+                ((uint64_t)src[1] << 40) |
+                ((uint64_t)src[2] << 32) |
+                ((uint64_t)src[3] << 24) |
+                ((uint64_t)src[4] << 16) |
+                ((uint64_t)src[5] << 8) |
+                ((uint64_t)src[6]);
+        if (!bigendian)
+        {
+            dst[i] = (uint16_t)(v & 0x3fff);
+            dst[i + 1] = (uint16_t)((v >> 14) & 0x3fff);
+            dst[i + 2] = (uint16_t)((v >> 28) & 0x3fff);
+            dst[i + 3] = (uint16_t)((v >> 42) & 0x3fff);
+        }
+        else
+        {
+            dst[i] = (uint16_t)((v >> 42) & 0x3fff);
+            dst[i + 1] = (uint16_t)((v >> 28) & 0x3fff);
+            dst[i + 2] = (uint16_t)((v >> 14) & 0x3fff);
+            dst[i + 3] = (uint16_t)(v & 0x3fff);
+        }
+        src += 7;
+    }
+    if (i < count)
+    {
+        size_t remain = count - i;
+        uint64_t v = 0;
+        if (!bigendian)
+        {
+            for (size_t b = 0; b < (remain * 14 + 7) / 8; b++)
+                v |= ((uint64_t)src[b]) << (8 * b);
+            for (size_t k = 0; k < remain; k++)
+                dst[i + k] = (uint16_t)((v >> (k * 14)) & 0x3fff);
+        }
+        else
+        {
+            size_t bytes = (remain * 14 + 7) / 8;
+            for (size_t b = 0; b < bytes; b++)
+                v |= ((uint64_t)src[b]) << (8 * (bytes - 1 - b));
+            for (size_t k = 0; k < remain; k++)
+                dst[i + k] =
+                    (uint16_t)((v >> ((remain - 1 - k) * 14)) & 0x3fff);
+        }
+    }
+}
+
+static void pack16_scalar(const uint16_t *src, uint8_t *dst, size_t count,
+                          int bigendian)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        uint16_t v = src[i];
+        if (!bigendian)
+        {
+            dst[0] = (uint8_t)(v & 0xff);
+            dst[1] = (uint8_t)((v >> 8) & 0xff);
+        }
+        else
+        {
+            dst[0] = (uint8_t)((v >> 8) & 0xff);
+            dst[1] = (uint8_t)(v & 0xff);
+        }
+        dst += 2;
+    }
+}
+
+static void unpack16_scalar(const uint8_t *src, uint16_t *dst, size_t count,
+                            int bigendian)
+{
+    for (size_t i = 0; i < count; i++)
+    {
+        if (!bigendian)
+            dst[i] = (uint16_t)(src[0] | (src[1] << 8));
+        else
+            dst[i] = (uint16_t)((src[0] << 8) | src[1]);
+        src += 2;
+    }
+}
+
 static void unpack12_scalar(const uint8_t *src, uint16_t *dst, size_t count,
                             int bigendian)
 {
@@ -48,6 +320,76 @@ static void unpack12_scalar(const uint8_t *src, uint16_t *dst, size_t count,
 }
 
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
+static void pack10_neon(const uint16_t *src, uint8_t *dst, size_t count,
+                        int bigendian)
+{
+    pack10_scalar(src, dst, count, bigendian);
+}
+
+static void unpack10_neon(const uint8_t *src, uint16_t *dst, size_t count,
+                          int bigendian)
+{
+    unpack10_scalar(src, dst, count, bigendian);
+}
+
+static void pack14_neon(const uint16_t *src, uint8_t *dst, size_t count,
+                        int bigendian)
+{
+    pack14_scalar(src, dst, count, bigendian);
+}
+
+static void unpack14_neon(const uint8_t *src, uint16_t *dst, size_t count,
+                          int bigendian)
+{
+    unpack14_scalar(src, dst, count, bigendian);
+}
+
+static void pack16_neon(const uint16_t *src, uint8_t *dst, size_t count,
+                        int bigendian)
+{
+    size_t i = 0;
+    for (; i + 8 <= count; i += 8)
+    {
+        uint16x8_t v = vld1q_u16(src + i);
+        uint8x8_t lo = vmovn_u16(v);
+        uint8x8_t hi = vshrn_n_u16(v, 8);
+        uint8x8x2_t outv;
+        if (!bigendian)
+        {
+            outv.val[0] = lo;
+            outv.val[1] = hi;
+        }
+        else
+        {
+            outv.val[0] = hi;
+            outv.val[1] = lo;
+        }
+        vst2_u8(dst, outv);
+        dst += 16;
+    }
+    if (i < count)
+        pack16_scalar(src + i, dst, count - i, bigendian);
+}
+
+static void unpack16_neon(const uint8_t *src, uint16_t *dst, size_t count,
+                          int bigendian)
+{
+    size_t i = 0;
+    for (; i + 8 <= count; i += 8)
+    {
+        uint8x8x2_t v = vld2_u8(src);
+        uint16x8_t out;
+        if (!bigendian)
+            out = vorrq_u16(vmovl_u8(v.val[0]), vshll_n_u8(v.val[1], 8));
+        else
+            out = vorrq_u16(vshll_n_u8(v.val[0], 8), vmovl_u8(v.val[1]));
+        vst1q_u16(dst + i, out);
+        src += 16;
+    }
+    if (i < count)
+        unpack16_scalar(src, dst + i, count - i, bigendian);
+}
+
 static void pack12_neon(const uint16_t *src, uint8_t *dst, size_t count,
                         int bigendian)
 {
@@ -138,6 +480,60 @@ void TIFFUnpackRaw12(const uint8_t *src, uint16_t *dst, size_t count,
     unpack12_neon(src, dst, count, bigendian);
 #else
     unpack12_scalar(src, dst, count, bigendian);
+#endif
+}
+
+void TIFFPackRaw10(const uint16_t *src, uint8_t *dst, size_t count, int bigendian)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    pack10_neon(src, dst, count, bigendian);
+#else
+    pack10_scalar(src, dst, count, bigendian);
+#endif
+}
+
+void TIFFUnpackRaw10(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    unpack10_neon(src, dst, count, bigendian);
+#else
+    unpack10_scalar(src, dst, count, bigendian);
+#endif
+}
+
+void TIFFPackRaw14(const uint16_t *src, uint8_t *dst, size_t count, int bigendian)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    pack14_neon(src, dst, count, bigendian);
+#else
+    pack14_scalar(src, dst, count, bigendian);
+#endif
+}
+
+void TIFFUnpackRaw14(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    unpack14_neon(src, dst, count, bigendian);
+#else
+    unpack14_scalar(src, dst, count, bigendian);
+#endif
+}
+
+void TIFFPackRaw16(const uint16_t *src, uint8_t *dst, size_t count, int bigendian)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    pack16_neon(src, dst, count, bigendian);
+#else
+    pack16_scalar(src, dst, count, bigendian);
+#endif
+}
+
+void TIFFUnpackRaw16(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    unpack16_neon(src, dst, count, bigendian);
+#else
+    unpack16_scalar(src, dst, count, bigendian);
 #endif
 }
 

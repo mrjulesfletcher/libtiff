@@ -199,4 +199,10 @@ EXPORTS	TIFFAccessTagMethods
         _TIFFGetGpsFields
         TIFFPackRaw12
         TIFFUnpackRaw12
+        TIFFPackRaw10
+        TIFFUnpackRaw10
+        TIFFPackRaw14
+        TIFFUnpackRaw14
+        TIFFPackRaw16
+        TIFFUnpackRaw16
         TIFFAssembleStripNEON
