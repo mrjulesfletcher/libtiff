@@ -506,11 +506,13 @@ static void TIFFReverseBitsNeonImpl(uint8_t *cp, tmsize_t n)
     static const uint8_t nibble_reverse[16] = {0x0, 0x8, 0x4, 0xc, 0x2, 0xa,
                                                0x6, 0xe, 0x1, 0x9, 0x5, 0xd,
                                                0x3, 0xb, 0x7, 0xf};
+    __builtin_prefetch(nibble_reverse + 64);
     uint8x16_t table = vld1q_u8(nibble_reverse);
     uint8x16_t mask = vdupq_n_u8(0x0f);
     size_t i = 0;
     for (; i + 16 <= (size_t)n; i += 16)
     {
+        __builtin_prefetch(cp + i + 64);
         uint8x16_t v = vld1q_u8(cp + i);
         uint8x16_t lo = vandq_u8(v, mask);
         uint8x16_t hi = vshrq_n_u8(v, 4);

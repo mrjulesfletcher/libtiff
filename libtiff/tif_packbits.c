@@ -44,7 +44,7 @@ static inline void memcpy_neon(uint8_t *dst, const uint8_t *src, size_t n)
     size_t i = 0;
     for (; i + 16 <= n; i += 16)
     {
-        __builtin_prefetch(src + i + 32);
+        __builtin_prefetch(src + i + 64);
         vst1q_u8(dst + i, vld1q_u8(src + i));
     }
     if (i < n)
@@ -377,7 +377,7 @@ static int PackBitsDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                 size_t i = 0;
                 for (; i + 16 <= (size_t)n; i += 16)
                 {
-                    __builtin_prefetch((const uint8_t *)bp + i + 32);
+                    __builtin_prefetch((const uint8_t *)bp + i + 64);
                     vst1q_u8(op + i, vld1q_u8((const uint8_t *)bp + i));
                 }
                 if (i < (size_t)n)
