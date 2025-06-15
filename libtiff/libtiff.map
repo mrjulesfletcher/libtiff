@@ -231,5 +231,6 @@ LIBTIFF_4.7.1 {
     _TIFFThreadPoolSubmit;
     _TIFFThreadPoolWait;
     TIFFSetThreadCount;
+    TIFFSetThreadPoolSize;
     TIFFGetThreadCount;
 } LIBTIFF_4.6.1;

@@ -573,6 +573,7 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
 
     /* Thread pool management */
     extern void TIFFSetThreadCount(TIFF *, int);
+    extern void TIFFSetThreadPoolSize(TIFF *, int, int);
     extern int TIFFGetThreadCount(TIFF *);
     extern void TIFFInitSIMD(void);
     extern tmsize_t TIFFReadEncodedStrip(TIFF *tif, uint32_t strip, void *buf,

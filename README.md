@@ -266,7 +266,8 @@ The io_uring backend uses a queue depth of 8 by default.  Set the
 
 The thread pool is initialized with the number of online processors by
 default. Set the `TIFF_THREAD_COUNT` environment variable or call
-`TIFFSetThreadCount()` to override this value.
+`TIFFSetThreadCount()` to override this value. Use
+`TIFFSetThreadPoolSize()` to additionally control the task queue limit.
 
 ## Testing and Validation
 Configure with testing enabled and run the full suite:
