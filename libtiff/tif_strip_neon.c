@@ -49,10 +49,63 @@ static void horiz_diff16(uint16_t *row, uint32_t width)
         row[i] = (uint16_t)(row[i] - row[i - 1]);
 }
 
+typedef struct
+{
+    TIFF *tif;
+    const uint16_t *src;
+    uint32_t width;
+    uint32_t height;
+    int apply_predictor;
+    int bigendian;
+    size_t *out_size;
+    uint16_t *scratch;
+    uint8_t *out_buf;
+    uint8_t *result;
+} TPStripTask;
+
+static uint8_t *assemble_strip_neon_internal(TIFF *tif, const uint16_t *src,
+                                             uint32_t width, uint32_t height,
+                                             int apply_predictor, int bigendian,
+                                             size_t *out_size,
+                                             uint16_t *scratch,
+                                             uint8_t *out_buf);
+
+static void assemble_strip_neon_task(void *arg)
+{
+    TPStripTask *t = (TPStripTask *)arg;
+    t->result = assemble_strip_neon_internal(
+        t->tif, t->src, t->width, t->height, t->apply_predictor, t->bigendian,
+        t->out_size, t->scratch, t->out_buf);
+}
+
 uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
                                int bigendian, size_t *out_size,
                                uint16_t *scratch, uint8_t *out_buf)
+{
+    static const char module[] = "TIFFAssembleStripNEON";
+    TPStripTask task = {tif,       src,      width,   height,  apply_predictor,
+                        bigendian, out_size, scratch, out_buf, NULL};
+#ifdef TIFF_USE_THREADPOOL
+    if (tif && TIFFGetThreadCount(tif) > 1)
+    {
+        _TIFFThreadPoolSubmit(tif->tif_threadpool, assemble_strip_neon_task,
+                              &task);
+        _TIFFThreadPoolWait(tif->tif_threadpool);
+        return task.result;
+    }
+#endif
+    return assemble_strip_neon_internal(tif, src, width, height,
+                                        apply_predictor, bigendian, out_size,
+                                        scratch, out_buf);
+}
+
+static uint8_t *assemble_strip_neon_internal(TIFF *tif, const uint16_t *src,
+                                             uint32_t width, uint32_t height,
+                                             int apply_predictor, int bigendian,
+                                             size_t *out_size,
+                                             uint16_t *scratch,
+                                             uint8_t *out_buf)
 {
     static const char module[] = "TIFFAssembleStripNEON";
     uint64_t count64 = _TIFFMultiply64(tif, width, height, module);
