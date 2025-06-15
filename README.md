@@ -264,6 +264,10 @@ The io_uring backend uses a queue depth of 8 by default.  Set the
 `TIFF_URING_DEPTH` environment variable or call
 `TIFFOpenOptionsSetURingQueueDepth()` to override it.
 
+The thread pool is initialized with the number of online processors by
+default. Set the `TIFF_THREAD_COUNT` environment variable or call
+`TIFFSetThreadCount()` to override this value.
+
 ## Testing and Validation
 Configure with testing enabled and run the full suite:
 ```bash

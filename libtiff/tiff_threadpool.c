@@ -2,8 +2,10 @@
 #ifdef TIFF_USE_THREADPOOL
 #include "tiff_threadpool.h"
 #include "tiffiop.h"
+#include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <unistd.h>
 
 #define TIFF_THREADPOOL_MAX_QUEUE 256
 
@@ -129,7 +131,8 @@ void _TIFFThreadPoolShutdown(TIFFThreadPool *pool)
         {
             int rc = pthread_join(pool->threads[i], NULL);
             if (rc != 0)
-                TIFFErrorExtR(NULL, "_TIFFThreadPoolShutdown", "pthread_join failed: %d", rc);
+                TIFFErrorExtR(NULL, "_TIFFThreadPoolShutdown",
+                              "pthread_join failed: %d", rc);
         }
         free(pool->threads);
     }
@@ -223,9 +226,38 @@ void TIFFSetThreadCount(TIFF *tif, int count)
 
 int TIFFGetThreadCount(TIFF *tif)
 {
-    if (tif && tif->tif_threadpool)
-        return tif->tif_threadpool->workers;
-    return 1;
+    if (!tif)
+        return 1;
+    if (!tif->tif_threadpool)
+    {
+        int workers = 0;
+        const char *env = getenv("TIFF_THREAD_COUNT");
+        if (env)
+        {
+            char *endptr = NULL;
+            errno = 0;
+            long val = strtol(env, &endptr, 10);
+            if (errno != 0 || *endptr != '\0' || endptr == env || val <= 0)
+            {
+                TIFFErrorExtR(
+                    tif, "TIFFGetThreadCount",
+                    "Invalid TIFF_THREAD_COUNT value '%s', using default", env);
+            }
+            else
+                workers = (int)val;
+        }
+        if (workers <= 0)
+        {
+            long nproc = sysconf(_SC_NPROCESSORS_ONLN);
+            if (nproc < 1)
+                nproc = 1;
+            workers = (int)nproc;
+        }
+        tif->tif_threadpool = _TIFFThreadPoolInit(workers);
+        if (!tif->tif_threadpool)
+            return 1;
+    }
+    return tif->tif_threadpool->workers;
 }
 
 #else
