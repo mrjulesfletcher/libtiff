@@ -24,8 +24,8 @@ int main(void)
         src[i] = (uint16_t)(i & 0x0FFF);
 
     size_t strip_size = 0;
-    uint8_t *packed =
-        TIFFAssembleStripNEON(NULL, src, width, height, 1, 0, &strip_size);
+    uint8_t *packed = TIFFAssembleStripNEON(NULL, src, width, height, 1, 0,
+                                            &strip_size, NULL, NULL);
 
     struct timespec s, e;
     clock_gettime(CLOCK_MONOTONIC, &s);
