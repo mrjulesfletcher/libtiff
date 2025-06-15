@@ -47,6 +47,7 @@ set(tiff_private_HEADERS
         tiffiop.h
         uvcode.h
         tif_bayer.h
+        rgb_neon.h
         strip_neon.h
         reverse_bits_neon.h
         ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h)
@@ -101,6 +102,7 @@ target_sources(tiff PRIVATE
         tif_jpegls.c
         tif_webp.c
         tif_bayer.c
+        tif_rgb.c
         tif_write.c
         tiff_threadpool.c
         tif_mmap.c

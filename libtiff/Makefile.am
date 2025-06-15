@@ -54,6 +54,7 @@ noinst_HEADERS = \
         tiffiop.h \
         uvcode.h \
         tif_bayer.h \
+        rgb_neon.h \
         strip_neon.h \
         reverse_bits_neon.h
 
@@ -104,6 +105,7 @@ libtiff_la_SOURCES = \
         tif_jpegls.c \
         tif_webp.c \
         tif_bayer.c \
+        tif_rgb.c \
         tif_write.c \
         tiff_threadpool.c \
         tif_mmap.c \

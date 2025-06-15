@@ -27,6 +27,7 @@
  *
  * Read and return a packed RGBA image.
  */
+#include "rgb_neon.h"
 #include "tiff_simd.h"
 #include "tiffiop.h"
 #include <limits.h>
@@ -1443,12 +1444,6 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     ((uint32_t)(r) | ((uint32_t)(g) << 8) | ((uint32_t)(b) << 16) |            \
      ((uint32_t)(a) << 24))
 #define W2B(v) (((v) >> 8) & 0xff)
-/* TODO: PACKW should have be made redundant in favor of Bitdepth16To8 LUT */
-#define PACKW(r, g, b)                                                         \
-    ((uint32_t)W2B(r) | ((uint32_t)W2B(g) << 8) | ((uint32_t)W2B(b) << 16) | A1)
-#define PACKW4(r, g, b, a)                                                     \
-    ((uint32_t)W2B(r) | ((uint32_t)W2B(g) << 8) | ((uint32_t)W2B(b) << 16) |   \
-     ((uint32_t)W2B(a) << 24))
 
 #define DECLAREContigPutFunc(name)                                             \
     static void name(TIFFRGBAImage *img, uint32_t *cp, uint32_t x, uint32_t y, \
@@ -1713,17 +1708,19 @@ static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *cp,
             int32x4_t r3 = vmlal_s16(vshll_n_s16(vget_high_s16(y1), 8),
                                      vget_high_s16(cr1), 359);
             int32x4_t g0 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_low_s16(y0), 8),
-                                             vget_low_s16(cb0), 88),
+                                               vget_low_s16(cb0), 88),
                                      vget_low_s16(cr0), 183);
-            int32x4_t g1 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y0), 8),
-                                             vget_high_s16(cb0), 88),
-                                     vget_high_s16(cr0), 183);
+            int32x4_t g1 =
+                vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y0), 8),
+                                    vget_high_s16(cb0), 88),
+                          vget_high_s16(cr0), 183);
             int32x4_t g2 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_low_s16(y1), 8),
-                                             vget_low_s16(cb1), 88),
+                                               vget_low_s16(cb1), 88),
                                      vget_low_s16(cr1), 183);
-            int32x4_t g3 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y1), 8),
-                                             vget_high_s16(cb1), 88),
-                                     vget_high_s16(cr1), 183);
+            int32x4_t g3 =
+                vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y1), 8),
+                                    vget_high_s16(cb1), 88),
+                          vget_high_s16(cr1), 183);
             int32x4_t b0 = vmlal_s16(vshll_n_s16(vget_low_s16(y0), 8),
                                      vget_low_s16(cb0), 454);
             int32x4_t b1 = vmlal_s16(vshll_n_s16(vget_high_s16(y0), 8),
@@ -1733,21 +1730,21 @@ static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *cp,
             int32x4_t b3 = vmlal_s16(vshll_n_s16(vget_high_s16(y1), 8),
                                      vget_high_s16(cb1), 454);
 
-            uint8x16_t rv = vcombine_u8(
-                vqmovun_s16(vcombine_s16(vqshrn_n_s32(r0, 8),
-                                         vqshrn_n_s32(r1, 8))),
-                vqmovun_s16(vcombine_s16(vqshrn_n_s32(r2, 8),
-                                         vqshrn_n_s32(r3, 8))));
-            uint8x16_t gv = vcombine_u8(
-                vqmovun_s16(vcombine_s16(vqshrn_n_s32(g0, 8),
-                                         vqshrn_n_s32(g1, 8))),
-                vqmovun_s16(vcombine_s16(vqshrn_n_s32(g2, 8),
-                                         vqshrn_n_s32(g3, 8))));
-            uint8x16_t bv = vcombine_u8(
-                vqmovun_s16(vcombine_s16(vqshrn_n_s32(b0, 8),
-                                         vqshrn_n_s32(b1, 8))),
-                vqmovun_s16(vcombine_s16(vqshrn_n_s32(b2, 8),
-                                         vqshrn_n_s32(b3, 8))));
+            uint8x16_t rv =
+                vcombine_u8(vqmovun_s16(vcombine_s16(vqshrn_n_s32(r0, 8),
+                                                     vqshrn_n_s32(r1, 8))),
+                            vqmovun_s16(vcombine_s16(vqshrn_n_s32(r2, 8),
+                                                     vqshrn_n_s32(r3, 8))));
+            uint8x16_t gv =
+                vcombine_u8(vqmovun_s16(vcombine_s16(vqshrn_n_s32(g0, 8),
+                                                     vqshrn_n_s32(g1, 8))),
+                            vqmovun_s16(vcombine_s16(vqshrn_n_s32(g2, 8),
+                                                     vqshrn_n_s32(g3, 8))));
+            uint8x16_t bv =
+                vcombine_u8(vqmovun_s16(vcombine_s16(vqshrn_n_s32(b0, 8),
+                                                     vqshrn_n_s32(b1, 8))),
+                            vqmovun_s16(vcombine_s16(vqshrn_n_s32(b2, 8),
+                                                     vqshrn_n_s32(b3, 8))));
 
             uint8x16x4_t outv;
             outv.val[0] = rv;
@@ -1864,6 +1861,16 @@ DECLAREContigPutFunc(putRGBcontig8bittile)
     (void)x;
     (void)y;
     fromskew *= samplesperpixel;
+    if (samplesperpixel == 3)
+    {
+        for (; h > 0; --h)
+        {
+            TIFFPackRGB24(pp, cp, w);
+            cp += w + toskew;
+            pp += w * 3 + fromskew;
+        }
+        return;
+    }
     for (; h > 0; --h)
     {
         UNROLL8(w, NOP, *cp++ = PACK(pp[0], pp[1], pp[2]);
@@ -1884,6 +1891,16 @@ DECLAREContigPutFunc(putRGBAAcontig8bittile)
     (void)x;
     (void)y;
     fromskew *= samplesperpixel;
+    if (samplesperpixel == 4)
+    {
+        for (; h > 0; --h)
+        {
+            TIFFPackRGBA32(pp, cp, w);
+            cp += w + toskew;
+            pp += w * 4 + fromskew;
+        }
+        return;
+    }
     for (; h > 0; --h)
     {
         UNROLL8(w, NOP, *cp++ = PACK4(pp[0], pp[1], pp[2], pp[3]);
@@ -1930,6 +1947,16 @@ DECLAREContigPutFunc(putRGBcontig16bittile)
     uint16_t *wp = (uint16_t *)pp;
     (void)y;
     fromskew *= samplesperpixel;
+    if (samplesperpixel == 3)
+    {
+        for (; h > 0; --h)
+        {
+            TIFFPackRGB48(wp, cp, w);
+            cp += w + toskew;
+            wp += w * 3 + fromskew;
+        }
+        return;
+    }
     for (; h > 0; --h)
     {
         for (x = w; x > 0; --x)
@@ -1953,6 +1980,16 @@ DECLAREContigPutFunc(putRGBAAcontig16bittile)
     uint16_t *wp = (uint16_t *)pp;
     (void)y;
     fromskew *= samplesperpixel;
+    if (samplesperpixel == 4)
+    {
+        for (; h > 0; --h)
+        {
+            TIFFPackRGBA64(wp, cp, w);
+            cp += w + toskew;
+            wp += w * 4 + fromskew;
+        }
+        return;
+    }
     for (; h > 0; --h)
     {
         for (x = w; x > 0; --x)
