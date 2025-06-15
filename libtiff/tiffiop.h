@@ -50,6 +50,7 @@
 #include "tiffio.h"
 #ifdef USE_IO_URING
 #include <liburing.h>
+#include <sys/uio.h>
 #endif
 
 #include "tif_dir.h"
@@ -566,6 +567,10 @@ extern "C"
     extern void _tiffUringSetAsync(TIFF *tif, int enable);
     extern void _tiffUringFlush(TIFF *tif);
     extern void _tiffUringWait(TIFF *tif);
+    extern tmsize_t _tiffUringReadV(thandle_t fd, struct iovec *iov,
+                                    unsigned int iovcnt, tmsize_t size);
+    extern tmsize_t _tiffUringWriteV(thandle_t fd, struct iovec *iov,
+                                     unsigned int iovcnt, tmsize_t size);
 #endif
 
     extern int _TIFFCopyFileRange(TIFF *tif, uint64_t offsetRead,
