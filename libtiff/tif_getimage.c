@@ -157,12 +157,19 @@ int TIFFRGBAImageOK(TIFF *tif, char emsg[EMSG_BUF_SIZE])
              */
             break;
         case PHOTOMETRIC_YCBCR:
-            /*
-             * TODO: if at all meaningful and useful, make more complete
-             * support check here, or better still, refactor to let supporting
-             * code decide whether there is support and what meaningful
-             * error to return
-             */
+#ifndef YCBCR_SUPPORT
+            snprintf(emsg, EMSG_BUF_SIZE,
+                     "Sorry, can not handle YCbCr image because YCbCr support is not configured");
+            return (0);
+#else
+            if (!TIFFIsCODECConfigured(td->td_compression))
+            {
+                snprintf(emsg, EMSG_BUF_SIZE,
+                         "Sorry, can not handle YCbCr image with compression %u",
+                         td->td_compression);
+                return (0);
+            }
+#endif
             break;
         case PHOTOMETRIC_RGB:
             if (colorchannels < 3)
@@ -458,6 +465,18 @@ int TIFFRGBAImageBegin(TIFFRGBAImage *img, TIFF *tif, int stop,
             }
             break;
         case PHOTOMETRIC_YCBCR:
+#ifndef YCBCR_SUPPORT
+            snprintf(emsg, EMSG_BUF_SIZE,
+                     "Sorry, can not handle YCbCr image because YCbCr support is not configured");
+            goto fail_return;
+#else
+            if (!TIFFIsCODECConfigured(compress))
+            {
+                snprintf(emsg, EMSG_BUF_SIZE,
+                         "Sorry, can not handle YCbCr image with compression %u",
+                         compress);
+                goto fail_return;
+            }
             /* It would probably be nice to have a reality check here. */
             if (planarconfig == PLANARCONFIG_CONTIG)
                 /* can rely on libjpeg to convert to RGB */
@@ -479,6 +498,7 @@ int TIFFRGBAImageBegin(TIFFRGBAImage *img, TIFF *tif, int stop,
                         /* do nothing */;
                         break;
                 }
+#endif
             /*
              * TODO: if at all meaningful and useful, make more complete
              * support check here, or better still, refactor to let supporting
