@@ -576,6 +576,10 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     extern void TIFFSetThreadPoolSize(TIFF *, int, int);
     extern int TIFFGetThreadCount(TIFF *);
     extern void TIFFInitSIMD(void);
+    extern int TIFFUseNEON(void);
+    extern int TIFFUseSSE41(void);
+    extern void TIFFSetUseNEON(int);
+    extern void TIFFSetUseSSE41(int);
     extern tmsize_t TIFFReadEncodedStrip(TIFF *tif, uint32_t strip, void *buf,
                                          tmsize_t size);
     extern tmsize_t TIFFReadRawStrip(TIFF *tif, uint32_t strip, void *buf,

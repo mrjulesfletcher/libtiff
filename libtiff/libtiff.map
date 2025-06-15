@@ -239,4 +239,9 @@ LIBTIFF_4.7.1 {
     TIFFSetThreadCount;
     TIFFSetThreadPoolSize;
     TIFFGetThreadCount;
+    TIFFInitSIMD;
+    TIFFUseNEON;
+    TIFFUseSSE41;
+    TIFFSetUseNEON;
+    TIFFSetUseSSE41;
 } LIBTIFF_4.6.1;

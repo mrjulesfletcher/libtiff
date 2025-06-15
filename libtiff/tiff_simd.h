@@ -52,6 +52,12 @@ extern "C"
     } tiff_simd_funcs;
 
     extern tiff_simd_funcs tiff_simd;
+    extern int tiff_use_neon;
+    extern int tiff_use_sse41;
+    int TIFFUseNEON(void);
+    int TIFFUseSSE41(void);
+    void TIFFSetUseNEON(int);
+    void TIFFSetUseSSE41(int);
 
     static inline tiff_v16u8 tiff_loadu_u8(const uint8_t *p)
     {
@@ -74,51 +80,54 @@ extern "C"
                                        size_t n)
     {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-        if (dst == src || n == 0)
+        if (tiff_use_neon)
+        {
+            if (dst == src || n == 0)
+                return;
+            if (dst < src)
+            {
+                while (((uintptr_t)dst & 15) && n)
+                {
+                    *dst++ = *src++;
+                    n--;
+                }
+                for (; n >= 16; n -= 16, dst += 16, src += 16)
+                {
+                    __builtin_prefetch(src + 64);
+                    vst1q_u8(dst, vld1q_u8(src));
+                }
+                while (n--)
+                    *dst++ = *src++;
+            }
+            else
+            {
+                dst += n;
+                src += n;
+                while (((uintptr_t)dst & 15) && n)
+                {
+                    dst--;
+                    src--;
+                    *dst = *src;
+                    n--;
+                }
+                for (; n >= 16; n -= 16)
+                {
+                    dst -= 16;
+                    src -= 16;
+                    __builtin_prefetch(src - 64);
+                    vst1q_u8(dst, vld1q_u8(src));
+                }
+                while (n--)
+                {
+                    dst--;
+                    src--;
+                    *dst = *src;
+                }
+            }
             return;
-        if (dst < src)
-        {
-            while (((uintptr_t)dst & 15) && n)
-            {
-                *dst++ = *src++;
-                n--;
-            }
-            for (; n >= 16; n -= 16, dst += 16, src += 16)
-            {
-                __builtin_prefetch(src + 64);
-                vst1q_u8(dst, vld1q_u8(src));
-            }
-            while (n--)
-                *dst++ = *src++;
         }
-        else
-        {
-            dst += n;
-            src += n;
-            while (((uintptr_t)dst & 15) && n)
-            {
-                dst--;
-                src--;
-                *dst = *src;
-                n--;
-            }
-            for (; n >= 16; n -= 16)
-            {
-                dst -= 16;
-                src -= 16;
-                __builtin_prefetch(src - 64);
-                vst1q_u8(dst, vld1q_u8(src));
-            }
-            while (n--)
-            {
-                dst--;
-                src--;
-                *dst = *src;
-            }
-        }
-#else
-    memmove(dst, src, n);
 #endif
+        memmove(dst, src, n);
     }
 
 #ifdef __cplusplus

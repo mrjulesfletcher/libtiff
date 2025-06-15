@@ -206,3 +206,8 @@ EXPORTS	TIFFAccessTagMethods
         TIFFPackRaw16
         TIFFUnpackRaw16
         TIFFAssembleStripNEON
+        TIFFInitSIMD
+        TIFFUseNEON
+        TIFFUseSSE41
+        TIFFSetUseNEON
+        TIFFSetUseSSE41

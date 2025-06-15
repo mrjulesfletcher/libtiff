@@ -21,6 +21,8 @@
 #endif
 
 tiff_simd_funcs tiff_simd;
+int tiff_use_neon = 0;
+int tiff_use_sse41 = 0;
 
 /* Scalar implementations */
 static tiff_v16u8 loadu_u8_scalar(const uint8_t *ptr)
@@ -193,6 +195,7 @@ void TIFFInitSIMD(void)
 #if defined(HAVE_NEON)
     if (detect_neon())
     {
+        tiff_use_neon = 1;
         tiff_simd.loadu_u8 = loadu_u8_neon;
         tiff_simd.storeu_u8 = storeu_u8_neon;
         tiff_simd.add_u8 = add_u8_neon;
@@ -203,10 +206,31 @@ void TIFFInitSIMD(void)
 #if defined(HAVE_SSE41)
     if (detect_sse41())
     {
+        tiff_use_sse41 = 1;
         tiff_simd.loadu_u8 = loadu_u8_sse41;
         tiff_simd.storeu_u8 = storeu_u8_sse41;
         tiff_simd.add_u8 = add_u8_sse41;
         tiff_simd.sub_u8 = sub_u8_sse41;
     }
 #endif
+}
+
+int TIFFUseNEON(void)
+{
+    return tiff_use_neon;
+}
+
+int TIFFUseSSE41(void)
+{
+    return tiff_use_sse41;
+}
+
+void TIFFSetUseNEON(int enable)
+{
+    tiff_use_neon = enable;
+}
+
+void TIFFSetUseSSE41(int enable)
+{
+    tiff_use_sse41 = enable;
 }

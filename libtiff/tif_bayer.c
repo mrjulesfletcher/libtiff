@@ -1,5 +1,6 @@
 #include "tif_bayer.h"
 #include <string.h>
+#include "tiff_simd.h"
 
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
@@ -469,73 +470,81 @@ static void unpack12_neon(const uint8_t *src, uint16_t *dst, size_t count,
 void TIFFPackRaw12(const uint16_t *src, uint8_t *dst, size_t count, int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    pack12_neon(src, dst, count, bigendian);
-#else
-    pack12_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        pack12_neon(src, dst, count, bigendian);
+    else
 #endif
+        pack12_scalar(src, dst, count, bigendian);
 }
 
 void TIFFUnpackRaw12(const uint8_t *src, uint16_t *dst, size_t count,
                      int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    unpack12_neon(src, dst, count, bigendian);
-#else
-    unpack12_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        unpack12_neon(src, dst, count, bigendian);
+    else
 #endif
+        unpack12_scalar(src, dst, count, bigendian);
 }
 
 void TIFFPackRaw10(const uint16_t *src, uint8_t *dst, size_t count, int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    pack10_neon(src, dst, count, bigendian);
-#else
-    pack10_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        pack10_neon(src, dst, count, bigendian);
+    else
 #endif
+        pack10_scalar(src, dst, count, bigendian);
 }
 
 void TIFFUnpackRaw10(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    unpack10_neon(src, dst, count, bigendian);
-#else
-    unpack10_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        unpack10_neon(src, dst, count, bigendian);
+    else
 #endif
+        unpack10_scalar(src, dst, count, bigendian);
 }
 
 void TIFFPackRaw14(const uint16_t *src, uint8_t *dst, size_t count, int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    pack14_neon(src, dst, count, bigendian);
-#else
-    pack14_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        pack14_neon(src, dst, count, bigendian);
+    else
 #endif
+        pack14_scalar(src, dst, count, bigendian);
 }
 
 void TIFFUnpackRaw14(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    unpack14_neon(src, dst, count, bigendian);
-#else
-    unpack14_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        unpack14_neon(src, dst, count, bigendian);
+    else
 #endif
+        unpack14_scalar(src, dst, count, bigendian);
 }
 
 void TIFFPackRaw16(const uint16_t *src, uint8_t *dst, size_t count, int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    pack16_neon(src, dst, count, bigendian);
-#else
-    pack16_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        pack16_neon(src, dst, count, bigendian);
+    else
 #endif
+        pack16_scalar(src, dst, count, bigendian);
 }
 
 void TIFFUnpackRaw16(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    unpack16_neon(src, dst, count, bigendian);
-#else
-    unpack16_scalar(src, dst, count, bigendian);
+    if (tiff_use_neon)
+        unpack16_neon(src, dst, count, bigendian);
+    else
 #endif
+        unpack16_scalar(src, dst, count, bigendian);
 }
 
