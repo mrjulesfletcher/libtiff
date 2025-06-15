@@ -22,6 +22,11 @@
  *    reasonable easily if needed to improve compatibility with other
  *    packages.  Many don't properly support PLANARCONFIG_SEPARATE.
  *
+ *  o Overviews are stored as additional directories appended to the
+ *    original TIFF.  Each overview directory uses the same compression
+ *    and photometric parameters as the base image.  Source blocks are
+ *    read, resampled and written to the overview levels in turn.
+ *
  ******************************************************************************
  * Copyright (c) 1999, Frank Warmerdam
  *
@@ -44,8 +49,6 @@
  * DEALINGS IN THE SOFTWARE.
  ******************************************************************************
  */
-
-/* TODO: update notes in header above */
 
 #include <assert.h>
 #include <stdio.h>
