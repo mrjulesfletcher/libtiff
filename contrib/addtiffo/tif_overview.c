@@ -790,10 +790,9 @@ void TIFFBuildOverviews(TIFF *hTIFF, int nOverviews, int *panOvList,
             return;
         }
         bSubsampled = 1;
-        TIFFGetField(hTIFF, TIFFTAG_YCBCRSUBSAMPLING, &nHorSubsampling,
-                     &nVerSubsampling);
-        /* TODO: find out if maybe TIFFGetFieldDefaulted is better choice for
-         * YCbCrSubsampling tag */
+        TIFFGetFieldDefaulted(hTIFF, TIFFTAG_YCBCRSUBSAMPLING, &nHorSubsampling,
+                              &nVerSubsampling);
+        /* Use defaults if the YCbCrSubsampling tag is missing */
     }
     else
     {
