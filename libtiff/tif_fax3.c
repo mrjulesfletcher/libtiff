@@ -37,6 +37,9 @@
  *      Copyright (C) 1990, 1995  Frank D. Cringle.
  */
 #include "tif_fax3.h"
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+#include <arm_neon.h>
+#endif
 #define G3CODES
 #include "t4.h"
 #include <stdio.h>
@@ -417,19 +420,59 @@ static int Fax3Decode2D(TIFF *tif, uint8_t *buf, tmsize_t occ, uint16_t s)
 }
 #undef SWAP
 
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+static inline void fax_fill_neon(uint8_t **cpp, int32_t n)
+{
+    uint8_t *cp = *cpp;
+    int32_t i = 0;
+    if (n >= 16)
+    {
+        uint8x16_t v = vdupq_n_u8(0xff);
+        for (; i + 16 <= n; i += 16)
+            vst1q_u8(cp + i, v);
+    }
+    if (i < n)
+        memset(cp + i, 0xff, (size_t)(n - i));
+    *cpp = cp + n;
+}
+
+static inline void fax_zero_neon(uint8_t **cpp, int32_t n)
+{
+    uint8_t *cp = *cpp;
+    int32_t i = 0;
+    if (n >= 16)
+    {
+        uint8x16_t v = vdupq_n_u8(0);
+        for (; i + 16 <= n; i += 16)
+            vst1q_u8(cp + i, v);
+    }
+    if (i < n)
+        memset(cp + i, 0, (size_t)(n - i));
+    *cpp = cp + n;
+}
+#define FILL(n, cp) fax_fill_neon(&(cp), (n))
+#define ZERO(n, cp) fax_zero_neon(&(cp), (n))
+#else
 #define FILL(n, cp)                                                            \
-    for (int32_t ifill = 0; ifill < (n); ++ifill)                              \
+    do                                                                         \
     {                                                                          \
-        (cp)[ifill] = 0xff;                                                    \
-    }                                                                          \
-    (cp) += (n);
+        for (int32_t ifill = 0; ifill < (n); ++ifill)                          \
+        {                                                                      \
+            (cp)[ifill] = 0xff;                                                \
+        }                                                                      \
+        (cp) += (n);                                                           \
+    } while (0)
 
 #define ZERO(n, cp)                                                            \
-    for (int32_t izero = 0; izero < (n); ++izero)                              \
+    do                                                                         \
     {                                                                          \
-        (cp)[izero] = 0;                                                       \
-    }                                                                          \
-    (cp) += (n);
+        for (int32_t izero = 0; izero < (n); ++izero)                          \
+        {                                                                      \
+            (cp)[izero] = 0;                                                   \
+        }                                                                      \
+        (cp) += (n);                                                           \
+    } while (0)
+#endif
 
 /*
  * Bit-fill a row according to the white/black
