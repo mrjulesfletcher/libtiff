@@ -55,6 +55,7 @@ static void pack12_neon(const uint16_t *src, uint8_t *dst, size_t count,
     uint8x8_t mask4 = vdup_n_u8(0x0f);
     for (; i + 16 <= count; i += 16)
     {
+        __builtin_prefetch(src + i + 32);
         uint16x8x2_t v = vld2q_u16(src + i);
         uint16x8_t even = v.val[0];
         uint16x8_t odd = v.val[1];
@@ -95,6 +96,7 @@ static void unpack12_neon(const uint8_t *src, uint16_t *dst, size_t count,
     uint8x8_t mask4 = vdup_n_u8(0x0f);
     for (; i + 16 <= count; i += 16)
     {
+        __builtin_prefetch(src + 32);
         uint8x8x3_t v = vld3_u8(src);
         uint16x8_t out0, out1;
         if (!bigendian)
