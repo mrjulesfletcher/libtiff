@@ -749,6 +749,45 @@ static void flip_horizontal(uint32_t *raster, uint32_t w, uint32_t h)
 #endif
 }
 
+static void flip_vertical(uint32_t *raster, uint32_t w, uint32_t h)
+{
+#if TIFF_SIMD_NEON
+    for (uint32_t row = 0; row < h / 2; row++)
+    {
+        uint32_t *top = raster + row * w;
+        uint32_t *bottom = raster + (h - 1 - row) * w;
+        uint32_t col = 0;
+        while (col + 3 < w)
+        {
+            uint32x4_t t = vld1q_u32(top + col);
+            uint32x4_t b = vld1q_u32(bottom + col);
+            vst1q_u32(top + col, b);
+            vst1q_u32(bottom + col, t);
+            col += 4;
+        }
+        while (col < w)
+        {
+            uint32_t tmp = top[col];
+            top[col] = bottom[col];
+            bottom[col] = tmp;
+            col++;
+        }
+    }
+#else
+    for (uint32_t row = 0; row < h / 2; row++)
+    {
+        uint32_t *top = raster + row * w;
+        uint32_t *bottom = raster + (h - 1 - row) * w;
+        for (uint32_t col = 0; col < w; col++)
+        {
+            uint32_t tmp = top[col];
+            top[col] = bottom[col];
+            bottom[col] = tmp;
+        }
+    }
+#endif
+}
+
 /*
  * Get an tile-organized image that has
  *	PlanarConfiguration contiguous if SamplesPerPixel > 1
@@ -784,28 +823,14 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     TIFFGetField(tif, TIFFTAG_TILELENGTH, &th);
 
     flip = setorientation(img);
-    if (flip & FLIP_VERTICALLY)
+    if (tw > ((int64_t)INT_MAX + w))
     {
-        if (((int64_t)tw + w) > INT_MAX)
-        {
-            TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
-                          "unsupported tile size (too wide)");
-            return (0);
-        }
-        y = h - 1;
-        toskew = -(int32_t)(tw + w);
+        TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
+                      "unsupported tile size (too wide)");
+        return (0);
     }
-    else
-    {
-        if (tw > ((int64_t)INT_MAX + w))
-        {
-            TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
-                          "unsupported tile size (too wide)");
-            return (0);
-        }
-        y = 0;
-        toskew = -(int32_t)(tw - w);
-    }
+    y = 0;
+    toskew = -(int32_t)(tw - w);
 
     if (tw == 0 || th == 0)
     {
@@ -870,10 +895,12 @@ static int gtTileContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
             this_toskew = toskew;
         }
 
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += nrow;
     }
     _TIFFfreeExt(img->tif, buf);
 
+    if (flip & FLIP_VERTICALLY)
+        flip_vertical(raster, w, h);
     if (flip & FLIP_HORIZONTALLY)
         flip_horizontal(raster, w, h);
 
@@ -923,28 +950,14 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     TIFFGetField(tif, TIFFTAG_TILELENGTH, &th);
 
     flip = setorientation(img);
-    if (flip & FLIP_VERTICALLY)
+    if (tw > ((int64_t)INT_MAX + w))
     {
-        if (((int64_t)tw + w) > INT_MAX)
-        {
-            TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
-                          "unsupported tile size (too wide)");
-            return (0);
-        }
-        y = h - 1;
-        toskew = -(int32_t)(tw + w);
+        TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
+                      "unsupported tile size (too wide)");
+        return (0);
     }
-    else
-    {
-        if (tw > ((int64_t)INT_MAX + w))
-        {
-            TIFFErrorExtR(tif, TIFFFileName(tif), "%s",
-                          "unsupported tile size (too wide)");
-            return (0);
-        }
-        y = 0;
-        toskew = -(int32_t)(tw - w);
-    }
+    y = 0;
+    toskew = -(int32_t)(tw - w);
 
     switch (img->photometric)
     {
@@ -1070,9 +1083,11 @@ static int gtTileSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
             this_toskew = toskew;
         }
 
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += nrow;
     }
 
+    if (flip & FLIP_VERTICALLY)
+        flip_vertical(raster, w, h);
     if (flip & FLIP_HORIZONTALLY)
         flip_horizontal(raster, w, h);
 
@@ -1114,21 +1129,8 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     maxstripsize = TIFFStripSize(tif);
 
     flip = setorientation(img);
-    if (flip & FLIP_VERTICALLY)
-    {
-        if (w > INT_MAX / 2)
-        {
-            TIFFErrorExtR(tif, TIFFFileName(tif), "Width overflow");
-            return (0);
-        }
-        y = h - 1;
-        toskew = -(int32_t)(w + w);
-    }
-    else
-    {
-        y = 0;
-        toskew = 0;
-    }
+    y = 0;
+    toskew = 0;
 
     TIFFGetFieldDefaulted(tif, TIFFTAG_ROWSPERSTRIP, &rowsperstrip);
     if (rowsperstrip == 0)
@@ -1169,9 +1171,11 @@ static int gtStripContig(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
         tmsize_t roffset = (tmsize_t)y * w;
         (*put)(img, raster + roffset, 0, y, w, nrow, fromskew, toskew,
                buf + pos);
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += nrow;
     }
 
+    if (flip & FLIP_VERTICALLY)
+        flip_vertical(raster, w, h);
     if (flip & FLIP_HORIZONTALLY)
         flip_horizontal(raster, w, h);
 
@@ -1213,21 +1217,8 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     }
 
     flip = setorientation(img);
-    if (flip & FLIP_VERTICALLY)
-    {
-        if (w > INT_MAX / 2)
-        {
-            TIFFErrorExtR(tif, TIFFFileName(tif), "Width overflow");
-            return (0);
-        }
-        y = h - 1;
-        toskew = -(int32_t)(w + w);
-    }
-    else
-    {
-        y = 0;
-        toskew = 0;
-    }
+    y = 0;
+    toskew = 0;
 
     switch (img->photometric)
     {
@@ -1327,9 +1318,11 @@ static int gtStripSeparate(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
         tmsize_t roffset = (tmsize_t)y * w;
         (*put)(img, raster + roffset, 0, y, w, nrow, fromskew, toskew, p0 + pos,
                p1 + pos, p2 + pos, (alpha ? (pa + pos) : NULL));
-        y += ((flip & FLIP_VERTICALLY) ? -(int32_t)nrow : (int32_t)nrow);
+        y += nrow;
     }
 
+    if (flip & FLIP_VERTICALLY)
+        flip_vertical(raster, w, h);
     if (flip & FLIP_HORIZONTALLY)
         flip_horizontal(raster, w, h);
 
