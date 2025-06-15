@@ -31,6 +31,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 
 #ifdef JBIG_SUPPORT
 #include "jbig.h"

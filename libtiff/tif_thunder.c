@@ -23,6 +23,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #include <assert.h>
 #ifdef THUNDER_SUPPORT
 /*

@@ -24,6 +24,7 @@
  */
 
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #ifdef LZW_SUPPORT
 /*
  * TIFF Library.
