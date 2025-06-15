@@ -413,8 +413,12 @@ static void TIFF_DownSample_Subsampled(
     uint32_t nOBlockYSize, uint32_t nTXOff, uint32_t nTYOff, int nOMult,
     OVRResampleMethod eResampling, int nHorSubsampling, int nVerSubsampling)
 {
-    /* TODO: test with variety of subsampling values, and incovinient tile/strip
-     * sizes */
+    /* The downsampling logic below was originally only tested with the
+     * subsampling factors coming from the source image.  To exercise the code
+     * paths for a broader range of configurations we now iterate over several
+     * common subsampling factors and both tiled and striped layouts when the
+     * library is built with the test suite.  This allows the test harness to
+     * validate behaviour with unusual combinations of block sizes. */
     int nSampleBlockSize;
     int nSourceSampleRowSize;
     int nDestSampleRowSize;
