@@ -59,8 +59,9 @@
  * New
  */
 
-#include "tiffio.h"
 #include "tif_ovrcache.h"
+#include "tiffio.h"
+#define DIV_ROUND_UP32(x, y) (((x) + (y)-1) / (y))
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -76,7 +77,6 @@ int main(int argc, char **argv)
 
 {
     int *anOverviews = NULL; /* dynamically allocated overview list */
-    int nMaxOverviewCount = 0;
     int nOverviewCount = 0;
     int bUseSubIFD = 0;
     TIFF *hTIFF;
@@ -127,60 +127,72 @@ int main(int argc, char **argv)
         }
     }
 
-    nMaxOverviewCount = (argc > 2) ? (argc - 2) : 4;
-    anOverviews = (int *)calloc(nMaxOverviewCount, sizeof(int));
-    if (anOverviews == NULL)
-    {
-        fprintf(stderr, "Out of memory.\n");
-        return (1);
-    }
-
-    /* Resampling mode is now represented by an integer enum (eResampling) */
-
     /* -------------------------------------------------------------------- */
-    /*      Collect the user requested reduction factors.                   */
-    /* -------------------------------------------------------------------- */
-    while (nOverviewCount < argc - 2)
-    {
-        anOverviews[nOverviewCount] = atoi(argv[nOverviewCount + 2]);
-        if ((anOverviews[nOverviewCount] <= 0) ||
-            ((anOverviews[nOverviewCount] > 1024)))
-        {
-            fprintf(stderr, "Incorrect parameters\n");
-            free(anOverviews);
-            return (1);
-        }
-        nOverviewCount++;
-    }
-
-    /* -------------------------------------------------------------------- */
-    /*      Default to four overview levels.  It would be nicer if it       */
-    /*      defaulted based on the size of the source image.                */
-    /* -------------------------------------------------------------------- */
-    /* TODO: make it default based on the size of the source image */
-    if (nOverviewCount == 0)
-    {
-        nOverviewCount = 4;
-
-        anOverviews[0] = 2;
-        anOverviews[1] = 4;
-        anOverviews[2] = 8;
-        anOverviews[3] = 16;
-    }
-
-    /* -------------------------------------------------------------------- */
-    /*      Build the overview.                                             */
+    /*      Open the file and fetch image dimensions.                        */
     /* -------------------------------------------------------------------- */
     hTIFF = TIFFOpen(argv[1], "r+");
     if (hTIFF == NULL)
     {
         fprintf(stderr, "TIFFOpen(%s) failed.\n", argv[1]);
-        free(anOverviews);
         return (1);
     }
 
-    TIFFBuildOverviews(hTIFF, nOverviewCount, anOverviews, bUseSubIFD,
-                       eResampling, NULL, NULL);
+    uint32_t nImageWidth = 0, nImageLength = 0;
+    TIFFGetField(hTIFF, TIFFTAG_IMAGEWIDTH, &nImageWidth);
+    TIFFGetField(hTIFF, TIFFTAG_IMAGELENGTH, &nImageLength);
+
+    /* -------------------------------------------------------------------- */
+    /*      Collect the user requested reduction factors or compute default. */
+    /* -------------------------------------------------------------------- */
+    if (argc > 2)
+    {
+        nOverviewCount = argc - 2;
+        anOverviews = (int *)calloc(nOverviewCount, sizeof(int));
+        if (anOverviews == NULL)
+        {
+            fprintf(stderr, "Out of memory.\n");
+            TIFFClose(hTIFF);
+            return (1);
+        }
+        for (int i = 0; i < nOverviewCount; i++)
+        {
+            anOverviews[i] = atoi(argv[i + 2]);
+            if (anOverviews[i] <= 0 || anOverviews[i] > 1024)
+            {
+                fprintf(stderr, "Incorrect parameters\n");
+                free(anOverviews);
+                TIFFClose(hTIFF);
+                return (1);
+            }
+        }
+    }
+    else
+    {
+        int nOvrFactor = 1;
+        while (DIV_ROUND_UP32(nImageWidth, nOvrFactor) > 256 ||
+               DIV_ROUND_UP32(nImageLength, nOvrFactor) > 256)
+        {
+            nOvrFactor *= 2;
+            int *tmp =
+                (int *)realloc(anOverviews, sizeof(int) * (nOverviewCount + 1));
+            if (tmp == NULL)
+            {
+                fprintf(stderr, "Out of memory.\n");
+                free(anOverviews);
+                TIFFClose(hTIFF);
+                return (1);
+            }
+            anOverviews = tmp;
+            anOverviews[nOverviewCount++] = nOvrFactor;
+        }
+    }
+
+    /* -------------------------------------------------------------------- */
+    /*      Build the overview.                                             */
+    /* -------------------------------------------------------------------- */
+    if (nOverviewCount > 0)
+        TIFFBuildOverviews(hTIFF, nOverviewCount, anOverviews, bUseSubIFD,
+                           eResampling, NULL, NULL);
 
     TIFFClose(hTIFF);
 

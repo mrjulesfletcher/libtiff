@@ -383,6 +383,9 @@ if(tiff-tools)
   list(APPEND tiff_test_extra_args "-DTIFFCP=$<TARGET_FILE:tiffcp>")
   list(APPEND tiff_test_extra_args "-DTIFFINFO=$<TARGET_FILE:tiffinfo>")
   list(APPEND tiff_test_extra_args "-DTIFFSPLIT=$<TARGET_FILE:tiffsplit>")
+  if(tiff-contrib)
+    list(APPEND tiff_test_extra_args "-DADDTIFFO=$<TARGET_FILE:addtiffo>")
+  endif()
 endif()
 
 if(WIN32)
@@ -658,4 +661,21 @@ if(tiff-tools)
   add_convert_tests(tiffcrop  extract    "-U px -E top -X 60 -Y 60" TIFFIMAGES TRUE)
   # Test extracting the first and fourth quarters from the left side.
   add_convert_tests(tiffcrop  extractz14 "-E left -Z1:4,2:4"        TIFFIMAGES TRUE)
+
+  # addtiffo default overview levels
+  add_test(NAME "addtiffo-default-small"
+           COMMAND "${CMAKE_COMMAND}"
+           "-DIMAGE=${CMAKE_CURRENT_SOURCE_DIR}/images/rgb-3c-8b.tiff"
+           "-DEXPECT_GT1=FALSE"
+           "-DOUTDIR=${TEST_OUTPUT}"
+           ${tiff_test_extra_args}
+           -P "${CMAKE_CURRENT_SOURCE_DIR}/AddtiffoTest.cmake")
+
+  add_test(NAME "addtiffo-default-large"
+           COMMAND "${CMAKE_COMMAND}"
+           "-DIMAGE=${CMAKE_CURRENT_SOURCE_DIR}/images/lzw-single-strip.tiff"
+           "-DEXPECT_GT1=TRUE"
+           "-DOUTDIR=${TEST_OUTPUT}"
+           ${tiff_test_extra_args}
+           -P "${CMAKE_CURRENT_SOURCE_DIR}/AddtiffoTest.cmake")
 endif()

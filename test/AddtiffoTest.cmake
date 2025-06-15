@@ -1,0 +1,28 @@
+include(${CMAKE_CURRENT_LIST_DIR}/TiffTestCommon.cmake)
+
+get_filename_component(_src "${IMAGE}" ABSOLUTE)
+get_filename_component(_name "${IMAGE}" NAME)
+set(_dst "${OUTDIR}/${_name}")
+file(COPY "${_src}" DESTINATION "${OUTDIR}")
+
+message(STATUS "Running ${ADDTIFFO} ${_dst}")
+execute_process(COMMAND ${ADDTIFFO} ${_dst} RESULT_VARIABLE _rv)
+if(_rv)
+  message(FATAL_ERROR "addtiffo failed")
+endif()
+
+execute_process(COMMAND ${TIFFINFO} -D ${_dst} OUTPUT_VARIABLE _info RESULT_VARIABLE _rv)
+if(_rv)
+  message(FATAL_ERROR "tiffinfo failed")
+endif()
+string(REGEX MATCHCOUNT "Directory" _count "${_info}")
+if(EXPECT_GT1)
+  if(_count LESS 2)
+    message(FATAL_ERROR "Expected more than one directory, got ${_count}")
+  endif()
+else()
+  if(NOT _count EQUAL 1)
+    message(FATAL_ERROR "Expected one directory, got ${_count}")
+  endif()
+endif()
+
