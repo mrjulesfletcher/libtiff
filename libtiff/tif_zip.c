@@ -200,7 +200,7 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
     if (sp->read_error)
     {
-        memset(op, 0, (size_t)occ);
+        tiff_memset_u8(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module,
                       "ZIPDecode: Scanline %" PRIu32 " cannot be read due to "
                       "previous error",
@@ -273,7 +273,7 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             if (res != LIBDEFLATE_SUCCESS &&
                 res != LIBDEFLATE_INSUFFICIENT_SPACE)
             {
-                memset(op, 0, (size_t)occ);
+                tiff_memset_u8(op, 0, (size_t)occ);
                 TIFFErrorExtR(tif, module, "Decoding error at scanline %lu",
                               (unsigned long)tif->tif_row);
                 sp->read_error = 1;
@@ -308,7 +308,7 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             break;
         if (state == Z_DATA_ERROR)
         {
-            memset(sp->stream.next_out, 0, (size_t)occ);
+            tiff_memset_u8(sp->stream.next_out, 0, (size_t)occ);
             TIFFErrorExtR(tif, module, "Decoding error at scanline %lu, %s",
                           (unsigned long)tif->tif_row, SAFE_MSG(sp));
             sp->read_error = 1;
@@ -316,7 +316,7 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
         }
         if (state != Z_OK)
         {
-            memset(sp->stream.next_out, 0, (size_t)occ);
+            tiff_memset_u8(sp->stream.next_out, 0, (size_t)occ);
             TIFFErrorExtR(tif, module, "ZLib error: %s", SAFE_MSG(sp));
             sp->read_error = 1;
             return (0);
@@ -328,7 +328,7 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                       "Not enough data at scanline %lu (short %" PRIu64
                       " bytes)",
                       (unsigned long)tif->tif_row, (uint64_t)occ);
-        memset(sp->stream.next_out, 0, (size_t)occ);
+        tiff_memset_u8(sp->stream.next_out, 0, (size_t)occ);
         sp->read_error = 1;
         return (0);
     }

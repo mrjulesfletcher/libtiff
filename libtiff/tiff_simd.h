@@ -153,6 +153,32 @@ extern "C"
         memcpy(dst, src, n);
     }
 
+    static inline void tiff_memset_u8(uint8_t *dst, uint8_t value, size_t n)
+    {
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+        if (tiff_use_neon)
+        {
+            if (n >= 16)
+            {
+                uint8x16_t v = vdupq_n_u8(value);
+                while (((uintptr_t)dst & 15) && n)
+                {
+                    *dst++ = value;
+                    n--;
+                }
+                for (; n >= 16; n -= 16, dst += 16)
+                {
+                    vst1q_u8(dst, v);
+                }
+            }
+            while (n--)
+                *dst++ = value;
+            return;
+        }
+#endif
+        memset(dst, value, n);
+    }
+
     uint32_t tiff_crc32(uint32_t crc, const uint8_t *buf, size_t len);
 
 #ifdef __cplusplus
