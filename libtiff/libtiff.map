@@ -225,6 +225,12 @@ LIBTIFF_4.7.1 {
     TIFFOpenOptionsSetURingQueueDepth;
     TIFFPackRaw12;
     TIFFUnpackRaw12;
+    TIFFPackRaw10;
+    TIFFUnpackRaw10;
+    TIFFPackRaw14;
+    TIFFUnpackRaw14;
+    TIFFPackRaw16;
+    TIFFUnpackRaw16;
     TIFFAssembleStripNEON;
     _TIFFThreadPoolInit;
     _TIFFThreadPoolShutdown;

@@ -104,7 +104,7 @@ if TIFF_TESTS
 check_PROGRAMS = \
        ascii_tag long_tag short_tag strip_rw rewrite custom_dir custom_dir_EXIF_231 \
        defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
-       test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test gray_flip_neon_test memmove_simd_test reverse_bits_neon_test swab_benchmark predictor_threadpool_benchmark pack_uring_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS) \
+       test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test gray_flip_neon_test memmove_simd_test reverse_bits_neon_test bayer_pack_test swab_benchmark predictor_threadpool_benchmark pack_uring_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS) \
        packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail
 endif
 
@@ -337,6 +337,9 @@ reverse_bits_neon_test_LDADD = $(LIBTIFF)
 
 swab_benchmark_SOURCES = swab_benchmark.c
 swab_benchmark_LDADD = $(LIBTIFF)
+
+bayer_pack_test_SOURCES = bayer_pack_test.c
+bayer_pack_test_LDADD = $(LIBTIFF)
 
 predictor_threadpool_benchmark_SOURCES = predictor_threadpool_benchmark.c
 predictor_threadpool_benchmark_LDADD = $(LIBTIFF)
