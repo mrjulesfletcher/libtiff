@@ -38,12 +38,30 @@ endif()
 set(HAVE_IEEEFP 1)
 
 include(CheckCSourceCompiles)
+
+# Determine NEON flags for this toolchain
+set(TIFF_NEON_FLAGS "" CACHE STRING "Flags used to enable NEON instructions")
+set(_neon_flags "${TIFF_NEON_FLAGS}")
+if(NOT _neon_flags)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64)")
+    set(_neon_flags "-march=armv8-a+simd")
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "arm")
+    set(_neon_flags "-mfpu=neon")
+  endif()
+endif()
+
+set(_save_required_flags "${CMAKE_REQUIRED_FLAGS}")
+set(CMAKE_REQUIRED_FLAGS "${_neon_flags}")
 check_c_source_compiles(
   "#include <arm_neon.h>
   int main(){ uint8x16_t v = vdupq_n_u8(0); return (int)v[0]; }"
   HAVE_NEON)
+set(CMAKE_REQUIRED_FLAGS "${_save_required_flags}")
 if(HAVE_NEON)
   add_compile_definitions(HAVE_NEON=1)
+  if(_neon_flags)
+    add_compile_options("${_neon_flags}")
+  endif()
 endif()
 
 check_c_source_compiles(
