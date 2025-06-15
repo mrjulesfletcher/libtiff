@@ -67,7 +67,7 @@
 
 #define TIFF_DIR_MAX 65534
 
-void TIFFBuildOverviews(TIFF *, int, int *, int, const char *,
+void TIFFBuildOverviews(TIFF *, int, int *, int, OVRResampleMethod,
                         int (*)(double, void *), void *);
 
 /************************************************************************/
@@ -272,7 +272,7 @@ static void TIFF_DownSample(unsigned char *pabySrcTile, uint32_t nBlockXSize,
                             int nBitsPerPixel, unsigned char *pabyOTile,
                             uint32_t nOBlockXSize, uint32_t nOBlockYSize,
                             uint32_t nTXOff, uint32_t nTYOff, int nOMult,
-                            int nSampleFormat, const char *pszResampling)
+                            int nSampleFormat, OVRResampleMethod eResampling)
 
 {
     uint32_t i, j;
@@ -324,8 +324,7 @@ static void TIFF_DownSample(unsigned char *pabySrcTile, uint32_t nBlockXSize,
         /*      data type, we just do a bytewise copy. */
         /* --------------------------------------------------------------------
          */
-        if (strncmp(pszResampling, "nearest", 4) == 0 ||
-            strncmp(pszResampling, "NEAR", 4) == 0)
+        if (eResampling == OVR_RESAMPLE_NEAREST)
         {
             pabySrc = pabySrcTile + j * nOMult * nBlockXSize * nPixelGroupBytes;
 
@@ -353,8 +352,7 @@ static void TIFF_DownSample(unsigned char *pabySrcTile, uint32_t nBlockXSize,
         /*      handle each sample format we are concerned with. */
         /* --------------------------------------------------------------------
          */
-        else if (strncmp(pszResampling, "averag", 6) == 0 ||
-                 strncmp(pszResampling, "AVERAG", 6) == 0)
+        else if (eResampling == OVR_RESAMPLE_AVERAGE)
         {
             pabySrc = pabySrcTile + j * nOMult * nBlockXSize * nPixelGroupBytes;
 
@@ -398,7 +396,7 @@ static void TIFF_DownSample_Subsampled(
     unsigned char *pabySrcTile, int nSample, uint32_t nBlockXSize,
     uint32_t nBlockYSize, unsigned char *pabyOTile, uint32_t nOBlockXSize,
     uint32_t nOBlockYSize, uint32_t nTXOff, uint32_t nTYOff, int nOMult,
-    const char *pszResampling, int nHorSubsampling, int nVerSubsampling)
+    OVRResampleMethod eResampling, int nHorSubsampling, int nVerSubsampling)
 {
     /* TODO: test with variety of subsampling values, and incovinient tile/strip
      * sizes */
@@ -421,8 +419,7 @@ static void TIFF_DownSample_Subsampled(
         ((nOBlockXSize + nHorSubsampling - 1) / nHorSubsampling) *
         nSampleBlockSize;
 
-    if (strncmp(pszResampling, "nearest", 4) == 0 ||
-        strncmp(pszResampling, "NEAR", 4) == 0)
+    if (eResampling == OVR_RESAMPLE_NEAREST)
     {
         if (nSample == 0)
         {
@@ -478,8 +475,7 @@ static void TIFF_DownSample_Subsampled(
             }
         }
     }
-    else if (strncmp(pszResampling, "averag", 6) == 0 ||
-             strncmp(pszResampling, "AVERAG", 6) == 0)
+    else if (eResampling == OVR_RESAMPLE_AVERAGE)
     {
         if (nSample == 0)
         {
@@ -594,7 +590,7 @@ void TIFF_ProcessFullResBlock(TIFF *hTIFF, int nPlanarConfig, int bSubsampled,
                               uint32_t nSXOff, uint32_t nSYOff,
                               unsigned char *pabySrcTile, uint32_t nBlockXSize,
                               uint32_t nBlockYSize, int nSampleFormat,
-                              const char *pszResampling)
+                              OVRResampleMethod eResampling)
 
 {
     int iOverview, iSample;
@@ -661,7 +657,7 @@ void TIFF_ProcessFullResBlock(TIFF *hTIFF, int nPlanarConfig, int bSubsampled,
                 TIFF_DownSample_Subsampled(
                     pabySrcTile, iSample, nBlockXSize, nBlockYSize, pabyOTile,
                     poRBI->nBlockXSize, poRBI->nBlockYSize, nTXOff, nTYOff,
-                    nOMult, pszResampling, nHorSubsampling, nVerSubsampling);
+                    nOMult, eResampling, nHorSubsampling, nVerSubsampling);
 #ifdef DBMALLOC
                 malloc_chain_check(1);
 #endif
@@ -704,7 +700,7 @@ void TIFF_ProcessFullResBlock(TIFF *hTIFF, int nPlanarConfig, int bSubsampled,
                                 nBlockYSize, nSkewBits, nBitsPerPixel,
                                 pabyOTile, poRBI->nBlockXSize,
                                 poRBI->nBlockYSize, nTXOff, nTYOff, nOMult,
-                                nSampleFormat, pszResampling);
+                                nSampleFormat, eResampling);
 #ifdef DBMALLOC
                 malloc_chain_check(1);
 #endif
@@ -724,7 +720,7 @@ void TIFF_ProcessFullResBlock(TIFF *hTIFF, int nPlanarConfig, int bSubsampled,
 /************************************************************************/
 
 void TIFFBuildOverviews(TIFF *hTIFF, int nOverviews, int *panOvList,
-                        int bUseSubIFDs, const char *pszResampleMethod,
+                        int bUseSubIFDs, OVRResampleMethod eResampleMethod,
                         int (*pfnProgress)(double, void *), void *pProgressData)
 
 {
@@ -912,7 +908,7 @@ void TIFFBuildOverviews(TIFF *hTIFF, int nOverviews, int *panOvList,
                 hTIFF, nPlanarConfig, bSubsampled, nHorSubsampling,
                 nVerSubsampling, nOverviews, panOvList, nBitsPerPixel, nSamples,
                 papoRawBIs, nSXOff, nSYOff, pabySrcTile, nBlockXSize,
-                nBlockYSize, nSampleFormat, pszResampleMethod);
+                nBlockYSize, nSampleFormat, eResampleMethod);
         }
     }
 

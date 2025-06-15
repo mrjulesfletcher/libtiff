@@ -7,8 +7,7 @@ This document lists the TODO comments found throughout the repository as of this
 
 ## contrib/addtiffo
 - **addtiffo.c**: un-hardwire array length for `anOverviews` (line 77) **[!]**
-- **addtiffo.c**: encode resampling mode parameter as an integer (line 118).
-- **addtiffo.c**: default overview levels based on source image size (line 140).
+- **addtiffo.c**: default overview levels based on source image size (line 160).
 - **tif_overview.c**: update header notes (line 48).
 - **tif_overview.c**: write `YCbCrPositioning` and `YCbCrCoefficients` tags (line 132).
 - **tif_overview.c**: add parameter for JPEG compression quality (line 135).

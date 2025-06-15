@@ -75,13 +75,20 @@ extern "C"
                                               int iTileY);
     void TIFFDestroyOvrCache(TIFFOvrCache *);
 
-    void TIFFBuildOverviews(TIFF *, int, int *, int, const char *,
+    typedef enum
+    {
+        OVR_RESAMPLE_NEAREST = 0,
+        OVR_RESAMPLE_AVERAGE = 1,
+        OVR_RESAMPLE_MODE = 2
+    } OVRResampleMethod;
+
+    void TIFFBuildOverviews(TIFF *, int, int *, int, OVRResampleMethod,
                             int (*)(double, void *), void *);
 
     void TIFF_ProcessFullResBlock(TIFF *, int, int, int, int, int, int *, int,
                                   int, TIFFOvrCache **, uint32_t, uint32_t,
                                   unsigned char *, uint32_t, uint32_t, int,
-                                  const char *);
+                                  OVRResampleMethod);
 
     uint32_t TIFF_WriteOverview(TIFF *, uint32_t, uint32_t, int, int, int, int,
                                 int, int, int, int, int, unsigned short *,
