@@ -95,8 +95,17 @@ uint32_t TIFF_WriteOverview(TIFF *hTIFF, uint32_t nXSize, uint32_t nYSize,
     toff_t nBaseDirOffset;
     toff_t nOffset;
     tdir_t iNumDir;
+    uint16_t nYCbCrPositioning = 0;
+    const float *pfYCbCrCoeffs = NULL;
 
     (void)bUseSubIFDs;
+
+    if (nPhotometric == PHOTOMETRIC_YCBCR || nPhotometric == PHOTOMETRIC_ITULAB)
+    {
+        TIFFGetFieldDefaulted(hTIFF, TIFFTAG_YCBCRPOSITIONING,
+                              &nYCbCrPositioning);
+        TIFFGetFieldDefaulted(hTIFF, TIFFTAG_YCBCRCOEFFICIENTS, &pfYCbCrCoeffs);
+    }
 
     nBaseDirOffset = TIFFCurrentDirOffset(hTIFF);
 
@@ -132,8 +141,9 @@ uint32_t TIFF_WriteOverview(TIFF *hTIFF, uint32_t nXSize, uint32_t nYSize,
     {
         TIFFSetField(hTIFF, TIFFTAG_YCBCRSUBSAMPLING, nHorSubsampling,
                      nVerSubsampling);
-        /* TODO: also write YCbCrPositioning and YCbCrCoefficients tag identical
-         * to source IFD */
+        TIFFSetField(hTIFF, TIFFTAG_YCBCRPOSITIONING, nYCbCrPositioning);
+        if (pfYCbCrCoeffs)
+            TIFFSetField(hTIFF, TIFFTAG_YCBCRCOEFFICIENTS, pfYCbCrCoeffs);
     }
     /* TODO: add command-line parameter for selecting jpeg compression quality
      * that gets ignored when compression isn't jpeg */
