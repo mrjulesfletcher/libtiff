@@ -34,6 +34,23 @@ $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/x86_64.cmake \
         -DCMAKE_C_FLAGS="-msse4.1" -DHAVE_SSE41=1 ..
 ```
 
+#### Cross-compiling for ARM
+
+Install an AArch64 cross compiler such as `gcc-aarch64-linux-gnu` and use the
+`toolchains/aarch64.cmake` or `toolchains/rpi5.cmake` files when building on an
+x86 host:
+
+```bash
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake -DHAVE_NEON=1 ..
+```
+
+With Autotools pass the `--host=aarch64-linux-gnu` triplet and appropriate
+flags:
+
+```bash
+$ ./configure --host=aarch64-linux-gnu CFLAGS="-march=armv8-a+simd" --enable-shared
+```
+
 
 ### libdeflate Support
 Install libdeflate and enable the option when configuring:
@@ -248,26 +265,22 @@ ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
 `TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`. `TIFFSwabArrayOfLong8` is
 around 3× faster than the scalar implementation on the same device.
 
-On a Raspberry Pi 5 you can enable the thread pool and io_uring backends and run
-additional benchmarks.  The io_uring code requires Linux 5.1 or newer.  When the
-kernel or liburing are missing, support is automatically disabled:
+## Thread Pool Usage
 
-```bash
-$ cmake -Dthreadpool=ON -Dio-uring=ON -DCMAKE_BUILD_TYPE=Release ..
-$ cmake --build . -j$(nproc)
+Build with `-Dthreadpool=ON` (CMake) or `--enable-multithreading` (Autotools)
+to enable the internal worker pool. By default the number of threads matches
+the available processors. Override this with the `TIFF_THREAD_COUNT`
+environment variable or by calling `TIFFSetThreadCount()`. The task queue
+limit may be changed via `TIFFSetThreadPoolSize()`.
 
-$ ./test/predictor_threadpool_benchmark 4 50
-$ ./test/pack_uring_benchmark
-```
+## io_uring Configuration
 
-The io_uring backend uses a queue depth of 8 by default.  Set the
-`TIFF_URING_DEPTH` environment variable or call
-`TIFFOpenOptionsSetURingQueueDepth()` to override it.
+io_uring support requires Linux 5.1 and liburing. Enable it with
+`-Dio-uring=ON` (CMake) or `--enable-io-uring` (Autotools). The queue depth
+defaults to 8 but can be modified through the `TIFF_URING_DEPTH`
+environment variable or by calling
+`TIFFOpenOptionsSetURingQueueDepth()`.
 
-The thread pool is initialized with the number of online processors by
-default. Set the `TIFF_THREAD_COUNT` environment variable or call
-`TIFFSetThreadCount()` to override this value. Use
-`TIFFSetThreadPoolSize()` to additionally control the task queue limit.
 
 ## Testing and Validation
 Configure with testing enabled and run the full suite:
