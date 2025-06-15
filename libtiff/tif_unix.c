@@ -56,6 +56,7 @@
 #endif
 
 #include "tiffiop.h"
+#include "tiff_mmap.h"
 
 #define TIFF_IO_MAX 2147483647U
 
@@ -270,13 +271,29 @@ static int _tiffMapProc(thandle_t fd, void **pbase, toff_t *psize)
     tmsize_t sizem = (tmsize_t)size64;
     if (size64 && (uint64_t)sizem == size64)
     {
+        tmsize_t map_size = sizem;
+        if (tiff_map_size > 0 && tiff_map_size < map_size)
+            map_size = tiff_map_size;
+        long page = sysconf(_SC_PAGESIZE);
+        if (page > 0)
+        {
+            map_size = (map_size + page - 1) & ~(page - 1);
+            if (map_size > sizem)
+                map_size = sizem;
+        }
         fd_as_handle_union_t fdh;
         fdh.h = fd;
-        *pbase =
-            (void *)mmap(0, (size_t)sizem, PROT_READ, MAP_SHARED, fdh.fd, 0);
+        *pbase = (void *)mmap(0, (size_t)map_size, PROT_READ, MAP_SHARED,
+                              fdh.fd, 0);
         if (*pbase != (void *)-1)
         {
-            *psize = (tmsize_t)sizem;
+            *psize = map_size;
+#ifdef HAVE_POSIX_FADVISE
+            posix_fadvise(fdh.fd, 0, map_size, tiff_posix_fadvise_flag);
+#endif
+#ifdef HAVE_MADVISE
+            madvise(*pbase, map_size, tiff_madvise_flag);
+#endif
             return (1);
         }
     }

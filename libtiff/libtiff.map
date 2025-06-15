@@ -244,4 +244,6 @@ LIBTIFF_4.7.1 {
     TIFFUseSSE41;
     TIFFSetUseNEON;
     TIFFSetUseSSE41;
+    TIFFSetMapSize;
+    TIFFSetMapAdvice;
 } LIBTIFF_4.6.1;

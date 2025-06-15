@@ -255,7 +255,7 @@ AC_MSG_RESULT($SSIZE_T)
 AC_DEFINE_UNQUOTED(TIFF_SSIZE_T,$SSIZE_T,[Signed size type])
 
 dnl Checks for library functions.
-AC_CHECK_FUNCS([mmap setmode])
+AC_CHECK_FUNCS([mmap setmode posix_fadvise madvise])
 
 dnl Will use local replacements for unavailable functions
 AC_REPLACE_FUNCS(getopt)

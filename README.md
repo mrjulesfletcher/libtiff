@@ -297,6 +297,13 @@ defaults to 8 but can be modified through the `TIFF_URING_DEPTH`
 environment variable or by calling
 `TIFFOpenOptionsSetURingQueueDepth()`.
 
+## Memory Mapping Tuning
+
+Mapped file regions are aligned to `sysconf(_SC_PAGESIZE)` and the library
+calls `posix_fadvise` and `madvise` with `POSIX_FADV_SEQUENTIAL` and
+`MADV_SEQUENTIAL` by default. Applications may adjust the window size or
+advice flags with `TIFFSetMapSize()` and `TIFFSetMapAdvice()`.
+
 
 ## Testing and Validation
 Configure with testing enabled and run the full suite:
