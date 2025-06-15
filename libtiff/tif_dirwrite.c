@@ -395,6 +395,7 @@ static int TIFFRewriteDirectorySec(TIFF *tif, int isimage, int imagedone,
         }
         /* Remove skipped offset from IFD loop directory list. */
         _TIFFRemoveEntryFromDirectoryListByOffset(tif, torewritediroff);
+        _TIFFInvalidateDirOffsetCache(tif);
     }
     else
     {
@@ -466,6 +467,7 @@ static int TIFFRewriteDirectorySec(TIFF *tif, int isimage, int imagedone,
         }
         /* Remove skipped offset from IFD loop directory list. */
         _TIFFRemoveEntryFromDirectoryListByOffset(tif, torewritediroff);
+        _TIFFInvalidateDirOffsetCache(tif);
     }
 
     /*

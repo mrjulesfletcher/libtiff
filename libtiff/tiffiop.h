@@ -198,6 +198,10 @@ struct tiff
     /* SubIFD support */
     uint16_t tif_nsubifd;   /* remaining subifds to write */
     uint64_t tif_subifdoff; /* offset for patching SubIFD link */
+    /* Cache of IFD offsets */
+    uint64_t *tif_dir_offset_cache;
+    tdir_t tif_dir_offset_cache_count;
+    tdir_t tif_dir_offset_cache_alloc;
     /* tiling support */
     uint32_t tif_col;      /* current column (offset by row too) */
     uint32_t tif_curtile;  /* current tile for read/write */
@@ -485,6 +489,7 @@ extern "C"
     extern uint32_t _TIFFClampDoubleToUInt32(double);
 
     extern void _TIFFCleanupIFDOffsetAndNumberMaps(TIFF *tif);
+    extern void _TIFFInvalidateDirOffsetCache(TIFF *tif);
     extern void _TIFFCleanupCustomValueMap(TIFFDirectory *td);
 
     extern tmsize_t _TIFFReadEncodedStripAndAllocBuffer(TIFF *tif,

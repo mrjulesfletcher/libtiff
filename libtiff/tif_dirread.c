@@ -5666,6 +5666,25 @@ int _TIFFCheckDirNumberAndOffset(TIFF *tif, tdir_t dirn, uint64_t diroff)
     if (diroff == 0) /* no more directories */
         return 0;
 
+    /* Update cache of directory offsets */
+    if (dirn >= tif->tif_dir_offset_cache_count)
+    {
+        tdir_t newalloc = tif->tif_dir_offset_cache_alloc ? tif->tif_dir_offset_cache_alloc : 16;
+        while (newalloc <= dirn)
+            newalloc *= 2;
+        uint64_t *newcache =
+            (uint64_t *)_TIFFreallocExt(tif, tif->tif_dir_offset_cache,
+                                        newalloc * sizeof(uint64_t));
+        if (!newcache)
+            return 0;
+        memset(newcache + tif->tif_dir_offset_cache_alloc, 0,
+               (newalloc - tif->tif_dir_offset_cache_alloc) * sizeof(uint64_t));
+        tif->tif_dir_offset_cache = newcache;
+        tif->tif_dir_offset_cache_alloc = newalloc;
+        tif->tif_dir_offset_cache_count = dirn + 1;
+    }
+    tif->tif_dir_offset_cache[dirn] = diroff;
+
     if (tif->tif_map_dir_offset_to_number == NULL)
     {
         tif->tif_map_dir_offset_to_number = TIFFHashSetNew(
@@ -5875,6 +5894,13 @@ int _TIFFGetDirNumberFromOffset(TIFF *tif, uint64_t diroff, tdir_t *dirn)
  */
 int _TIFFGetOffsetFromDirNumber(TIFF *tif, tdir_t dirn, uint64_t *diroff)
 {
+    if (dirn < tif->tif_dir_offset_cache_count &&
+        tif->tif_dir_offset_cache != NULL)
+    {
+        *diroff = tif->tif_dir_offset_cache[dirn];
+        if (*diroff != 0)
+            return 1;
+    }
 
     if (tif->tif_map_dir_number_to_offset == NULL)
         return 0;
@@ -5929,6 +5955,11 @@ int _TIFFRemoveEntryFromDirectoryListByOffset(TIFF *tif, uint64_t diroff)
                                   foundEntryOldDir);
                 TIFFHashSetRemove(tif->tif_map_dir_offset_to_number,
                                   foundEntryOldOff);
+                if (foundEntryOldOff->dirNumber < tif->tif_dir_offset_cache_count &&
+                    tif->tif_dir_offset_cache)
+                {
+                    tif->tif_dir_offset_cache[foundEntryOldOff->dirNumber] = 0;
+                }
                 return 1;
             }
         }
