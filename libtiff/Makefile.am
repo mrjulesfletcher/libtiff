@@ -107,6 +107,7 @@ libtiff_la_SOURCES = \
         tif_bayer.c \
         tif_rgb.c \
         tif_write.c \
+        tif_uring.c \
         tiff_threadpool.c \
         tif_mmap.c \
         tif_zip.c \

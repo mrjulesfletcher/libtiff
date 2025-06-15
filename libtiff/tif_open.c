@@ -134,12 +134,11 @@ void TIFFOpenOptionsSetWarningHandlerExtR(TIFFOpenOptions *opts,
     opts->warnhandler_user_data = warnhandler_user_data;
 }
 
-#ifdef USE_IO_URING
-void TIFFOpenOptionsSetURingQueueDepth(TIFFOpenOptions *opts, unsigned int depth)
+void TIFFOpenOptionsSetURingQueueDepth(TIFFOpenOptions *opts,
+                                       unsigned int depth)
 {
     opts->uring_queue_depth = depth;
 }
-#endif
 
 static void _TIFFEmitErrorAboveMaxSingleMemAlloc(TIFF *tif,
                                                  const char *pszFunction,
@@ -293,8 +292,7 @@ void _TIFFfreeExt(TIFF *tif, void *p)
         memcpy(&oldSize, oldPtr, sizeof(oldSize));
         if (oldSize <= 0 || oldSize > tif->tif_cur_cumulated_mem_alloc)
         {
-            TIFFErrorExtR(tif, "_TIFFfreeExt",
-                          "Corrupt size header in buffer");
+            TIFFErrorExtR(tif, "_TIFFfreeExt", "Corrupt size header in buffer");
             return;
         }
         tif->tif_cur_cumulated_mem_alloc -= oldSize;
@@ -353,8 +351,7 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
         if (n.a16 != 1)
 #endif
         {
-            TIFFErrorExtR(NULL, module,
-                          "Unexpected byte order configuration");
+            TIFFErrorExtR(NULL, module, "Unexpected byte order configuration");
             goto bad2;
         }
     }
@@ -418,9 +415,7 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
         tif->tif_max_single_mem_alloc = opts->max_single_mem_alloc;
         tif->tif_max_cumulated_mem_alloc = opts->max_cumulated_mem_alloc;
         tif->tif_warn_about_unknown_tags = opts->warn_about_unknown_tags;
-#ifdef USE_IO_URING
         tif->tif_uring_depth = opts->uring_queue_depth;
-#endif
     }
 
     if (!readproc || !writeproc || !seekproc || !closeproc || !sizeproc)

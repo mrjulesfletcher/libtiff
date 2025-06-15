@@ -533,10 +533,8 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     TIFFOpenOptionsSetWarningHandlerExtR(TIFFOpenOptions *opts,
                                          TIFFErrorHandlerExtR handler,
                                          void *warnhandler_user_data);
-#ifdef USE_IO_URING
     extern void TIFFOpenOptionsSetURingQueueDepth(TIFFOpenOptions *opts,
                                                   unsigned int depth);
-#endif
 
     extern TIFF *TIFFOpen(const char *, const char *);
     extern TIFF *TIFFOpenExt(const char *, const char *, TIFFOpenOptions *opts);
@@ -581,10 +579,8 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     extern void TIFFSetUseSSE41(int);
     extern void TIFFSetMapSize(tmsize_t size);
     extern void TIFFSetMapAdvice(int fadvise_flags, int madvise_flags);
-#ifdef USE_IO_URING
     extern int TIFFSetURingQueueDepth(TIFF *tif, unsigned int depth);
     extern unsigned int TIFFGetURingQueueDepth(TIFF *tif);
-#endif
     extern tmsize_t TIFFReadEncodedStrip(TIFF *tif, uint32_t strip, void *buf,
                                          tmsize_t size);
     extern tmsize_t TIFFReadRawStrip(TIFF *tif, uint32_t strip, void *buf,

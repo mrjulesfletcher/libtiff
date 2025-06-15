@@ -50,8 +50,8 @@
 #include "tiffio.h"
 #ifdef USE_IO_URING
 #include <liburing.h>
-#include <sys/uio.h>
 #endif
+#include <sys/uio.h>
 
 #include "tif_dir.h"
 
@@ -269,10 +269,12 @@ struct tiff
     tmsize_t tif_max_cumulated_mem_alloc; /* in bytes. 0 for unlimited */
     tmsize_t tif_cur_cumulated_mem_alloc; /* in bytes */
 #ifdef USE_IO_URING
-    struct io_uring *tif_uring;   /* persistent io_uring handle */
+    struct io_uring *tif_uring; /* persistent io_uring handle */
+#else
+    void *tif_uring; /* fallback async I/O handle */
+#endif
     int tif_uring_async;          /* async flush/wait semantics */
     unsigned int tif_uring_depth; /* queue depth. 0 for default */
-#endif
     int tif_warn_about_unknown_tags;
     struct TIFFThreadPool *tif_threadpool; /* thread pool handle */
 };
@@ -286,9 +288,7 @@ struct TIFFOpenOptions
     tmsize_t max_single_mem_alloc;     /* in bytes. 0 for unlimited */
     tmsize_t max_cumulated_mem_alloc;  /* in bytes. 0 for unlimited */
     int warn_about_unknown_tags;
-#ifdef USE_IO_URING
     unsigned int uring_queue_depth; /* 0 for default */
-#endif
 };
 
 #define isPseudoTag(t) (t > 0xffff) /* is tag value normal or pseudo */
@@ -566,7 +566,6 @@ extern "C"
     extern void *_TIFFcallocExt(TIFF *tif, tmsize_t nmemb, tmsize_t siz);
     extern void *_TIFFreallocExt(TIFF *tif, void *p, tmsize_t s);
     extern void _TIFFfreeExt(TIFF *tif, void *p);
-#ifdef USE_IO_URING
     extern int _tiffUringInit(TIFF *tif);
     extern void _tiffUringTeardown(TIFF *tif);
     extern void _tiffUringSetAsync(TIFF *tif, int enable);
@@ -576,7 +575,6 @@ extern "C"
                                     unsigned int iovcnt, tmsize_t size);
     extern tmsize_t _tiffUringWriteV(thandle_t fd, struct iovec *iov,
                                      unsigned int iovcnt, tmsize_t size);
-#endif
 
     extern int _TIFFCopyFileRange(TIFF *tif, uint64_t offsetRead,
                                   uint64_t offsetWrite, uint64_t toCopy);
