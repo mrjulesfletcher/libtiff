@@ -106,7 +106,7 @@ check_PROGRAMS = \
        defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
        test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test gray_flip_neon_test memmove_simd_test reverse_bits_neon_test bayer_pack_test swab_benchmark predictor_threadpool_benchmark pack_uring_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS) \
        bayer_simd_benchmark \
-       packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize
+       packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test
 endif
 
 # Test scripts to execute
@@ -329,6 +329,9 @@ assemble_strip_neon_alloc_fail_LDADD = $(LIBTIFF)
 
 gray_flip_neon_test_SOURCES = gray_flip_neon_test.c
 gray_flip_neon_test_LDADD = $(LIBTIFF)
+
+ycbcr_neon_test_SOURCES = ycbcr_neon_test.c
+ycbcr_neon_test_LDADD = $(LIBTIFF)
 
 memmove_simd_test_SOURCES = memmove_simd_test.c
 memmove_simd_test_LDADD = $(LIBTIFF)
