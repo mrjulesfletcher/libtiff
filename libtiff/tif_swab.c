@@ -225,6 +225,23 @@ static void TIFFSwabArrayOfLong8Scalar(uint64_t *lp, tmsize_t n)
 static void TIFFSwabArrayOfLong8Neon(uint64_t *lp, tmsize_t n)
 {
     size_t i = 0;
+#ifdef __aarch64__
+    for (; i + 4 <= (size_t)n; i += 4)
+    {
+#ifdef __GNUC__
+        __builtin_prefetch(lp + i + 32);
+#endif
+        uint64x2x2_t v = vld1q_u64_x2(lp + i);
+        uint8x16_t b0 = vreinterpretq_u8_u64(v.val[0]);
+        uint8x16_t b1 = vreinterpretq_u8_u64(v.val[1]);
+        b0 = vrev64q_u8(b0);
+        b1 = vrev64q_u8(b1);
+        uint64x2x2_t r;
+        r.val[0] = vreinterpretq_u64_u8(b0);
+        r.val[1] = vreinterpretq_u64_u8(b1);
+        vst1q_u64_x2(lp + i, r);
+    }
+#endif
     for (; i + 2 <= (size_t)n; i += 2)
     {
 #ifdef __GNUC__
@@ -361,6 +378,21 @@ static void TIFFSwabArrayOfDoubleScalar(double *dp, tmsize_t n)
 static void TIFFSwabArrayOfDoubleNeon(double *dp, tmsize_t n)
 {
     size_t i = 0;
+#ifdef __aarch64__
+    for (; i + 4 <= (size_t)n; i += 4)
+    {
+        __builtin_prefetch(dp + i + 32);
+        uint64x2x2_t v = vld1q_u64_x2((const uint64_t *)(dp + i));
+        uint8x16_t b0 = vreinterpretq_u8_u64(v.val[0]);
+        uint8x16_t b1 = vreinterpretq_u8_u64(v.val[1]);
+        b0 = vrev64q_u8(b0);
+        b1 = vrev64q_u8(b1);
+        uint64x2x2_t r;
+        r.val[0] = vreinterpretq_u64_u8(b0);
+        r.val[1] = vreinterpretq_u64_u8(b1);
+        vst1q_u64_x2((uint64_t *)(dp + i), r);
+    }
+#endif
     for (; i + 2 <= (size_t)n; i += 2)
     {
         __builtin_prefetch(dp + i + 32);
