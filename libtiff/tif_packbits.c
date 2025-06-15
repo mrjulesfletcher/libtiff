@@ -140,8 +140,12 @@ static int PackBitsEncode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
                 if (!TIFFFlushData1(tif))
                     return (0);
                 op = tif->tif_rawcp;
-                while (slop-- > 0)
-                    *op++ = *lastliteral++;
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+                memcpy_neon(op, lastliteral, (size_t)slop);
+#else
+                memcpy(op, lastliteral, (size_t)slop);
+#endif
+                op += slop;
                 lastliteral = tif->tif_rawcp;
             }
             else

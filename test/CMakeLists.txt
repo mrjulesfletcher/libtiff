@@ -285,6 +285,12 @@ set_target_properties(pack_uring_benchmark PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(pack_uring_benchmark PRIVATE tiff tiff_port)
 list(APPEND simple_tests pack_uring_benchmark)
 
+add_executable(packbits_literal_run ../placeholder.h)
+target_sources(packbits_literal_run PRIVATE packbits_literal_run.c)
+set_target_properties(packbits_literal_run PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(packbits_literal_run PRIVATE tiff tiff_port)
+list(APPEND simple_tests packbits_literal_run)
+
 add_executable(threadpool_stress ../placeholder.h)
 target_sources(threadpool_stress PRIVATE threadpool_stress.c)
 set_target_properties(threadpool_stress PROPERTIES LINKER_LANGUAGE CXX)
