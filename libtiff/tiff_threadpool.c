@@ -23,6 +23,7 @@ typedef struct TIFFThreadPool
     int stop;
     int active;
     int queued;
+    TPTask *freelist;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
 } TIFFThreadPool;
@@ -50,8 +51,9 @@ static void *_tiffThreadProc(void *arg)
         pool->active++;
         pthread_mutex_unlock(&pool->mutex);
         task->func(task->arg);
-        _TIFFfreeExt(NULL, task);
         pthread_mutex_lock(&pool->mutex);
+        task->next = pool->freelist;
+        pool->freelist = task;
         pool->active--;
         if (!pool->head && pool->active == 0)
             pthread_cond_broadcast(&pool->cond);
@@ -132,6 +134,14 @@ void _TIFFThreadPoolShutdown(TIFFThreadPool *pool)
         free(pool->threads);
     }
     pthread_mutex_lock(&pool->mutex);
+    TPTask *t = pool->freelist;
+    while (t)
+    {
+        TPTask *next = t->next;
+        _TIFFfreeExt(NULL, t);
+        t = next;
+    }
+    pool->freelist = NULL;
     pool->threads = NULL;
     pool->head = pool->tail = NULL;
     pool->stop = 0;
@@ -162,12 +172,21 @@ int _TIFFThreadPoolSubmit(TIFFThreadPool *pool, void (*func)(void *), void *arg)
         TIFFErrorExtR(NULL, module, "Thread pool queue limit exceeded");
         return 0;
     }
-    TPTask *t = (TPTask *)_TIFFmallocExt(NULL, sizeof(TPTask));
-    if (!t)
+    TPTask *t = NULL;
+    if (pool->freelist)
     {
-        pthread_mutex_unlock(&pool->mutex);
-        TIFFErrorExtR(NULL, module, "Out of memory");
-        return 0;
+        t = pool->freelist;
+        pool->freelist = t->next;
+    }
+    else
+    {
+        t = (TPTask *)_TIFFmallocExt(NULL, sizeof(TPTask));
+        if (!t)
+        {
+            pthread_mutex_unlock(&pool->mutex);
+            TIFFErrorExtR(NULL, module, "Out of memory");
+            return 0;
+        }
     }
     t->func = func;
     t->arg = arg;
