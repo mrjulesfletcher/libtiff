@@ -142,10 +142,10 @@ static void interleave4_neon(uint8_t *dst, const uint8_t *src, tmsize_t wc,
     tmsize_t i = 0;
     for (; i + 16 <= wc; i += 16)
     {
-        __builtin_prefetch(src + i + 32 + order[0] * wc);
-        __builtin_prefetch(src + i + 32 + order[1] * wc);
-        __builtin_prefetch(src + i + 32 + order[2] * wc);
-        __builtin_prefetch(src + i + 32 + order[3] * wc);
+        __builtin_prefetch(src + i + 64 + order[0] * wc);
+        __builtin_prefetch(src + i + 64 + order[1] * wc);
+        __builtin_prefetch(src + i + 64 + order[2] * wc);
+        __builtin_prefetch(src + i + 64 + order[3] * wc);
         uint8x16_t v0 = vld1q_u8(src + i + order[0] * wc);
         uint8x16_t v1 = vld1q_u8(src + i + order[1] * wc);
         uint8x16_t v2 = vld1q_u8(src + i + order[2] * wc);
@@ -501,8 +501,8 @@ static int horAcc8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 16)
                 {
                     __builtin_prefetch(p + 16);
-                    uint8x16_t v = vld1q_u8(p);
                     __builtin_prefetch(p + 64);
+                    uint8x16_t v = vld1q_u8(p);
                     v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 15));
                     v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 14));
                     v = vaddq_u8(v, vextq_u8(vdupq_n_u8(0), v, 12));
@@ -1078,6 +1078,7 @@ static int horDiff8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 32)
                 {
                     __builtin_prefetch(p + 16);
+                    __builtin_prefetch(p + 64);
                     uint8x16_t cur1 = vld1q_u8(p);
                     uint8x16_t cur2 = vld1q_u8(p + 16);
                     __builtin_prefetch(p + 128);
@@ -1091,8 +1092,8 @@ static int horDiff8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 while (remaining >= 16)
                 {
                     __builtin_prefetch(p + 16);
-                    uint8x16_t cur = vld1q_u8(p);
                     __builtin_prefetch(p + 64);
+                    uint8x16_t cur = vld1q_u8(p);
                     uint8x16_t prev = vld1q_u8(p - 1);
                     vst1q_u8(p, vsubq_u8(cur, prev));
                     p += 16;
@@ -1488,8 +1489,8 @@ static int fpDiff(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         while (remaining >= 16)
         {
             __builtin_prefetch(p + 16);
-            uint8x16_t cur = vld1q_u8(p);
             __builtin_prefetch(p + 64);
+            uint8x16_t cur = vld1q_u8(p);
             uint8x16_t prev = vld1q_u8(p - 1);
             uint8x16_t diff = vsubq_u8(cur, prev);
             vst1q_u8(p, diff);

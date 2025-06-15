@@ -56,6 +56,7 @@ static tiff_v16u8 sub_u8_scalar(tiff_v16u8 a, tiff_v16u8 b)
 static tiff_v16u8 loadu_u8_neon(const uint8_t *ptr)
 {
     tiff_v16u8 r;
+    __builtin_prefetch(ptr + 64);
     r.n = vld1q_u8(ptr);
     return r;
 }

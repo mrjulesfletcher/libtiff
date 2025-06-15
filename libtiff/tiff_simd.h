@@ -84,7 +84,10 @@ extern "C"
                 n--;
             }
             for (; n >= 16; n -= 16, dst += 16, src += 16)
+            {
+                __builtin_prefetch(src + 64);
                 vst1q_u8(dst, vld1q_u8(src));
+            }
             while (n--)
                 *dst++ = *src++;
         }
@@ -103,6 +106,7 @@ extern "C"
             {
                 dst -= 16;
                 src -= 16;
+                __builtin_prefetch(src - 64);
                 vst1q_u8(dst, vld1q_u8(src));
             }
             while (n--)

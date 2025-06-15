@@ -1596,6 +1596,7 @@ static void putgreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
         uint32_t ww = w;
         while (ww >= 16)
         {
+            __builtin_prefetch(pp + 64);
             uint8x16_t g = vld1q_u8(pp);
             if (invert)
                 g = vsubq_u8(maxv, g);
