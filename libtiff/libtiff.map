@@ -232,6 +232,10 @@ LIBTIFF_4.7.1 {
     TIFFPackRaw16;
     TIFFUnpackRaw16;
     TIFFAssembleStripNEON;
+    TIFFPackRGB24;
+    TIFFPackRGBA32;
+    TIFFPackRGB48;
+    TIFFPackRGBA64;
     _TIFFThreadPoolInit;
     _TIFFThreadPoolShutdown;
     _TIFFThreadPoolSubmit;
