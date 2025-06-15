@@ -86,6 +86,10 @@ static void interleave4_avx2(uint8_t *dst, const uint8_t *src, tmsize_t wc,
     tmsize_t i = 0;
     for (; i + 31 < wc; i += 32)
     {
+        __builtin_prefetch(src + i + 32 + order[0] * wc);
+        __builtin_prefetch(src + i + 32 + order[1] * wc);
+        __builtin_prefetch(src + i + 32 + order[2] * wc);
+        __builtin_prefetch(src + i + 32 + order[3] * wc);
         __m256i v0 =
             _mm256_loadu_si256((const __m256i *)(src + i + order[0] * wc));
         __m256i v1 =
@@ -138,6 +142,10 @@ static void interleave4_neon(uint8_t *dst, const uint8_t *src, tmsize_t wc,
     tmsize_t i = 0;
     for (; i + 16 <= wc; i += 16)
     {
+        __builtin_prefetch(src + i + 32 + order[0] * wc);
+        __builtin_prefetch(src + i + 32 + order[1] * wc);
+        __builtin_prefetch(src + i + 32 + order[2] * wc);
+        __builtin_prefetch(src + i + 32 + order[3] * wc);
         uint8x16_t v0 = vld1q_u8(src + i + order[0] * wc);
         uint8x16_t v1 = vld1q_u8(src + i + order[1] * wc);
         uint8x16_t v2 = vld1q_u8(src + i + order[2] * wc);

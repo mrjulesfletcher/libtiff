@@ -290,6 +290,7 @@ static void TIFFSwabArrayOfFloatNeon(float *fp, tmsize_t n)
     size_t i = 0;
     for (; i + 4 <= (size_t)n; i += 4)
     {
+        __builtin_prefetch(fp + i + 32);
         uint32x4_t v = vld1q_u32((const uint32_t *)(fp + i));
         uint8x16_t b = vreinterpretq_u8_u32(v);
         b = vrev32q_u8(b);
@@ -362,6 +363,7 @@ static void TIFFSwabArrayOfDoubleNeon(double *dp, tmsize_t n)
     size_t i = 0;
     for (; i + 2 <= (size_t)n; i += 2)
     {
+        __builtin_prefetch(dp + i + 32);
         uint64x2_t v = vld1q_u64((const uint64_t *)(dp + i));
         uint8x16_t b = vreinterpretq_u8_u64(v);
         b = vrev64q_u8(b);
