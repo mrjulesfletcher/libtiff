@@ -147,6 +147,24 @@ void _TIFFCleanupIFDOffsetAndNumberMaps(TIFF *tif)
         TIFFHashSetDestroy(tif->tif_map_dir_number_to_offset);
         tif->tif_map_dir_number_to_offset = NULL;
     }
+    if (tif->tif_dir_offset_cache)
+    {
+        _TIFFfreeExt(tif, tif->tif_dir_offset_cache);
+        tif->tif_dir_offset_cache = NULL;
+        tif->tif_dir_offset_cache_count = 0;
+        tif->tif_dir_offset_cache_alloc = 0;
+    }
+}
+
+void _TIFFInvalidateDirOffsetCache(TIFF *tif)
+{
+    if (tif->tif_dir_offset_cache)
+    {
+        _TIFFfreeExt(tif, tif->tif_dir_offset_cache);
+        tif->tif_dir_offset_cache = NULL;
+    }
+    tif->tif_dir_offset_cache_count = 0;
+    tif->tif_dir_offset_cache_alloc = 0;
 }
 
 /************************************************************************/
