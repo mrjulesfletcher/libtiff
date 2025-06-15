@@ -501,7 +501,11 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
      * option permits applications that only want to look at the tags,
      * for example, to get the unadulterated TIFF tag information.
      */
-    for (cp = mode; *cp; cp++)
+    /* Skip the initial access mode character and optional '+' */
+    cp = mode + 1;
+    if ((mode[0] == 'r' || mode[0] == 'w' || mode[0] == 'a') && mode[1] == '+')
+        cp++;
+    for (; *cp; cp++)
         switch (*cp)
         {
             case 'b':
@@ -550,6 +554,9 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
                 break;
             case 'h':
                 tif->tif_flags |= TIFF_HEADERONLY;
+                break;
+            case '4':
+                /* ClassicTIFF is the default, so just ignore */
                 break;
             case '8':
                 if (m & O_CREAT)
