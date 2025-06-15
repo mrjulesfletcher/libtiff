@@ -45,6 +45,10 @@ typedef struct
     tmsize_t stride;  /* sample stride over data */
     tmsize_t rowsize; /* tile/strip row size */
 
+    /* Temporary buffer used by PredictorEncodeRow/Tile */
+    uint8_t *work_buffer;
+    tmsize_t work_buffer_size;
+
     TIFFCodeMethod encoderow;           /* parent codec encode/decode row */
     TIFFCodeMethod encodestrip;         /* parent codec encode/decode strip */
     TIFFCodeMethod encodetile;          /* parent codec encode/decode tile */
