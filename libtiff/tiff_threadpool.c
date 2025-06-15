@@ -230,17 +230,33 @@ void TIFFSetThreadCount(TIFF *tif, int count)
         count = 1;
     _TIFFThreadPoolShutdown(tif ? tif->tif_threadpool : NULL);
     if (tif)
-        tif->tif_threadpool = _TIFFThreadPoolInitWithSize(count,
-                                                          TIFF_THREADPOOL_MAX_QUEUE);
+        tif->tif_threadpool =
+            _TIFFThreadPoolInitWithSize(count, TIFF_THREADPOOL_MAX_QUEUE);
 }
 
 void TIFFSetThreadPoolSize(TIFF *tif, int count, int max_queue)
 {
-    if (count < 1)
-        count = 1;
     if (max_queue < 1)
         max_queue = TIFF_THREADPOOL_MAX_QUEUE;
-    _TIFFThreadPoolShutdown(tif ? tif->tif_threadpool : NULL);
+    TIFFThreadPool *pool = tif ? tif->tif_threadpool : NULL;
+    if (count == 0 && pool)
+    {
+        /* auto-size based on current queue depth */
+        pthread_mutex_lock(&pool->mutex);
+        int queued = pool->queued + pool->active;
+        pthread_mutex_unlock(&pool->mutex);
+        long nproc = sysconf(_SC_NPROCESSORS_ONLN);
+        if (nproc < 1)
+            nproc = 1;
+        count = queued;
+        if (count < 1)
+            count = 1;
+        if (count > nproc)
+            count = (int)nproc;
+    }
+    if (count < 1)
+        count = 1;
+    _TIFFThreadPoolShutdown(pool);
     if (tif)
         tif->tif_threadpool = _TIFFThreadPoolInitWithSize(count, max_queue);
 }
@@ -255,17 +271,25 @@ int TIFFGetThreadCount(TIFF *tif)
         const char *env = getenv("TIFF_THREAD_COUNT");
         if (env)
         {
-            char *endptr = NULL;
-            errno = 0;
-            long val = strtol(env, &endptr, 10);
-            if (errno != 0 || *endptr != '\0' || endptr == env || val <= 0)
+            if (strcasecmp(env, "auto") == 0)
             {
-                TIFFErrorExtR(
-                    tif, "TIFFGetThreadCount",
-                    "Invalid TIFF_THREAD_COUNT value '%s', using default", env);
+                workers = 0;
             }
             else
-                workers = (int)val;
+            {
+                char *endptr = NULL;
+                errno = 0;
+                long val = strtol(env, &endptr, 10);
+                if (errno != 0 || *endptr != '\0' || endptr == env || val <= 0)
+                {
+                    TIFFErrorExtR(
+                        tif, "TIFFGetThreadCount",
+                        "Invalid TIFF_THREAD_COUNT value '%s', using default",
+                        env);
+                }
+                else
+                    workers = (int)val;
+            }
         }
         if (workers <= 0)
         {

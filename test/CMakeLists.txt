@@ -290,6 +290,12 @@ set_target_properties(predictor_threadpool_benchmark PROPERTIES LINKER_LANGUAGE 
 target_link_libraries(predictor_threadpool_benchmark PRIVATE tiff tiff_port)
 list(APPEND simple_tests predictor_threadpool_benchmark)
 
+add_executable(predictor_threadpool_resize ../placeholder.h)
+target_sources(predictor_threadpool_resize PRIVATE predictor_threadpool_resize.c)
+set_target_properties(predictor_threadpool_resize PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(predictor_threadpool_resize PRIVATE tiff tiff_port)
+list(APPEND simple_tests predictor_threadpool_resize)
+
 add_executable(pack_uring_benchmark ../placeholder.h)
 target_sources(pack_uring_benchmark PRIVATE pack_uring_benchmark.c)
 set_target_properties(pack_uring_benchmark PROPERTIES LINKER_LANGUAGE CXX)

@@ -284,8 +284,10 @@ around 3× faster than the scalar implementation on the same device.
 Build with `-Dthreadpool=ON` (CMake) or `--enable-multithreading` (Autotools)
 to enable the internal worker pool. By default the number of threads matches
 the available processors. Override this with the `TIFF_THREAD_COUNT`
-environment variable or by calling `TIFFSetThreadCount()`. The task queue
-limit may be changed via `TIFFSetThreadPoolSize()`.
+environment variable (set to an integer or `auto`) or by calling
+`TIFFSetThreadCount()`. The task queue limit may be changed via
+`TIFFSetThreadPoolSize()`. Passing `0` to `TIFFSetThreadPoolSize()` sizes the
+pool automatically based on the queued tasks.
 
 ## io_uring Configuration
 
