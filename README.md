@@ -218,6 +218,20 @@ free(strip);
 free(buf);
 ```
 
+When io_uring is enabled you may queue each strip using `_tiffUringWriteProc`
+while preparing the next one.  After the thread pool finishes assembling
+strips call `_tiffUringWait` to flush outstanding writes:
+
+```c
+_tiffUringSetAsync(tif, 1);
+for (...) {
+    uint8_t *s = TIFFAssembleStripNEON(tif, src, w, rows, 1, 1, &sz);
+    _tiffUringWriteProc((thandle_t)TIFFFileno(tif), s, (tmsize_t)sz);
+}
+_TIFFThreadPoolWait(pool);
+_tiffUringWait(tif);
+```
+
 Packing helpers for raw Bayer buffers:
 ```c
 TIFFPackRaw12(src16, packed, count, 0);

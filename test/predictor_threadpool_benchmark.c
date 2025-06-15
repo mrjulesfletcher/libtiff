@@ -1,8 +1,14 @@
 #include "strip_neon.h"
 #include "tiff_threadpool.h"
+#include "tiffiop.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#ifdef USE_IO_URING
+extern tmsize_t _tiffUringWriteProc(thandle_t fd, void *buf, tmsize_t size);
+extern void _tiffUringSetAsync(TIFF *tif, int enable);
+extern void _tiffUringWait(TIFF *tif);
+#endif
 
 typedef struct
 {
@@ -10,6 +16,7 @@ typedef struct
     uint32_t width;
     uint32_t height;
     size_t loops;
+    TIFF *tif;
 } Task;
 
 static void bench_task(void *arg)
@@ -20,6 +27,12 @@ static void bench_task(void *arg)
         size_t out_size = 0;
         uint8_t *dst = TIFFAssembleStripNEON(NULL, t->src, t->width, t->height,
                                              1, 0, &out_size);
+        if (!dst)
+            continue;
+#ifdef USE_IO_URING
+        _tiffUringWriteProc((thandle_t)TIFFFileno(t->tif), dst,
+                            (tmsize_t)out_size);
+#endif
         free(dst);
     }
 }
@@ -41,6 +54,17 @@ int main(int argc, char **argv)
 
     TIFFThreadPool *tp = _TIFFThreadPoolInit(threads);
 
+    const char *filename = "predictor_threadpool.tmp";
+    TIFF *tif = TIFFOpen(filename, "w+");
+    if (!tif)
+    {
+        fprintf(stderr, "cannot create %s\n", filename);
+        return 1;
+    }
+#ifdef USE_IO_URING
+    _tiffUringSetAsync(tif, 1);
+#endif
+
     const uint32_t width = 512, height = 512;
     size_t count = (size_t)width * height;
     uint16_t *buf = (uint16_t *)malloc(count * sizeof(uint16_t));
@@ -58,12 +82,16 @@ int main(int argc, char **argv)
         tasks[t].width = width;
         tasks[t].height = height;
         tasks[t].loops = loops;
+        tasks[t].tif = tif;
         _TIFFThreadPoolSubmit(tp, bench_task, &tasks[t]);
     }
 
     struct timespec s, e;
     clock_gettime(CLOCK_MONOTONIC, &s);
     _TIFFThreadPoolWait(tp);
+#ifdef USE_IO_URING
+    _tiffUringWait(tif);
+#endif
     clock_gettime(CLOCK_MONOTONIC, &e);
 
     printf("predictor+pack with %d threads (%zu loops each): %.2f ms\n",
@@ -72,5 +100,11 @@ int main(int argc, char **argv)
     free(tasks);
     free(buf);
     _TIFFThreadPoolShutdown(tp);
+    TIFFClose(tif);
+#ifdef USE_IO_URING
+    unlink(filename);
+#else
+    (void)filename;
+#endif
     return 0;
 }
