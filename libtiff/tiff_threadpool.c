@@ -25,6 +25,7 @@ typedef struct TIFFThreadPool
     int stop;
     int active;
     int queued;
+    int max_queue;
     TPTask *freelist;
     pthread_mutex_t mutex;
     pthread_cond_t cond;
@@ -64,10 +65,12 @@ static void *_tiffThreadProc(void *arg)
     return NULL;
 }
 
-TIFFThreadPool *_TIFFThreadPoolInit(int workers)
+static TIFFThreadPool *_TIFFThreadPoolInitWithSize(int workers, int max_queue)
 {
     if (workers <= 0)
         workers = 1;
+    if (max_queue <= 0)
+        max_queue = TIFF_THREADPOOL_MAX_QUEUE;
     static const char module[] = "_TIFFThreadPoolInit";
     TIFFThreadPool *pool = (TIFFThreadPool *)calloc(1, sizeof(TIFFThreadPool));
     if (!pool)
@@ -89,6 +92,7 @@ TIFFThreadPool *_TIFFThreadPoolInit(int workers)
     }
     pool->workers = workers;
     pool->queued = 0;
+    pool->max_queue = max_queue;
     pool->threads = (pthread_t *)calloc(workers, sizeof(pthread_t));
     if (!pool->threads)
     {
@@ -115,6 +119,11 @@ TIFFThreadPool *_TIFFThreadPoolInit(int workers)
         }
     }
     return pool;
+}
+
+TIFFThreadPool *_TIFFThreadPoolInit(int workers)
+{
+    return _TIFFThreadPoolInitWithSize(workers, TIFF_THREADPOOL_MAX_QUEUE);
 }
 
 void _TIFFThreadPoolShutdown(TIFFThreadPool *pool)
@@ -169,7 +178,7 @@ int _TIFFThreadPoolSubmit(TIFFThreadPool *pool, void (*func)(void *), void *arg)
         TIFFErrorExtR(NULL, module, "Thread pool not initialized");
         return 0;
     }
-    if (pool->queued >= TIFF_THREADPOOL_MAX_QUEUE)
+    if (pool->queued >= pool->max_queue)
     {
         pthread_mutex_unlock(&pool->mutex);
         TIFFErrorExtR(NULL, module, "Thread pool queue limit exceeded");
@@ -221,7 +230,19 @@ void TIFFSetThreadCount(TIFF *tif, int count)
         count = 1;
     _TIFFThreadPoolShutdown(tif ? tif->tif_threadpool : NULL);
     if (tif)
-        tif->tif_threadpool = _TIFFThreadPoolInit(count);
+        tif->tif_threadpool = _TIFFThreadPoolInitWithSize(count,
+                                                          TIFF_THREADPOOL_MAX_QUEUE);
+}
+
+void TIFFSetThreadPoolSize(TIFF *tif, int count, int max_queue)
+{
+    if (count < 1)
+        count = 1;
+    if (max_queue < 1)
+        max_queue = TIFF_THREADPOOL_MAX_QUEUE;
+    _TIFFThreadPoolShutdown(tif ? tif->tif_threadpool : NULL);
+    if (tif)
+        tif->tif_threadpool = _TIFFThreadPoolInitWithSize(count, max_queue);
 }
 
 int TIFFGetThreadCount(TIFF *tif)
@@ -280,6 +301,12 @@ void TIFFSetThreadCount(TIFF *tif, int count)
 {
     (void)tif;
     (void)count;
+}
+void TIFFSetThreadPoolSize(TIFF *tif, int count, int max_queue)
+{
+    (void)tif;
+    (void)count;
+    (void)max_queue;
 }
 int TIFFGetThreadCount(TIFF *tif)
 {
