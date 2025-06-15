@@ -80,3 +80,4 @@ test/o-*
 .vs
 cmake-build*
 build*
+Testing/
