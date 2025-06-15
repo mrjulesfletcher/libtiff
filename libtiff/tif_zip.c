@@ -38,6 +38,7 @@
  * For scanline access, zlib will be sued as a fallback.
  */
 #include "tif_predict.h"
+#include "tiff_simd.h"
 #include "zlib.h"
 
 #if LIBDEFLATE_SUPPORT
@@ -72,6 +73,9 @@ typedef struct
     int zipquality; /* compression level */
     int state;      /* state flags */
     int subcodec;   /* DEFLATE_SUBCODEC_ZLIB or DEFLATE_SUBCODEC_LIBDEFLATE */
+#if defined(HAVE_ARM_CRC32)
+    uint32_t crc32;
+#endif
 #if LIBDEFLATE_SUPPORT
     int libdeflate_state; /* -1 = until first time ZIPEncode() / ZIPDecode() is
                              called, 0 = use zlib, 1 = use libdeflate */
@@ -188,6 +192,7 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 {
     static const char module[] = "ZIPDecode";
     ZIPState *sp = ZIPDecoderState(tif);
+    tmsize_t occ_initial = occ;
 
     (void)s;
     assert(sp != NULL);
@@ -275,6 +280,7 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                 return 0;
             }
 
+            sp->crc32 = tiff_crc32(0, op, (size_t)occ_initial);
             return 1;
         }
     } while (0);
@@ -328,6 +334,10 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     }
 
     tif->tif_rawcp = sp->stream.next_in;
+
+#if defined(HAVE_ARM_CRC32)
+    sp->crc32 = tiff_crc32(0, op, (size_t)occ_initial);
+#endif
 
     return (1);
 }

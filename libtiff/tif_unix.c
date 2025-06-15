@@ -55,8 +55,10 @@
 #include <io.h>
 #endif
 
-#include "tiffiop.h"
 #include "tiff_mmap.h"
+#include "tiff_simd.h"
+#include "tiffiop.h"
+#include <stdint.h>
 
 #define TIFF_IO_MAX 2147483647U
 
@@ -283,8 +285,8 @@ static int _tiffMapProc(thandle_t fd, void **pbase, toff_t *psize)
         }
         fd_as_handle_union_t fdh;
         fdh.h = fd;
-        *pbase = (void *)mmap(0, (size_t)map_size, PROT_READ, MAP_SHARED,
-                              fdh.fd, 0);
+        *pbase =
+            (void *)mmap(0, (size_t)map_size, PROT_READ, MAP_SHARED, fdh.fd, 0);
         if (*pbase != (void *)-1)
         {
             *psize = map_size;
@@ -478,7 +480,7 @@ void _TIFFmemset(void *p, int v, tmsize_t c) { memset(p, v, (size_t)c); }
 
 void _TIFFmemcpy(void *d, const void *s, tmsize_t c)
 {
-    memcpy(d, s, (size_t)c);
+    tiff_memcpy_u8((uint8_t *)d, (const uint8_t *)s, (size_t)c);
 }
 
 int _TIFFmemcmp(const void *p1, const void *p2, tmsize_t c)
