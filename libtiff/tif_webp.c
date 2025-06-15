@@ -345,7 +345,8 @@ static int TWebPDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             }
             else
             {
-                memcpy(op, buf + (sp->last_y * stride), occ);
+                /* Use SIMD-accelerated helper in case of overlapping buffers */
+                tiff_memmove_u8(op, buf + (sp->last_y * stride), occ);
             }
 
             tif->tif_rawcp += tif->tif_rawcc;
