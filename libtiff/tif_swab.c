@@ -226,6 +226,28 @@ static void TIFFSwabArrayOfLong8Neon(uint64_t *lp, tmsize_t n)
 {
     size_t i = 0;
 #ifdef __aarch64__
+    for (; i + 8 <= (size_t)n; i += 8)
+    {
+#ifdef __GNUC__
+        __builtin_prefetch(lp + i + 64);
+#endif
+        uint64x2_t v0 = vld1q_u64(lp + i);
+        uint64x2_t v1 = vld1q_u64(lp + i + 2);
+        uint64x2_t v2 = vld1q_u64(lp + i + 4);
+        uint64x2_t v3 = vld1q_u64(lp + i + 6);
+        uint8x16_t b0 = vreinterpretq_u8_u64(v0);
+        uint8x16_t b1 = vreinterpretq_u8_u64(v1);
+        uint8x16_t b2 = vreinterpretq_u8_u64(v2);
+        uint8x16_t b3 = vreinterpretq_u8_u64(v3);
+        b0 = vrev64q_u8(b0);
+        b1 = vrev64q_u8(b1);
+        b2 = vrev64q_u8(b2);
+        b3 = vrev64q_u8(b3);
+        vst1q_u64(lp + i, vreinterpretq_u64_u8(b0));
+        vst1q_u64(lp + i + 2, vreinterpretq_u64_u8(b1));
+        vst1q_u64(lp + i + 4, vreinterpretq_u64_u8(b2));
+        vst1q_u64(lp + i + 6, vreinterpretq_u64_u8(b3));
+    }
     for (; i + 4 <= (size_t)n; i += 4)
     {
 #ifdef __GNUC__
