@@ -1107,8 +1107,21 @@ tmsize_t _TIFFReadEncodedTileAndAllocBuffer(TIFF *tif, uint32_t tile,
         size_to_read = tilesize;
     else if (size_to_read > tilesize)
         size_to_read = tilesize;
-    if ((*tif->tif_decodetile)(tif, (uint8_t *)*buf, size_to_read,
-                               (uint16_t)(tile / td->td_stripsperimage)))
+    int decode_ok = 0;
+#ifdef TIFF_USE_THREADPOOL
+    if (TIFFGetThreadCount(tif) > 1)
+    {
+        TPTileTask task = {tif, (uint8_t *)*buf, size_to_read,
+                           (uint16_t)(tile / td->td_stripsperimage), 0};
+        _TIFFThreadPoolSubmit(tif->tif_threadpool, TPDecodePredictTile, &task);
+        _TIFFThreadPoolWait(tif->tif_threadpool);
+        decode_ok = task.result;
+    }
+    else
+#endif
+        decode_ok = (*tif->tif_decodetile)(tif, (uint8_t *)*buf, size_to_read,
+                                           (uint16_t)(tile / td->td_stripsperimage)) != 0;
+    if (decode_ok)
     {
         (*tif->tif_postdecode)(tif, (uint8_t *)*buf, size_to_read);
         return (size_to_read);
