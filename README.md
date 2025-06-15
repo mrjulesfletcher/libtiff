@@ -127,6 +127,11 @@ Horizontal differencing used by the predictor tag includes NEON implementations 
 ```
 【F:libtiff/tif_predict.c†L1078-L1094】
 
+### NEON PackBits and Fax3 Speedups
+PackBits decoding now uses NEON for both run replication and literal copies.
+Fax3 fill runs are also vectorized, providing snappier handling of bilevel
+images.
+
 ### SSE2 Predictor Optimization
 Float32 predictor decoding on x86‑64 interleaves four vectors at once and now prefetches upcoming data. The 8‑bit and 16‑bit accumulators also fall back to SSE2 when SSE4.1 is unavailable. This yields about a **25 %** improvement:
 ```c
@@ -172,6 +177,21 @@ When libdeflate is unavailable the Deflate codec now accelerates small memcpy
 and CRC loops with ARM NEON. The path works with multithreaded decoding and
 provides around a **20 %** speedup on an RK3588 using zlib 1.3.
 
+### NEON YCbCr Conversion
+`TIFFReadRGBAImage()` uses a vectorized path for YCbCr 4:4:4 data. 16 pixels are
+converted per iteration, significantly reducing the cost of converting camera
+captures to RGBA.
+
+### NEON RGB Packing
+The helpers `TIFFPackRGB24`, `TIFFPackRGBA32`, `TIFFPackRGB48` and
+`TIFFPackRGBA64` assemble ABGR words from 8‑ or 16‑bit planar channels. They are
+exposed in `rgb_neon.h` and called internally by the RGBA reader.
+
+### SIMD Memory Helpers
+`tiff_simd.h` defines `tiff_memcpy_u8`, `tiff_memmove_u8`, `tiff_memset_u8` and
+`tiff_crc32` which use NEON on ARM. Compression codecs and internal routines now
+rely on these for faster memory access.
+
 ### SIMD Abstraction Header
 `libtiff/tiff_simd.h` exposes a small vector API that maps to NEON, SSE4.1 or plain C:
 ```c
@@ -197,6 +217,11 @@ startup time when files reside on slow storage.
 
 See [doc/functions/TIFFStrileQuery.rst](doc/functions/TIFFStrileQuery.rst) for
 details on querying per‑strile information.
+
+### Directory Offset Caching
+Directory offsets are cached in memory to speed up `TIFFSetDirectory()` and
+avoid expensive scans through large files. The cache is invalidated on write so
+that applications always see consistent state.
 
 ## How to Use SIMD Routines
 Below is a short example that assembles a 12‑bit strip and writes a DNG.
@@ -258,6 +283,8 @@ tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
 |Byte swapping|`TIFFSwabArrayOfShort`, `TIFFSwabArrayOfLong8`|ARM NEON|~3×¹|
 |Predictor acceleration|`PredictorDecodeRow`|ARM NEON / SSE2|up to 25 %|
 |Strip assembly|`TIFFAssembleStripNEON`|ARM NEON|>5× pack|
+|RGB packing|`TIFFPackRGB24` etc.|ARM NEON|>2×|
+|YCbCr to RGBA|`TIFFReadRGBAImage`|ARM NEON|~2×|
 |SIMD abstraction|`tiff_v16u8` etc.|NEON / SSE4.1 / scalar|N/A|
 
 ¹Measured with `swab_benchmark` on an RK3588.
@@ -293,7 +320,8 @@ the available processors. Override this with the `TIFF_THREAD_COUNT`
 environment variable (set to an integer or `auto`) or by calling
 `TIFFSetThreadCount()`. The task queue limit may be changed via
 `TIFFSetThreadPoolSize()`. Passing `0` to `TIFFSetThreadPoolSize()` sizes the
-pool automatically based on the queued tasks.
+pool automatically based on the queued tasks. Strip and tile decoding both
+submit work items to this pool when more than one thread is available.
 
 ## io_uring Configuration
 
