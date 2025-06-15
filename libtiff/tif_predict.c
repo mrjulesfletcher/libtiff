@@ -1062,13 +1062,24 @@ static int horDiff8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
             {
                 uint8_t *p = cp + 1;
                 tmsize_t remaining = cc - 1;
+                while (remaining >= 32)
+                {
+                    uint8x16_t cur1 = vld1q_u8(p);
+                    uint8x16_t cur2 = vld1q_u8(p + 16);
+                    __builtin_prefetch(p + 128);
+                    uint8x16_t prev1 = vld1q_u8(p - 1);
+                    uint8x16_t prev2 = vld1q_u8(p + 15);
+                    vst1q_u8(p, vsubq_u8(cur1, prev1));
+                    vst1q_u8(p + 16, vsubq_u8(cur2, prev2));
+                    p += 32;
+                    remaining -= 32;
+                }
                 while (remaining >= 16)
                 {
                     uint8x16_t cur = vld1q_u8(p);
                     __builtin_prefetch(p + 64);
                     uint8x16_t prev = vld1q_u8(p - 1);
-                    uint8x16_t diff = vsubq_u8(cur, prev);
-                    vst1q_u8(p, diff);
+                    vst1q_u8(p, vsubq_u8(cur, prev));
                     p += 16;
                     remaining -= 16;
                 }
