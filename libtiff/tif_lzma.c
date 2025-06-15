@@ -175,7 +175,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
     if (sp->read_error)
     {
-        memset(op, 0, (size_t)occ);
+        tiff_memset_u8(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module,
                       "LZMADecode: Scanline %" PRIu32 " cannot be read due to "
                       "previous error",
@@ -192,7 +192,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     {
         // read_error not set here as this is a usage issue that can be
         // recovered in a following call.
-        memset(op, 0, (size_t)occ);
+        tiff_memset_u8(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module,
                       "Liblzma cannot deal with buffers this size");
         return 0;
@@ -217,7 +217,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
             if (r != LZMA_OK)
             {
                 sp->read_error = 1;
-                memset(op, 0, (size_t)occ);
+                tiff_memset_u8(op, 0, (size_t)occ);
                 TIFFErrorExtR(tif, module,
                               "Error initializing the stream decoder, %s",
                               LZMAStrerror(r));
@@ -238,7 +238,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     if (sp->stream.avail_out != 0)
     {
         sp->read_error = 1;
-        memset(sp->stream.next_out, 0, sp->stream.avail_out);
+        tiff_memset_u8(sp->stream.next_out, 0, sp->stream.avail_out);
         TIFFErrorExtR(tif, module,
                       "Not enough data at scanline %" PRIu32
                       " (short %" TIFF_SIZE_FORMAT " bytes)",

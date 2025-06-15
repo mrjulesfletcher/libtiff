@@ -755,7 +755,7 @@ static int LERCDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
     if (sp->uncompressed_buffer == NULL)
     {
-        memset(op, 0, (size_t)occ);
+        tiff_memset_u8(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module, "Uncompressed buffer not allocated");
         return 0;
     }
@@ -763,7 +763,7 @@ static int LERCDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     if ((uint64_t)sp->uncompressed_offset + (uint64_t)occ >
         sp->uncompressed_size)
     {
-        memset(op, 0, (size_t)occ);
+        tiff_memset_u8(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module, "Too many bytes read");
         return 0;
     }

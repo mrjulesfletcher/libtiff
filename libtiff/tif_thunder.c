@@ -157,7 +157,7 @@ static int ThunderDecode(TIFF *tif, uint8_t *op0, tmsize_t maxpixels)
     if (npixels != maxpixels)
     {
         uint8_t *op_end = op0 + (maxpixels + 1) / 2;
-        memset(op, 0, (size_t)(op_end - op));
+        tiff_memset_u8(op, 0, (size_t)(op_end - op));
         TIFFErrorExtR(tif, module,
                       "%s data at scanline %lu (%" PRIu64 " != %" PRIu64 ")",
                       npixels < maxpixels ? "Not enough" : "Too much",

@@ -447,7 +447,7 @@ static inline void fax_zero_neon(uint8_t **cpp, int32_t n)
             vst1q_u8(cp + i, v);
     }
     if (i < n)
-        memset(cp + i, 0, (size_t)(n - i));
+        tiff_memset_u8(cp + i, 0, (size_t)(n - i));
     *cpp = cp + n;
 }
 #define FILL(n, cp) fax_fill_neon(&(cp), (n))
@@ -678,8 +678,8 @@ static int Fax3SetupState(TIFF *tif)
         "for Group 3/4 run arrays");
     if (dsp->runs == NULL)
         return (0);
-    memset(dsp->runs, 0,
-           TIFFSafeMultiply(uint32_t, dsp->nruns, 2) * sizeof(uint32_t));
+    tiff_memset_u8(dsp->runs, 0,
+                   TIFFSafeMultiply(uint32_t, dsp->nruns, 2) * sizeof(uint32_t));
     dsp->curruns = dsp->runs;
     if (needsRefLine)
         dsp->refruns = dsp->runs + dsp->nruns;

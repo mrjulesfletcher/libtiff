@@ -416,7 +416,7 @@ static int PackBitsDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     tif->tif_rawcc = cc;
     if (occ > 0)
     {
-        memset(op, 0, (size_t)occ);
+        tiff_memset_u8(op, 0, (size_t)occ);
         TIFFErrorExtR(tif, module, "Not enough data for scanline %" PRIu32,
                       tif->tif_row);
         return (0);
