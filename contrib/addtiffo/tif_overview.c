@@ -285,7 +285,8 @@ static void TIFF_DownSample(unsigned char *pabySrcTile, uint32_t nBlockXSize,
                             int nBitsPerSample, unsigned char *pabyOTile,
                             uint32_t nOBlockXSize, uint32_t nOBlockYSize,
                             uint32_t nTXOff, uint32_t nTYOff, int nOMult,
-                            int nSampleFormat, OVRResampleMethod eResampling)
+                            int nSampleFormat, OVRResampleMethod eResampling,
+                            int iSampleOffset)
 
 {
     uint32_t i, j;
@@ -341,7 +342,9 @@ static void TIFF_DownSample(unsigned char *pabySrcTile, uint32_t nBlockXSize,
          */
         if (eResampling == OVR_RESAMPLE_NEAREST)
         {
-            pabySrc = pabySrcTile + j * nOMult * nBlockXSize * nPixelGroupBytes;
+            pabySrc = pabySrcTile +
+                      j * nOMult * nBlockXSize * nPixelGroupBytes +
+                      iSampleOffset;
 
             for (i = 0; i * nOMult < nBlockXSize; i++)
             {
@@ -369,7 +372,9 @@ static void TIFF_DownSample(unsigned char *pabySrcTile, uint32_t nBlockXSize,
          */
         else if (eResampling == OVR_RESAMPLE_AVERAGE)
         {
-            pabySrc = pabySrcTile + j * nOMult * nBlockXSize * nPixelGroupBytes;
+            pabySrc = pabySrcTile +
+                      j * nOMult * nBlockXSize * nPixelGroupBytes +
+                      iSampleOffset;
 
             for (i = 0; i * nOMult < nBlockXSize; i++)
             {
@@ -715,11 +720,10 @@ void TIFF_ProcessFullResBlock(TIFF *hTIFF, int nPlanarConfig, int bSubsampled,
 #ifdef DBMALLOC
                 malloc_chain_check(1);
 #endif
-                TIFF_DownSample(pabySrcTile + nSampleByteOffset, nBlockXSize,
-                                nBlockYSize, nSkewBits, nBitsPerSample,
-                                pabyOTile, poRBI->nBlockXSize,
+                TIFF_DownSample(pabySrcTile, nBlockXSize, nBlockYSize, nSkewBits,
+                                nBitsPerSample, pabyOTile, poRBI->nBlockXSize,
                                 poRBI->nBlockYSize, nTXOff, nTYOff, nOMult,
-                                nSampleFormat, eResampling);
+                                nSampleFormat, eResampling, nSampleByteOffset);
 #ifdef DBMALLOC
                 malloc_chain_check(1);
 #endif
