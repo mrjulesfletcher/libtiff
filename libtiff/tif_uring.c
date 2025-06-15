@@ -3,9 +3,9 @@
 #include "tiffiop.h"
 #include <errno.h>
 #include <liburing.h>
-#include <sys/uio.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <sys/uio.h>
 
 /*
  * io_uring based asynchronous I/O helpers.  The API became stable in
@@ -14,9 +14,9 @@
  *
  * Mapping between file descriptors and their io_uring.  Access to this list
  * and all io_uring operations is serialized by the global mutex below since
- * liburing itself is not thread-safe.  The queue depth is currently fixed to
- * 8 events which is sufficient for the sequential access patterns used by
- * libtiff.
+ * liburing itself is not thread-safe.  The default queue depth is 8 events
+ * which is typically sufficient for the sequential access patterns used by
+ * libtiff, but applications may request any depth supported by the kernel.
  */
 typedef struct _TIFFURingEntry
 {
@@ -98,13 +98,6 @@ int _tiffUringInit(TIFF *tif)
     if (tif->tif_uring_depth > 0)
     {
         depth = tif->tif_uring_depth;
-        if (depth > 1024)
-        {
-            TIFFErrorExtR(
-                tif, "tif_uring",
-                "Invalid TIFFOpenOptions queue depth %u, using default", depth);
-            depth = 8;
-        }
     }
     else if (env)
     {
@@ -112,7 +105,7 @@ int _tiffUringInit(TIFF *tif)
         errno = 0;
         unsigned long val = strtoul(env, &endptr, 10);
         if (errno != 0 || *endptr != '\0' || endptr == env || env[0] == '-' ||
-            val == 0 || val > 1024)
+            val == 0)
         {
             TIFFErrorExtR(tif, "tif_uring",
                           "Invalid TIFF_URING_DEPTH value '%s', using default",
@@ -187,6 +180,27 @@ void _tiffUringWait(TIFF *tif)
     }
 }
 
+int TIFFSetURingQueueDepth(TIFF *tif, unsigned int depth)
+{
+    if (!tif)
+        return 0;
+    if (tif->tif_uring)
+    {
+        _tiffUringTeardown(tif);
+        tif->tif_uring_depth = depth;
+        return _tiffUringInit(tif);
+    }
+    tif->tif_uring_depth = depth;
+    return 1;
+}
+
+unsigned int TIFFGetURingQueueDepth(TIFF *tif)
+{
+    if (!tif)
+        return 0;
+    return tif->tif_uring_depth;
+}
+
 static tmsize_t io_uring_rw(int readflag, thandle_t fd, struct iovec *iov,
                             unsigned int iovcnt, tmsize_t total_size)
 {
@@ -242,13 +256,13 @@ static tmsize_t io_uring_rw(int readflag, thandle_t fd, struct iovec *iov,
 
 tmsize_t _tiffUringReadProc(thandle_t fd, void *buf, tmsize_t size)
 {
-    struct iovec iov = { buf, (size_t)size };
+    struct iovec iov = {buf, (size_t)size};
     return io_uring_rw(1, fd, &iov, 1, size);
 }
 
 tmsize_t _tiffUringWriteProc(thandle_t fd, void *buf, tmsize_t size)
 {
-    struct iovec iov = { buf, (size_t)size };
+    struct iovec iov = {buf, (size_t)size};
     return io_uring_rw(0, fd, &iov, 1, size);
 }
 

@@ -254,7 +254,7 @@ struct _TIFFRGBAImage
  * Macros for extracting components from the
  * packed ABGR form returned by TIFFReadRGBAImage.
  */
-#define TIFFGetR(abgr) ((abgr) & 0xff)
+#define TIFFGetR(abgr) ((abgr)&0xff)
 #define TIFFGetG(abgr) (((abgr) >> 8) & 0xff)
 #define TIFFGetB(abgr) (((abgr) >> 16) & 0xff)
 #define TIFFGetA(abgr) (((abgr) >> 24) & 0xff)
@@ -534,9 +534,8 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
                                          TIFFErrorHandlerExtR handler,
                                          void *warnhandler_user_data);
 #ifdef USE_IO_URING
-    extern void
-    TIFFOpenOptionsSetURingQueueDepth(TIFFOpenOptions *opts,
-                                      unsigned int depth);
+    extern void TIFFOpenOptionsSetURingQueueDepth(TIFFOpenOptions *opts,
+                                                  unsigned int depth);
 #endif
 
     extern TIFF *TIFFOpen(const char *, const char *);
@@ -582,6 +581,10 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     extern void TIFFSetUseSSE41(int);
     extern void TIFFSetMapSize(tmsize_t size);
     extern void TIFFSetMapAdvice(int fadvise_flags, int madvise_flags);
+#ifdef USE_IO_URING
+    extern int TIFFSetURingQueueDepth(TIFF *tif, unsigned int depth);
+    extern unsigned int TIFFGetURingQueueDepth(TIFF *tif);
+#endif
     extern tmsize_t TIFFReadEncodedStrip(TIFF *tif, uint32_t strip, void *buf,
                                          tmsize_t size);
     extern tmsize_t TIFFReadRawStrip(TIFF *tif, uint32_t strip, void *buf,

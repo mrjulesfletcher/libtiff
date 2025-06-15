@@ -213,3 +213,5 @@ EXPORTS	TIFFAccessTagMethods
         TIFFSetUseSSE41
         TIFFSetMapSize
         TIFFSetMapAdvice
+        TIFFSetURingQueueDepth
+        TIFFGetURingQueueDepth
