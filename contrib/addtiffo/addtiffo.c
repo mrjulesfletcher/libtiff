@@ -116,7 +116,7 @@ int main(int argc, char **argv)
                 eResampling = OVR_RESAMPLE_MODE;
             else
             {
-                fprintf(stderr, "Unknown resampling method: %s\n", *argv);
+                TIFFError("addtiffo", "Unknown resampling method: %s", *argv);
                 free(anOverviews);
                 return (1);
             }
@@ -129,7 +129,7 @@ int main(int argc, char **argv)
         }
         else
         {
-            fprintf(stderr, "Incorrect parameters\n");
+            TIFFError("addtiffo", "Incorrect parameters");
             return (1);
         }
     }
@@ -140,7 +140,7 @@ int main(int argc, char **argv)
     hTIFF = TIFFOpen(argv[1], "r+");
     if (hTIFF == NULL)
     {
-        fprintf(stderr, "TIFFOpen(%s) failed.\n", argv[1]);
+        TIFFError("addtiffo", "TIFFOpen(%s) failed.", argv[1]);
         return (1);
     }
 
@@ -157,7 +157,7 @@ int main(int argc, char **argv)
         anOverviews = (int *)calloc(nOverviewCount, sizeof(int));
         if (anOverviews == NULL)
         {
-            fprintf(stderr, "Out of memory.\n");
+            TIFFError("addtiffo", "Out of memory.");
             TIFFClose(hTIFF);
             return (1);
         }
@@ -166,7 +166,7 @@ int main(int argc, char **argv)
             anOverviews[i] = atoi(argv[i + 2]);
             if (anOverviews[i] <= 0 || anOverviews[i] > 1024)
             {
-                fprintf(stderr, "Incorrect parameters\n");
+                TIFFError("addtiffo", "Incorrect parameters");
                 free(anOverviews);
                 TIFFClose(hTIFF);
                 return (1);
@@ -184,7 +184,7 @@ int main(int argc, char **argv)
                 (int *)realloc(anOverviews, sizeof(int) * (nOverviewCount + 1));
             if (tmp == NULL)
             {
-                fprintf(stderr, "Out of memory.\n");
+                TIFFError("addtiffo", "Out of memory.");
                 free(anOverviews);
                 TIFFClose(hTIFF);
                 return (1);
