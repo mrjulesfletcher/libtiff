@@ -17,18 +17,19 @@ $ cmake --build . -j$(nproc)
 $ ctest
 $ cmake --install . --prefix /usr/local
 ```
-SIMD support is detected automatically.  You may explicitly control it:
+SIMD support is detected automatically.  You may explicitly control it or
+override the NEON compiler flags:
 ```bash
 $ cmake -DHAVE_NEON=1 -DHAVE_SSE41=0 ..   # force NEON only
 $ cmake -DHAVE_SSE41=1 ..                 # enable SSE4.1
+$ cmake -DTIFF_NEON_FLAGS="-march=armv8-a+simd" ..  # custom NEON flags
 ```
 Cross-compiling examples:
 ```bash
 # Raspberry Pi 5 (AArch64 with NEON)
-$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake -DHAVE_NEON=1 ..
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake ..
 # Generic AArch64 target
-$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake \
-        -DCMAKE_C_FLAGS="-march=armv8-a+simd" -DHAVE_NEON=1 ..
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake ..
 # Target x86_64 with SSE4.1
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/x86_64.cmake \
         -DCMAKE_C_FLAGS="-msse4.1" -DHAVE_SSE41=1 ..
@@ -41,7 +42,7 @@ Install an AArch64 cross compiler such as `gcc-aarch64-linux-gnu` and use the
 x86 host:
 
 ```bash
-$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake -DHAVE_NEON=1 ..
+$ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake ..
 ```
 
 With Autotools pass the `--host=aarch64-linux-gnu` triplet and appropriate
@@ -61,7 +62,7 @@ $ cmake --build . -j$(nproc)
 Cross-compiling for Raspberry Pi 5 with libdeflate:
 ```bash
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake \
-        -Dlibdeflate=ON -DHAVE_NEON=1 -DCMAKE_BUILD_TYPE=Release ..
+        -Dlibdeflate=ON -DCMAKE_BUILD_TYPE=Release ..
 ```
 Benchmarking a 10MB image gave about 2x faster compression with `zip:p9:s1` (libdeflate) versus `zip:p9:s0` (zlib).
 
@@ -333,7 +334,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for details on code style and workflow.  
 
 ## FAQ
 **Q: CMake fails to detect NEON or SSE.**
-Use `-DHAVE_NEON=1` or `-DHAVE_SSE41=1` to force detection. Cross‑compilers may require additional flags.
+Use `-DHAVE_NEON=1` or `-DHAVE_SSE41=1` to force detection. If the compiler
+requires custom flags, set them via `-DTIFF_NEON_FLAGS="-march=armv8-a+simd"`.
 
 **Q: How do I enable JPEG‑LS support?**
 Install CharLS and configure with `-Djpegls=ON` (CMake) or `--with-jpegls` (Autotools).
