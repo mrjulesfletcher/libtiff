@@ -383,6 +383,7 @@ if(tiff-tools)
   list(APPEND tiff_test_extra_args "-DTIFFCP=$<TARGET_FILE:tiffcp>")
   list(APPEND tiff_test_extra_args "-DTIFFINFO=$<TARGET_FILE:tiffinfo>")
   list(APPEND tiff_test_extra_args "-DTIFFSPLIT=$<TARGET_FILE:tiffsplit>")
+  list(APPEND tiff_test_extra_args "-DRGB2YCBCR=$<TARGET_FILE:rgb2ycbcr>")
   if(tiff-contrib)
     list(APPEND tiff_test_extra_args "-DADDTIFFO=$<TARGET_FILE:addtiffo>")
   endif()
@@ -678,4 +679,10 @@ if(tiff-tools)
            "-DOUTDIR=${TEST_OUTPUT}"
            ${tiff_test_extra_args}
            -P "${CMAKE_CURRENT_SOURCE_DIR}/AddtiffoTest.cmake")
+
+  add_test(NAME "addtiffo-subsampling-combinations"
+           COMMAND "${CMAKE_COMMAND}"
+           "-DOUTDIR=${TEST_OUTPUT}"
+           ${tiff_test_extra_args}
+           -P "${CMAKE_CURRENT_SOURCE_DIR}/AddtiffoSubsampledTest.cmake")
 endif()
