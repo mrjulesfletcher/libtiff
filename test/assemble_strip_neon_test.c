@@ -16,8 +16,8 @@ int main(void)
         buf[i] = (uint16_t)i;
 
     size_t strip_size = 0;
-    uint8_t *strip =
-        TIFFAssembleStripNEON(NULL, buf, width, height, 0, 1, &strip_size);
+    uint8_t *strip = TIFFAssembleStripNEON(NULL, buf, width, height, 0, 1,
+                                           &strip_size, NULL, NULL);
     free(buf);
     if (!strip)
         return 1;

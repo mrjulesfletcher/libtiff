@@ -26,7 +26,7 @@ static void bench_task(void *arg)
     {
         size_t out_size = 0;
         uint8_t *dst = TIFFAssembleStripNEON(NULL, t->src, t->width, t->height,
-                                             1, 0, &out_size);
+                                             1, 0, &out_size, NULL, NULL);
         if (!dst)
             continue;
 #ifdef USE_IO_URING

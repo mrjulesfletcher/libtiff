@@ -1,7 +1,8 @@
 #include "tif_bayer.h"
-#include "tiffiop.h"
-#include <string.h>
 #include "tiff_simd.h"
+#include "tiffiop.h"
+#include <stdbool.h>
+#include <string.h>
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
@@ -50,7 +51,8 @@ static void horiz_diff16(uint16_t *row, uint32_t width)
 
 uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
-                               int bigendian, size_t *out_size)
+                               int bigendian, size_t *out_size,
+                               uint16_t *scratch, uint8_t *out_buf)
 {
     static const char module[] = "TIFFAssembleStripNEON";
     uint64_t count64 = _TIFFMultiply64(tif, width, height, module);
@@ -60,29 +62,45 @@ uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
     if (countm == 0 && count64 != 0)
         return NULL;
     size_t count = (size_t)countm;
-    uint16_t *tmp = (uint16_t *)_TIFFmallocExt(tif, count * sizeof(uint16_t));
-    if (!tmp)
+
+    bool free_scratch = false;
+    if (apply_predictor && scratch == NULL)
     {
-        TIFFErrorExtR(tif, module, "Out of memory");
-        return NULL;
+        scratch = (uint16_t *)_TIFFmallocExt(tif, count * sizeof(uint16_t));
+        if (!scratch)
+        {
+            TIFFErrorExtR(tif, module, "Out of memory");
+            return NULL;
+        }
+        free_scratch = true;
     }
-    memcpy(tmp, src, count * sizeof(uint16_t));
     if (apply_predictor)
     {
+        memcpy(scratch, src, count * sizeof(uint16_t));
         for (uint32_t row = 0; row < height; row++)
-            horiz_diff16(tmp + row * width, width);
+            horiz_diff16(scratch + row * width, width);
     }
+
     size_t packed_size = ((count + 1) / 2) * 3;
-    uint8_t *packed = (uint8_t *)_TIFFmallocExt(tif, packed_size);
-    if (!packed)
+    if (out_buf == NULL)
     {
-        _TIFFfreeExt(tif, tmp);
-        TIFFErrorExtR(tif, module, "Out of memory");
-        return NULL;
+        out_buf = (uint8_t *)_TIFFmallocExt(tif, packed_size);
+        if (!out_buf)
+        {
+            if (free_scratch)
+                _TIFFfreeExt(tif, scratch);
+            TIFFErrorExtR(tif, module, "Out of memory");
+            return NULL;
+        }
     }
-    TIFFPackRaw12(tmp, packed, count, bigendian);
-    _TIFFfreeExt(tif, tmp);
+
+    const uint16_t *pack_src = apply_predictor ? scratch : src;
+    TIFFPackRaw12(pack_src, out_buf, count, bigendian);
+
+    if (free_scratch)
+        _TIFFfreeExt(tif, scratch);
+
     if (out_size)
         *out_size = packed_size;
-    return packed;
+    return out_buf;
 }

@@ -25,7 +25,8 @@ int main(void)
     setenv("FAIL_MALLOC_COUNT", "1", 1);
     failalloc_reset_from_env();
     uint16_t buf[2] = {0, 0};
-    uint8_t *strip = TIFFAssembleStripNEON(NULL, buf, 1, 2, 0, 1, NULL);
+    uint8_t *strip =
+        TIFFAssembleStripNEON(NULL, buf, 1, 2, 0, 1, NULL, NULL, NULL);
     int ret = 0;
     if (strip != NULL)
     {
@@ -46,7 +47,7 @@ int main(void)
     failalloc_reset_from_env();
     error_buffer[0] = '\0';
     error_module[0] = '\0';
-    strip = TIFFAssembleStripNEON(NULL, buf, 1, 2, 0, 1, NULL);
+    strip = TIFFAssembleStripNEON(NULL, buf, 1, 2, 0, 1, NULL, NULL, NULL);
     if (strip != NULL)
     {
         fprintf(stderr, "Expected failure on second allocation\n");
@@ -67,15 +68,16 @@ int main(void)
     /* Overflow detection */
     error_buffer[0] = '\0';
     error_module[0] = '\0';
-    strip =
-        TIFFAssembleStripNEON(NULL, buf, 0xFFFFFFFFU, 0xFFFFFFFFU, 0, 1, NULL);
+    strip = TIFFAssembleStripNEON(NULL, buf, 0xFFFFFFFFU, 0xFFFFFFFFU, 0, 1,
+                                  NULL, NULL, NULL);
     if (strip != NULL)
     {
         fprintf(stderr, "Expected overflow failure\n");
         free(strip);
         ret = 1;
     }
-    if (strcmp(error_buffer, "Integer overflow in TIFFAssembleStripNEON") != 0 ||
+    if (strcmp(error_buffer, "Integer overflow in TIFFAssembleStripNEON") !=
+            0 ||
         strcmp(error_module, "TIFFAssembleStripNEON") != 0)
     {
         fprintf(stderr, "Unexpected error: %s (%s)\n", error_module,

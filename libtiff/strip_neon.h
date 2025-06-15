@@ -13,7 +13,8 @@ extern "C"
     uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src,
                                    uint32_t width, uint32_t height,
                                    int apply_predictor, int bigendian,
-                                   size_t *out_size);
+                                   size_t *out_size, uint16_t *scratch,
+                                   uint8_t *out_buf);
 
 #ifdef __cplusplus
 }

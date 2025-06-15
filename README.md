@@ -167,7 +167,8 @@ Float32 predictor decoding on x86‑64 interleaves four vectors at once and now 
 ```c
 uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
-                               int bigendian, size_t *out_size);
+                               int bigendian, size_t *out_size,
+                               uint16_t *scratch, uint8_t *out_buf);
 ```
 【F:libtiff/strip_neon.h†L1-L19】
 The implementation computes differences and packs data efficiently【F:libtiff/tif_strip_neon.c†L1-L63】.
@@ -233,9 +234,10 @@ The full program is [`test/assemble_strip_neon_test.c`](test/assemble_strip_neon
 uint32_t width = 64, height = 32;
 uint16_t *buf = malloc(width * height * sizeof(uint16_t));
 /* fill buf */
-size_t strip_size = 0;
-uint8_t *strip =
-    TIFFAssembleStripNEON(NULL, buf, width, height, 1, 1, &strip_size);
+size_t strip_size = ((width * height + 1) / 2) * 3;
+uint16_t *tmp = malloc(width * height * sizeof(uint16_t));
+uint8_t *strip = malloc(strip_size);
+TIFFAssembleStripNEON(NULL, buf, width, height, 1, 1, &strip_size, tmp, strip);
 
 TIFF *tif = TIFFOpen("out.dng", "w");
 TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
@@ -246,6 +248,7 @@ TIFFSetField(tif, TIFFTAG_ROWSPERSTRIP, height);
 TIFFWriteRawStrip(tif, 0, strip, strip_size);
 TIFFClose(tif);
 free(strip);
+free(tmp);
 free(buf);
 ```
 
@@ -255,12 +258,17 @@ strips call `_tiffUringWait` to flush outstanding writes:
 
 ```c
 _tiffUringSetAsync(tif, 1);
+size_t buf_sz = ((w * rows + 1) / 2) * 3;
+uint16_t *tmp = malloc(w * rows * sizeof(uint16_t));
+uint8_t *s = malloc(buf_sz);
 for (...) {
-    uint8_t *s = TIFFAssembleStripNEON(tif, src, w, rows, 1, 1, &sz);
+    TIFFAssembleStripNEON(tif, src, w, rows, 1, 1, &sz, tmp, s);
     _tiffUringWriteProc((thandle_t)TIFFFileno(tif), s, (tmsize_t)sz);
 }
 _TIFFThreadPoolWait(pool);
 _tiffUringWait(tif);
+free(s);
+free(tmp);
 ```
 
 Packing helpers for raw Bayer buffers:
