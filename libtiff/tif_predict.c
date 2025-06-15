@@ -355,6 +355,39 @@ static int PredictorSetupEncode(TIFF *tif)
     if (!(*sp->setupencode)(tif) || !PredictorSetup(tif))
         return 0;
 
+    /* (Re)allocate working buffer sized to current scanline */
+    if (tif->tif_scanlinesize > 0)
+    {
+        if (sp->work_buffer == NULL)
+        {
+            sp->work_buffer =
+                (uint8_t *)_TIFFmallocExt(tif, tif->tif_scanlinesize);
+            if (sp->work_buffer == NULL)
+            {
+                TIFFErrorExtR(tif, "PredictorSetupEncode",
+                              "Out of memory allocating %" PRId64
+                              " byte buffer",
+                              (int64_t)tif->tif_scanlinesize);
+                return 0;
+            }
+            sp->work_buffer_size = tif->tif_scanlinesize;
+        }
+        else if (sp->work_buffer_size != tif->tif_scanlinesize)
+        {
+            uint8_t *newbuf = (uint8_t *)_TIFFreallocExt(tif, sp->work_buffer,
+                                                         tif->tif_scanlinesize);
+            if (newbuf == NULL)
+            {
+                TIFFErrorExtR(tif, "PredictorSetupEncode",
+                              "Out of memory reallocating %" PRId64 " bytes",
+                              (int64_t)tif->tif_scanlinesize);
+                return 0;
+            }
+            sp->work_buffer = newbuf;
+            sp->work_buffer_size = tif->tif_scanlinesize;
+        }
+    }
+
     if (sp->predictor == 2)
     {
         switch (td->td_bitspersample)
@@ -1516,35 +1549,32 @@ static int PredictorEncodeRow(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 {
     static const char module[] = "PredictorEncodeRow";
     TIFFPredictorState *sp = PredictorState(tif);
-    uint8_t *working_copy;
     int result_code;
 
     assert(sp != NULL);
     assert(sp->encodepfunc != NULL);
     assert(sp->encoderow != NULL);
 
-    /*
-     * Do predictor manipulation in a working buffer to avoid altering
-     * the callers buffer, like for PredictorEncodeTile().
-     * https://gitlab.com/libtiff/libtiff/-/issues/5
-     */
-    working_copy = (uint8_t *)_TIFFmallocExt(tif, cc);
-    if (working_copy == NULL)
+    if (sp->work_buffer == NULL || sp->work_buffer_size < cc)
     {
-        TIFFErrorExtR(tif, module,
-                      "Out of memory allocating %" PRId64 " byte temp buffer.",
-                      (int64_t)cc);
-        return 0;
+        uint8_t *newbuf = (uint8_t *)_TIFFreallocExt(tif, sp->work_buffer, cc);
+        if (newbuf == NULL)
+        {
+            TIFFErrorExtR(tif, module,
+                          "Out of memory allocating %" PRId64 " bytes",
+                          (int64_t)cc);
+            return 0;
+        }
+        sp->work_buffer = newbuf;
+        sp->work_buffer_size = cc;
     }
-    memcpy(working_copy, bp, cc);
+    memcpy(sp->work_buffer, bp, cc);
 
-    if (!(*sp->encodepfunc)(tif, working_copy, cc))
+    if (!(*sp->encodepfunc)(tif, sp->work_buffer, cc))
     {
-        _TIFFfreeExt(tif, working_copy);
         return 0;
     }
-    result_code = (*sp->encoderow)(tif, working_copy, cc, s);
-    _TIFFfreeExt(tif, working_copy);
+    result_code = (*sp->encoderow)(tif, sp->work_buffer, cc, s);
     return result_code;
 }
 
@@ -1553,7 +1583,6 @@ static int PredictorEncodeTile(TIFF *tif, uint8_t *bp0, tmsize_t cc0,
 {
     static const char module[] = "PredictorEncodeTile";
     TIFFPredictorState *sp = PredictorState(tif);
-    uint8_t *working_copy;
     tmsize_t cc = cc0, rowsize;
     unsigned char *bp;
     int result_code;
@@ -1566,23 +1595,27 @@ static int PredictorEncodeTile(TIFF *tif, uint8_t *bp0, tmsize_t cc0,
      * Do predictor manipulation in a working buffer to avoid altering
      * the callers buffer. http://trac.osgeo.org/gdal/ticket/1965
      */
-    working_copy = (uint8_t *)_TIFFmallocExt(tif, cc0);
-    if (working_copy == NULL)
+    if (sp->work_buffer == NULL || sp->work_buffer_size < cc0)
     {
-        TIFFErrorExtR(tif, module,
-                      "Out of memory allocating %" PRId64 " byte temp buffer.",
-                      (int64_t)cc0);
-        return 0;
+        uint8_t *newbuf = (uint8_t *)_TIFFreallocExt(tif, sp->work_buffer, cc0);
+        if (newbuf == NULL)
+        {
+            TIFFErrorExtR(tif, module,
+                          "Out of memory allocating %" PRId64 " bytes",
+                          (int64_t)cc0);
+            return 0;
+        }
+        sp->work_buffer = newbuf;
+        sp->work_buffer_size = cc0;
     }
-    memcpy(working_copy, bp0, cc0);
-    bp = working_copy;
+    memcpy(sp->work_buffer, bp0, cc0);
+    bp = sp->work_buffer;
 
     rowsize = sp->rowsize;
     assert(rowsize > 0);
     if ((cc0 % rowsize) != 0)
     {
         TIFFErrorExtR(tif, "PredictorEncodeTile", "%s", "(cc0%rowsize)!=0");
-        _TIFFfreeExt(tif, working_copy);
         return 0;
     }
     while (cc > 0)
@@ -1591,9 +1624,7 @@ static int PredictorEncodeTile(TIFF *tif, uint8_t *bp0, tmsize_t cc0,
         cc -= rowsize;
         bp += rowsize;
     }
-    result_code = (*sp->encodetile)(tif, working_copy, cc0, s);
-
-    _TIFFfreeExt(tif, working_copy);
+    result_code = (*sp->encodetile)(tif, sp->work_buffer, cc0, s);
 
     return result_code;
 }
@@ -1706,6 +1737,8 @@ int TIFFPredictorInit(TIFF *tif)
     sp->predictor = 1;      /* default value */
     sp->encodepfunc = NULL; /* no predictor routine */
     sp->decodepfunc = NULL; /* no predictor routine */
+    sp->work_buffer = NULL;
+    sp->work_buffer_size = 0;
     return 1;
 }
 
@@ -1720,6 +1753,13 @@ int TIFFPredictorCleanup(TIFF *tif)
     tif->tif_tagmethods.printdir = sp->printdir;
     tif->tif_setupdecode = sp->setupdecode;
     tif->tif_setupencode = sp->setupencode;
+
+    if (sp->work_buffer)
+    {
+        _TIFFfreeExt(tif, sp->work_buffer);
+        sp->work_buffer = NULL;
+        sp->work_buffer_size = 0;
+    }
 
     return 1;
 }
