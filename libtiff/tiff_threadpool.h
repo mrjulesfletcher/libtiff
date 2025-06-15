@@ -5,6 +5,17 @@
 
 typedef struct TIFFThreadPool TIFFThreadPool;
 
+typedef struct
+{
+    TIFF *tif;
+    uint8_t *buf;
+    tmsize_t size;
+    uint16_t s;
+    int result;
+} TPTileTask;
+
+void TPDecodePredictTile(void *arg);
+
 #ifdef __cplusplus
 extern "C" {
 #endif

@@ -31,6 +31,18 @@ typedef struct TIFFThreadPool
     pthread_cond_t cond;
 } TIFFThreadPool;
 
+void TPDecodePredictTile(void *arg)
+{
+    TPTileTask *t = (TPTileTask *)arg;
+    if ((*t->tif->tif_decodetile)(t->tif, t->buf, t->size, t->s))
+    {
+        (*t->tif->tif_postdecode)(t->tif, t->buf, t->size);
+        t->result = 1;
+    }
+    else
+        t->result = 0;
+}
+
 static void *_tiffThreadProc(void *arg)
 {
     TIFFThreadPool *pool = (TIFFThreadPool *)arg;
