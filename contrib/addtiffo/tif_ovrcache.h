@@ -83,7 +83,7 @@ extern "C"
     } OVRResampleMethod;
 
     void TIFFBuildOverviews(TIFF *, int, int *, int, OVRResampleMethod,
-                            int (*)(double, void *), void *);
+                            int (*)(double, void *), void *, int);
 
     void TIFF_ProcessFullResBlock(TIFF *, int, int, int, int, int, int *, int,
                                   int, TIFFOvrCache **, uint32_t, uint32_t,
@@ -93,7 +93,7 @@ extern "C"
     uint32_t TIFF_WriteOverview(TIFF *, uint32_t, uint32_t, int, int, int, int,
                                 int, int, int, int, int, unsigned short *,
                                 unsigned short *, unsigned short *, int, int,
-                                int);
+                                int, int);
 
 #if defined(__cplusplus)
 }
