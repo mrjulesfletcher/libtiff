@@ -50,6 +50,19 @@ static inline void memcpy_neon(uint8_t *dst, const uint8_t *src, size_t n)
     if (i < n)
         memcpy(dst + i, src + i, n - i);
 }
+
+static inline void memset_neon(uint8_t *dst, uint8_t value, size_t n)
+{
+    size_t i = 0;
+    if (n >= 16)
+    {
+        uint8x16_t v = vdupq_n_u8(value);
+        for (; i + 16 <= n; i += 16)
+            vst1q_u8(dst + i, v);
+    }
+    if (i < n)
+        memset(dst + i, value, n - i);
+}
 #endif
 #if defined(HAVE_SSE41)
 static inline void memcpy_sse41(uint8_t *dst, const uint8_t *src, size_t n)
@@ -315,21 +328,13 @@ static int PackBitsDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
             if (n >= 16)
             {
-                uint8x16_t v = vdupq_n_u8((uint8_t)b);
-                long i = 0;
-                for (; i + 16 <= n; i += 16)
-                {
-                    vst1q_u8(op + i, v);
-                }
-                if (i < n)
-                    memset(op + i, b, (size_t)(n - i));
-                op += n;
+                memset_neon(op, (uint8_t)b, (size_t)n);
             }
             else
             {
                 memset(op, b, (size_t)n);
-                op += n;
             }
+            op += n;
 #elif defined(HAVE_SSE41)
             if (n >= 16)
             {
@@ -374,14 +379,7 @@ static int PackBitsDecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
             if (n >= 16)
             {
-                size_t i = 0;
-                for (; i + 16 <= (size_t)n; i += 16)
-                {
-                    __builtin_prefetch((const uint8_t *)bp + i + 64);
-                    vst1q_u8(op + i, vld1q_u8((const uint8_t *)bp + i));
-                }
-                if (i < (size_t)n)
-                    memcpy(op + i, (const uint8_t *)bp + i, (size_t)n - i);
+                memcpy_neon(op, (const uint8_t *)bp, (size_t)n);
             }
             else
             {
