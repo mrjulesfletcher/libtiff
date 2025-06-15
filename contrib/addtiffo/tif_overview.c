@@ -314,9 +314,11 @@ static void TIFF_DownSample(unsigned char *pabySrcTile, uint32_t nBlockXSize,
     }
     if (padfSamples_size == 0)
     {
-        /* TODO: This is an error condition */
+        TIFFError("TIFF_DownSample",
+                  "Invalid padfSamples_size -- integer overflow detected");
         return;
     }
+
     padfSamples = (double *)malloc(padfSamples_size);
 
     /* ==================================================================== */
