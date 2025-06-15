@@ -1672,6 +1672,103 @@ static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *cp, uint32_t x,
         pp += fromskew;
     }
 }
+
+static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *cp,
+                                          uint32_t x, uint32_t y, uint32_t w,
+                                          uint32_t h, int32_t fromskew,
+                                          int32_t toskew, unsigned char *pp)
+{
+    (void)x;
+    (void)y;
+    fromskew = (fromskew / 1) * (1 * 1 + 2);
+    const int16x8_t c128 = vdupq_n_s16(128);
+    const uint8x16_t maxv = vdupq_n_u8(255);
+    for (; h > 0; --h)
+    {
+        uint32_t ww = w;
+        while (ww >= 16)
+        {
+            uint8x16x3_t src = vld3q_u8(pp);
+            uint8x16_t yv = src.val[0];
+            uint8x16_t cbv = src.val[1];
+            uint8x16_t crv = src.val[2];
+
+            int16x8_t y0 = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(yv)));
+            int16x8_t y1 = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(yv)));
+            int16x8_t cb0 = vsubq_s16(
+                vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(cbv))), c128);
+            int16x8_t cb1 = vsubq_s16(
+                vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(cbv))), c128);
+            int16x8_t cr0 = vsubq_s16(
+                vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(crv))), c128);
+            int16x8_t cr1 = vsubq_s16(
+                vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(crv))), c128);
+
+            int32x4_t r0 = vmlal_s16(vshll_n_s16(vget_low_s16(y0), 8),
+                                     vget_low_s16(cr0), 359);
+            int32x4_t r1 = vmlal_s16(vshll_n_s16(vget_high_s16(y0), 8),
+                                     vget_high_s16(cr0), 359);
+            int32x4_t r2 = vmlal_s16(vshll_n_s16(vget_low_s16(y1), 8),
+                                     vget_low_s16(cr1), 359);
+            int32x4_t r3 = vmlal_s16(vshll_n_s16(vget_high_s16(y1), 8),
+                                     vget_high_s16(cr1), 359);
+            int32x4_t g0 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_low_s16(y0), 8),
+                                             vget_low_s16(cb0), 88),
+                                     vget_low_s16(cr0), 183);
+            int32x4_t g1 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y0), 8),
+                                             vget_high_s16(cb0), 88),
+                                     vget_high_s16(cr0), 183);
+            int32x4_t g2 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_low_s16(y1), 8),
+                                             vget_low_s16(cb1), 88),
+                                     vget_low_s16(cr1), 183);
+            int32x4_t g3 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y1), 8),
+                                             vget_high_s16(cb1), 88),
+                                     vget_high_s16(cr1), 183);
+            int32x4_t b0 = vmlal_s16(vshll_n_s16(vget_low_s16(y0), 8),
+                                     vget_low_s16(cb0), 454);
+            int32x4_t b1 = vmlal_s16(vshll_n_s16(vget_high_s16(y0), 8),
+                                     vget_high_s16(cb0), 454);
+            int32x4_t b2 = vmlal_s16(vshll_n_s16(vget_low_s16(y1), 8),
+                                     vget_low_s16(cb1), 454);
+            int32x4_t b3 = vmlal_s16(vshll_n_s16(vget_high_s16(y1), 8),
+                                     vget_high_s16(cb1), 454);
+
+            uint8x16_t rv = vcombine_u8(
+                vqmovun_s16(vcombine_s16(vqshrn_n_s32(r0, 8),
+                                         vqshrn_n_s32(r1, 8))),
+                vqmovun_s16(vcombine_s16(vqshrn_n_s32(r2, 8),
+                                         vqshrn_n_s32(r3, 8))));
+            uint8x16_t gv = vcombine_u8(
+                vqmovun_s16(vcombine_s16(vqshrn_n_s32(g0, 8),
+                                         vqshrn_n_s32(g1, 8))),
+                vqmovun_s16(vcombine_s16(vqshrn_n_s32(g2, 8),
+                                         vqshrn_n_s32(g3, 8))));
+            uint8x16_t bv = vcombine_u8(
+                vqmovun_s16(vcombine_s16(vqshrn_n_s32(b0, 8),
+                                         vqshrn_n_s32(b1, 8))),
+                vqmovun_s16(vcombine_s16(vqshrn_n_s32(b2, 8),
+                                         vqshrn_n_s32(b3, 8))));
+
+            uint8x16x4_t outv;
+            outv.val[0] = rv;
+            outv.val[1] = gv;
+            outv.val[2] = bv;
+            outv.val[3] = maxv;
+            vst4q_u8((uint8_t *)cp, outv);
+
+            pp += 48;
+            cp += 16;
+            ww -= 16;
+        }
+        for (; ww > 0; --ww)
+        {
+            YCbCrtoRGB(*cp++, pp[0]);
+            pp += 3;
+        }
+        cp += toskew;
+        pp += fromskew;
+    }
+}
 #endif
 
 /*
@@ -3163,7 +3260,11 @@ static int PickContigCase(TIFFRGBAImage *img)
                             img->put.contig = putcontig8bitYCbCr12tile;
                             break;
                         case 0x11:
+#if TIFF_SIMD_NEON
+                            img->put.contig = putcontig8bitYCbCr11tile_neon;
+#else
                             img->put.contig = putcontig8bitYCbCr11tile;
+#endif
                             break;
                     }
                 }
