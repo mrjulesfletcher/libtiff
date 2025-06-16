@@ -271,6 +271,9 @@ free(s);
 free(tmp);
 ```
 
+See [doc/async_dng.rst](doc/async_dng.rst) for a detailed overview of
+asynchronous DNG creation and tuning options.
+
 Packing helpers for raw Bayer buffers:
 ```c
 TIFFPackRaw12(src16, packed, count, 0);
