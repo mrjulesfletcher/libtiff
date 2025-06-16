@@ -1,4 +1,4 @@
-#include "strip_neon.h"
+#include "strip_simd.h"
 #include "tiffio.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,7 +24,7 @@ int main(void)
         src[i] = (uint16_t)(i & 0x0FFF);
 
     size_t strip_size = 0;
-    uint8_t *packed = TIFFAssembleStripNEON(NULL, src, width, height, 1, 0,
+    uint8_t *packed = TIFFAssembleStripSIMD(NULL, src, width, height, 1, 0,
                                             &strip_size, NULL, NULL);
 
     struct timespec s, e;

@@ -19,7 +19,7 @@ the next strip is prepared::
 
     _tiffUringSetAsync(tif, 1);
     for (...) {
-        TIFFAssembleStripNEON(tif, src, w, rows, 1, 1, &sz, tmp, buf);
+        TIFFAssembleStripSIMD(tif, src, w, rows, 1, 1, &sz, tmp, buf);
         _tiffUringWriteProc((thandle_t)TIFFFileno(tif), buf, (tmsize_t)sz);
     }
     _TIFFThreadPoolWait(pool);

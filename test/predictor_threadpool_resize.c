@@ -1,4 +1,4 @@
-#include "strip_neon.h"
+#include "strip_simd.h"
 #include "tiff_threadpool.h"
 #include "tiffiop.h"
 #include <stdio.h>
@@ -20,7 +20,7 @@ static void bench_task(void *arg)
     for (size_t i = 0; i < t->loops; i++)
     {
         size_t out_size = 0;
-        uint8_t *dst = TIFFAssembleStripNEON(NULL, t->src, t->width, t->height,
+        uint8_t *dst = TIFFAssembleStripSIMD(NULL, t->src, t->width, t->height,
                                              1, 0, &out_size, NULL, NULL);
         free(dst);
     }

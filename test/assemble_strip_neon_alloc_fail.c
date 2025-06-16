@@ -1,5 +1,5 @@
 #include "failalloc.h"
-#include "strip_neon.h"
+#include "strip_simd.h"
 #include "tiffio.h"
 #include <stdarg.h>
 #include <stdio.h>
@@ -20,13 +20,15 @@ static void myErrorHandler(thandle_t fd, const char *module, const char *fmt,
 int main(void)
 {
     TIFFErrorHandlerExt prev = TIFFSetErrorHandlerExt(myErrorHandler);
+    const char *mod =
+        TIFFUseSSE41() ? "TIFFAssembleStripSSE41" : "TIFFAssembleStripNEON";
 
     /* Failure of first allocation */
     setenv("FAIL_MALLOC_COUNT", "1", 1);
     failalloc_reset_from_env();
     uint16_t buf[2] = {0, 0};
     uint8_t *strip =
-        TIFFAssembleStripNEON(NULL, buf, 1, 2, 0, 1, NULL, NULL, NULL);
+        TIFFAssembleStripSIMD(NULL, buf, 1, 2, 0, 1, NULL, NULL, NULL);
     int ret = 0;
     if (strip != NULL)
     {
@@ -35,7 +37,7 @@ int main(void)
         ret = 1;
     }
     if (strcmp(error_buffer, "Out of memory") != 0 ||
-        strcmp(error_module, "TIFFAssembleStripNEON") != 0)
+        strcmp(error_module, mod) != 0)
     {
         fprintf(stderr, "Unexpected error: %s (%s)\n", error_module,
                 error_buffer);
@@ -47,7 +49,7 @@ int main(void)
     failalloc_reset_from_env();
     error_buffer[0] = '\0';
     error_module[0] = '\0';
-    strip = TIFFAssembleStripNEON(NULL, buf, 1, 2, 0, 1, NULL, NULL, NULL);
+    strip = TIFFAssembleStripSIMD(NULL, buf, 1, 2, 0, 1, NULL, NULL, NULL);
     if (strip != NULL)
     {
         fprintf(stderr, "Expected failure on second allocation\n");
@@ -55,7 +57,7 @@ int main(void)
         ret = 1;
     }
     if (strcmp(error_buffer, "Out of memory") != 0 ||
-        strcmp(error_module, "TIFFAssembleStripNEON") != 0)
+        strcmp(error_module, mod) != 0)
     {
         fprintf(stderr, "Unexpected error: %s (%s)\n", error_module,
                 error_buffer);
@@ -68,7 +70,7 @@ int main(void)
     /* Overflow detection */
     error_buffer[0] = '\0';
     error_module[0] = '\0';
-    strip = TIFFAssembleStripNEON(NULL, buf, 0xFFFFFFFFU, 0xFFFFFFFFU, 0, 1,
+    strip = TIFFAssembleStripSIMD(NULL, buf, 0xFFFFFFFFU, 0xFFFFFFFFU, 0, 1,
                                   NULL, NULL, NULL);
     if (strip != NULL)
     {
@@ -76,9 +78,9 @@ int main(void)
         free(strip);
         ret = 1;
     }
-    if (strcmp(error_buffer, "Integer overflow in TIFFAssembleStripNEON") !=
-            0 ||
-        strcmp(error_module, "TIFFAssembleStripNEON") != 0)
+    char expected[64];
+    snprintf(expected, sizeof(expected), "Integer overflow in %s", mod);
+    if (strcmp(error_buffer, expected) != 0 || strcmp(error_module, mod) != 0)
     {
         fprintf(stderr, "Unexpected error: %s (%s)\n", error_module,
                 error_buffer);
