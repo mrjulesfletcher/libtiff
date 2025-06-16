@@ -181,4 +181,7 @@
 /* Define to 1 if SSE4.1 intrinsics are available */
 #cmakedefine HAVE_SSE41 1
 
+/* Define to 1 if SSE4.2 intrinsics are available */
+#cmakedefine HAVE_SSE42 1
+
 /* clang-format on */

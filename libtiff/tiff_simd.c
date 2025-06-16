@@ -24,6 +24,7 @@ tiff_simd_funcs tiff_simd;
 int tiff_use_neon = 0;
 int tiff_use_sse41 = 0;
 int tiff_use_sse2 = 0;
+int tiff_use_sse42 = 0;
 #include <zlib.h>
 
 /* Scalar implementations */
@@ -199,6 +200,17 @@ static int detect_sse2(void)
     return 0;
 }
 
+static int detect_sse42(void)
+{
+#if defined(HAVE_SSE42) && (defined(__x86_64__) || defined(__i386__) || \
+                            defined(_M_X64) || defined(_M_IX86))
+    unsigned int eax, ebx, ecx, edx;
+    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx))
+        return (ecx & bit_SSE4_2) != 0;
+#endif
+    return 0;
+}
+
 void TIFFInitSIMD(void)
 {
     tiff_simd.loadu_u8 = loadu_u8_scalar;
@@ -233,6 +245,12 @@ void TIFFInitSIMD(void)
         tiff_use_sse2 = 1;
     }
 #endif
+#if defined(HAVE_SSE42)
+    if (detect_sse42())
+    {
+        tiff_use_sse42 = 1;
+    }
+#endif
 }
 
 int TIFFUseNEON(void) { return tiff_use_neon; }
@@ -241,11 +259,15 @@ int TIFFUseSSE41(void) { return tiff_use_sse41; }
 
 int TIFFUseSSE2(void) { return tiff_use_sse2; }
 
+int TIFFUseSSE42(void) { return tiff_use_sse42; }
+
 void TIFFSetUseNEON(int enable) { tiff_use_neon = enable; }
 
 void TIFFSetUseSSE41(int enable) { tiff_use_sse41 = enable; }
 
 void TIFFSetUseSSE2(int enable) { tiff_use_sse2 = enable; }
+
+void TIFFSetUseSSE42(int enable) { tiff_use_sse42 = enable; }
 
 #if defined(HAVE_ARM_CRC32) && defined(__ARM_FEATURE_CRC32)
 static uint32_t crc32_neon(uint32_t crc, const uint8_t *p, size_t len)
@@ -280,11 +302,48 @@ static uint32_t crc32_neon(uint32_t crc, const uint8_t *p, size_t len)
 }
 #endif
 
+#if defined(HAVE_SSE42)
+static uint32_t crc32_sse42(uint32_t crc, const uint8_t *p, size_t len)
+{
+    while (len >= 8)
+    {
+        uint64_t v;
+        memcpy(&v, p, 8);
+        crc = (uint32_t)_mm_crc32_u64(crc, v);
+        p += 8;
+        len -= 8;
+    }
+    if (len >= 4)
+    {
+        uint32_t v;
+        memcpy(&v, p, 4);
+        crc = _mm_crc32_u32(crc, v);
+        p += 4;
+        len -= 4;
+    }
+    if (len >= 2)
+    {
+        uint16_t v;
+        memcpy(&v, p, 2);
+        crc = _mm_crc32_u16(crc, v);
+        p += 2;
+        len -= 2;
+    }
+    if (len)
+        crc = _mm_crc32_u8(crc, *p);
+    return crc;
+}
+#endif
+
 uint32_t tiff_crc32(uint32_t crc, const uint8_t *buf, size_t len)
 {
 #if defined(HAVE_ARM_CRC32) && defined(__ARM_FEATURE_CRC32)
     if (tiff_use_neon)
         return crc32_neon(crc, buf, len);
+#endif
+#if defined(HAVE_SSE42)
+    if (tiff_use_sse42)
+        return crc32_sse42(crc, buf, len);
 #endif
     return (uint32_t)crc32(crc, buf, (uInt)len);
 }

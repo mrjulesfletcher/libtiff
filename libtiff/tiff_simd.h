@@ -13,6 +13,9 @@
 #if defined(HAVE_SSE41)
 #include <smmintrin.h>
 #endif
+#if defined(HAVE_SSE42)
+#include <nmmintrin.h>
+#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -29,12 +32,17 @@ extern "C"
 #else
 #define TIFF_SIMD_SSE41 0
 #endif
+#if defined(HAVE_SSE42)
+#define TIFF_SIMD_SSE42 1
+#else
+#define TIFF_SIMD_SSE42 0
+#endif
 #if defined(HAVE_SSE2)
 #define TIFF_SIMD_SSE2 1
 #else
 #define TIFF_SIMD_SSE2 0
 #endif
-#if TIFF_SIMD_NEON || TIFF_SIMD_SSE41 || TIFF_SIMD_SSE2
+#if TIFF_SIMD_NEON || TIFF_SIMD_SSE41 || TIFF_SIMD_SSE42 || TIFF_SIMD_SSE2
 #define TIFF_SIMD_ENABLED 1
 #else
 #define TIFF_SIMD_ENABLED 0
@@ -63,12 +71,15 @@ extern "C"
     extern int tiff_use_neon;
     extern int tiff_use_sse41;
     extern int tiff_use_sse2;
+    extern int tiff_use_sse42;
     int TIFFUseNEON(void);
     int TIFFUseSSE41(void);
     int TIFFUseSSE2(void);
+    int TIFFUseSSE42(void);
     void TIFFSetUseNEON(int);
     void TIFFSetUseSSE41(int);
     void TIFFSetUseSSE2(int);
+    void TIFFSetUseSSE42(int);
 
     static inline tiff_v16u8 tiff_loadu_u8(const uint8_t *p)
     {
@@ -134,6 +145,56 @@ extern "C"
                     src--;
                     *dst = *src;
                 }
+        }
+        return;
+    }
+#endif
+#if defined(HAVE_SSE41)
+        if (tiff_use_sse41)
+        {
+            if (dst == src || n == 0)
+                return;
+            if (dst < src)
+            {
+                while (((uintptr_t)dst & 15) && n)
+                {
+                    *dst++ = *src++;
+                    n--;
+                }
+                for (; n >= 16; n -= 16, dst += 16, src += 16)
+                {
+                    __m128i v = _mm_loadu_si128((const __m128i *)src);
+                    __builtin_prefetch(src + 64);
+                    _mm_storeu_si128((__m128i *)dst, v);
+                }
+                while (n--)
+                    *dst++ = *src++;
+            }
+            else
+            {
+                dst += n;
+                src += n;
+                while (((uintptr_t)dst & 15) && n)
+                {
+                    dst--;
+                    src--;
+                    *dst = *src;
+                    n--;
+                }
+                for (; n >= 16; n -= 16)
+                {
+                    dst -= 16;
+                    src -= 16;
+                    __m128i v = _mm_loadu_si128((const __m128i *)src);
+                    __builtin_prefetch(src - 64);
+                    _mm_storeu_si128((__m128i *)dst, v);
+                }
+                while (n--)
+                {
+                    dst--;
+                    src--;
+                    *dst = *src;
+                }
             }
             return;
         }
@@ -161,6 +222,24 @@ extern "C"
             return;
         }
 #endif
+#if defined(HAVE_SSE41)
+        if (tiff_use_sse41)
+        {
+            while (((uintptr_t)dst & 15) && n)
+            {
+                *dst++ = *src++;
+                n--;
+            }
+            for (; n >= 16; n -= 16, dst += 16, src += 16)
+            {
+                __m128i v = _mm_loadu_si128((const __m128i *)src);
+                _mm_storeu_si128((__m128i *)dst, v);
+            }
+            while (n--)
+                *dst++ = *src++;
+            return;
+        }
+#endif
         memcpy(dst, src, n);
     }
 
@@ -180,6 +259,27 @@ extern "C"
                 for (; n >= 16; n -= 16, dst += 16)
                 {
                     vst1q_u8(dst, v);
+                }
+            }
+            while (n--)
+                *dst++ = value;
+            return;
+        }
+#endif
+#if defined(HAVE_SSE41)
+        if (tiff_use_sse41)
+        {
+            if (n >= 16)
+            {
+                __m128i v = _mm_set1_epi8((char)value);
+                while (((uintptr_t)dst & 15) && n)
+                {
+                    *dst++ = value;
+                    n--;
+                }
+                for (; n >= 16; n -= 16, dst += 16)
+                {
+                    _mm_storeu_si128((__m128i *)dst, v);
                 }
             }
             while (n--)
