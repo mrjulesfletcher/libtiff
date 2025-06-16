@@ -88,6 +88,8 @@ $ ./configure --host=x86_64-linux-gnu CFLAGS="-msse4.1" --enable-shared
 
 ### NEON 12‑bit Bayer Packing
 The functions `TIFFPackRaw12()` and `TIFFUnpackRaw12()` leverage NEON to process 16 pixels per iteration and fall back to scalar code when NEON is unavailable.  On an RK3588 (ARMv8) system the NEON path provides about **6×** packing and **5×** unpacking speedups【F:doc/bayer12neon.rst†L1-L12】.
+The companion routines `TIFFPackRaw16()` and `TIFFUnpackRaw16()` operate on
+16-bit samples with a similar automatic fallback【F:doc/bayer16neon.rst†L1-L8】.
 
 ### NEON Byte Swapping
 Byte-swapping routines accelerate endian conversion with vector instructions:
