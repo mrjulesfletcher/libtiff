@@ -90,9 +90,8 @@ Return values
 
 1 is returned if the image was successfully read and converted.
 Otherwise, 0 is returned if an error was encountered and
-*stopOnError* is zero.
-
-.. TODO: Specify, what the return value is if an error occurs and stopOnError was non-zero.
+*stopOnError* is zero.  If *stopOnError* is non-zero and an error is
+encountered, the operation is aborted and 0 is returned.
 
 Diagnostics
 -----------
