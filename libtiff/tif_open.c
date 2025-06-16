@@ -359,7 +359,18 @@ TIFF *TIFFClientOpenExt(const char *name, const char *mode,
     m = _TIFFgetMode(opts, clientdata, mode, module);
     if (m == -1)
         goto bad2;
-    tmsize_t size_to_alloc = (tmsize_t)(sizeof(TIFF) + strlen(name) + 1);
+    uint64_t size_to_alloc64 =
+        (uint64_t)sizeof(TIFF) + (uint64_t)strlen(name) + 1;
+    tmsize_t size_to_alloc =
+        _TIFFCastUInt64ToSSize(NULL, size_to_alloc64, module);
+    if (size_to_alloc == 0 && size_to_alloc64 != 0)
+    {
+        _TIFFErrorEarly(opts, clientdata, module,
+                        "%s: Memory allocation of %" PRIu64
+                        " bytes exceeds TIFF_TMSIZE_T_MAX",
+                        name, size_to_alloc64);
+        goto bad2;
+    }
     if (opts && opts->max_single_mem_alloc > 0 &&
         size_to_alloc > opts->max_single_mem_alloc)
     {
