@@ -635,8 +635,177 @@ int write_test_tiff(TIFF *tif, const char *filenameRead)
         tFieldArray = _TIFFGetGpsFields();
         nTags = tFieldArray->count;
 
-        /*-- TODO: fill in the for / switch part of EXIF writing, when finished
-         * and tested!! */
+        for (i = 0; i < nTags; i++)
+        {
+            bool deferredSetField = false;
+            tTag = tFieldArray->fields[i].field_tag;
+            tType = tFieldArray->fields[i].field_type;
+            tWriteCount = tFieldArray->fields[i].field_writecount;
+            tSetFieldType = tFieldArray->fields[i].set_get_field_type;
+            tFieldName = tFieldArray->fields[i].field_name;
+            pVoid = NULL;
+
+            switch (tSetFieldType)
+            {
+                case TIFF_SETGET_ASCII:
+                    if (tWriteCount > 0)
+                        auxInt32 = tWriteCount - 1;
+                    else
+                        auxInt32 = (int32_t)strlen(auxTextArrayW[i]) - 1;
+                    strncpy(auxCharArray, auxTextArrayW[i], auxInt32);
+                    auxCharArray[auxInt32] = 0;
+                    if (!TIFFSetField(tif, tTag, auxCharArray))
+                    {
+                        fprintf(stderr, "Can't write %s\n",
+                                tFieldArray->fields[i].field_name);
+                        goto failure;
+                    }
+                    break;
+                case TIFF_SETGET_UINT8:
+                case TIFF_SETGET_UINT16:
+                case TIFF_SETGET_UINT32:
+                case TIFF_SETGET_IFD8:
+                case TIFF_SETGET_INT:
+                    if (!TIFFSetField(tif, tTag, auxInt32ArrayW[i]))
+                    {
+                        fprintf(stderr, "Can't write %s\n",
+                                tFieldArray->fields[i].field_name);
+                        goto failure;
+                    }
+                    break;
+                case TIFF_SETGET_SINT8:
+                case TIFF_SETGET_SINT16:
+                case TIFF_SETGET_SINT32:
+                    if (!TIFFSetField(tif, tTag, -1.0 * auxInt32ArrayW[i]))
+                    {
+                        fprintf(stderr, "Can't write %s\n",
+                                tFieldArray->fields[i].field_name);
+                        goto failure;
+                    }
+                    break;
+                case TIFF_SETGET_FLOAT:
+                case TIFF_SETGET_DOUBLE:
+                    if (tWriteCount == 1)
+                    {
+                        if (!TIFFSetField(tif, tTag, auxDoubleArrayW[i]))
+                        {
+                            fprintf(stderr, "Can't write %s\n",
+                                    tFieldArray->fields[i].field_name);
+                            goto failure;
+                        }
+                    }
+                    else
+                    {
+                        fprintf(stderr,
+                                "WriteCount for .set_get_field_type %d should be 1!  %s\n",
+                                tSetFieldType, tFieldArray->fields[i].field_name);
+                    }
+                    break;
+                case TIFF_SETGET_C0_FLOAT:
+                case TIFF_SETGET_C0_DOUBLE:
+                case TIFF_SETGET_C16_FLOAT:
+                case TIFF_SETGET_C16_DOUBLE:
+                case TIFF_SETGET_C32_FLOAT:
+                case TIFF_SETGET_C32_DOUBLE:
+                    if (tWriteCount == 1)
+                    {
+                        fprintf(stderr,
+                                "WriteCount for .set_get_field_type %d should be -1 or greater than 1!  %s\n",
+                                tSetFieldType, tFieldArray->fields[i].field_name);
+                    }
+                    else
+                    {
+                        if (tSetFieldType == TIFF_SETGET_C0_FLOAT ||
+                            tSetFieldType == TIFF_SETGET_C16_FLOAT ||
+                            tSetFieldType == TIFF_SETGET_C32_FLOAT)
+                            pVoid = &auxFloatArrayW[i];
+                        else
+                            pVoid = &auxDoubleArrayW[i];
+                        if (tWriteCount > 1)
+                        {
+                            if (!TIFFSetField(tif, tTag, pVoid))
+                            {
+                                fprintf(stderr, "Can't write %s\n",
+                                        tFieldArray->fields[i].field_name);
+                                goto failure;
+                            }
+                        }
+                        else
+                        {
+                            if (!TIFFSetField(tif, tTag, VARIABLE_ARRAY_SIZE,
+                                              pVoid))
+                            {
+                                fprintf(stderr, "Can't write %s\n",
+                                        tFieldArray->fields[i].field_name);
+                                goto failure;
+                            }
+                        }
+                    }
+                    break;
+                case TIFF_SETGET_C0_UINT8:
+                case TIFF_SETGET_C0_SINT8:
+                case TIFF_SETGET_C16_UINT8:
+                case TIFF_SETGET_C16_SINT8:
+                case TIFF_SETGET_C32_UINT8:
+                case TIFF_SETGET_C32_SINT8:
+                    pVoid = &auxCharArrayW[i];
+                    deferredSetField = true;
+                    break;
+                case TIFF_SETGET_C0_UINT16:
+                case TIFF_SETGET_C0_SINT16:
+                case TIFF_SETGET_C16_UINT16:
+                case TIFF_SETGET_C16_SINT16:
+                case TIFF_SETGET_C32_UINT16:
+                case TIFF_SETGET_C32_SINT16:
+                    pVoid = &auxShortArrayW[i];
+                    deferredSetField = true;
+                    break;
+                case TIFF_SETGET_C0_UINT32:
+                case TIFF_SETGET_C0_SINT32:
+                case TIFF_SETGET_C16_UINT32:
+                case TIFF_SETGET_C16_SINT32:
+                case TIFF_SETGET_C32_UINT32:
+                case TIFF_SETGET_C32_SINT32:
+                    pVoid = &auxInt32ArrayW[i];
+                    deferredSetField = true;
+                    break;
+                default:
+                    fprintf(stderr,
+                            "SetFieldType %d not defined within writing switch for %s.\n",
+                            tSetFieldType, tFieldName);
+            } /* switch */
+
+            if (deferredSetField)
+            {
+                if (tWriteCount == 1)
+                {
+                    fprintf(stderr,
+                            "WriteCount for .set_get_field_type %d should be -1 or greater than 1!  %s\n",
+                            tSetFieldType, tFieldArray->fields[i].field_name);
+                }
+                else
+                {
+                    if (tWriteCount > 1)
+                    {
+                        if (!TIFFSetField(tif, tTag, pVoid))
+                        {
+                            fprintf(stderr, "Can't write %s\n",
+                                    tFieldArray->fields[i].field_name);
+                            goto failure;
+                        }
+                    }
+                    else
+                    {
+                        if (!TIFFSetField(tif, tTag, VARIABLE_ARRAY_SIZE, pVoid))
+                        {
+                            fprintf(stderr, "Can't write %s\n",
+                                    tFieldArray->fields[i].field_name);
+                            goto failure;
+                        }
+                    }
+                }
+            }
+        } /* for */
 
     } /*-- if (blnFillGPSManually) --*/
 
