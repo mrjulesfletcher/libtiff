@@ -117,7 +117,7 @@ Consult the TIFF specification for information on the meaning of each tag.
     * - :c:macro:`TIFFTAG_DOTRANGE`
       - 2
       - :c:expr:`uint16_t`
-      -
+      - § values passed separately
     * - :c:macro:`TIFFTAG_EXTRASAMPLES`
       - 2
       - :c:expr:`uint16_t`, :c:expr:`uint16_t*`
@@ -362,6 +362,11 @@ Consult the TIFF specification for information on the meaning of each tag.
 
   If ``SamplesPerPixel`` is one, then a single array is passed;
   otherwise three arrays should be passed.
+
+§:
+  ``TIFFTAG_DOTRANGE`` is handled as two ``uint16_t`` values that are
+  passed as separate arguments when calling :c:func:`TIFFSetField` and
+  :c:func:`TIFFGetField`.
 
 \*:
   The contents of this field are quite complex.  See

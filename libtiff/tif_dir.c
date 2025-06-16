@@ -201,7 +201,8 @@ static bool equalCustomValue(const void *elt1, const void *elt2)
 
 static int TIFFBuildCustomValueMap(TIFFDirectory *td)
 {
-    TIFFHashSet *newMap = TIFFHashSetNew(hashCustomValue, equalCustomValue, NULL);
+    TIFFHashSet *newMap =
+        TIFFHashSetNew(hashCustomValue, equalCustomValue, NULL);
     if (!newMap)
         return 0;
     for (int i = 0; i < td->td_customValueCount; i++)
@@ -874,10 +875,10 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                 if (fip->field_tag == TIFFTAG_DOTRANGE &&
                     strcmp(fip->field_name, "DotRange") == 0)
                 {
-                    /* TODO: This is an evil exception and should not have been
-                       handled this way ... likely best if we move it into
-                       the directory structure with an explicit field in
-                       libtiff 4.1 and assign it a FIELD_ value */
+                    /* DotRange is stored as a pair of uint16 values and uses
+                     * the TIFF_SETGET_UINT16_PAIR accessor.  The values are
+                     * passed separately to TIFFSetField(), so we must pack
+                     * them into a temporary array here. */
                     uint16_t v2[2];
                     v2[0] = (uint16_t)va_arg(ap, int);
                     v2[1] = (uint16_t)va_arg(ap, int);
@@ -1497,10 +1498,10 @@ static int _TIFFVGetField(TIFF *tif, uint32_t tag, va_list ap)
                 else if (fip->field_tag == TIFFTAG_DOTRANGE &&
                          strcmp(fip->field_name, "DotRange") == 0)
                 {
-                    /* TODO: This is an evil exception and should not have been
-                       handled this way ... likely best if we move it into
-                       the directory structure with an explicit field in
-                       libtiff 4.1 and assign it a FIELD_ value */
+                    /* DotRange returns two uint16 values using
+                     * TIFF_SETGET_UINT16_PAIR.  Retrieve each element from the
+                     * stored array and return them in the order expected by
+                     * TIFFGetField(). */
                     *va_arg(ap, uint16_t *) = ((uint16_t *)tv->value)[0];
                     *va_arg(ap, uint16_t *) = ((uint16_t *)tv->value)[1];
                     ret_val = 1;

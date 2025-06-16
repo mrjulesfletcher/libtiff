@@ -659,10 +659,9 @@ void TIFFPrintDirectory(TIFF *tif, FILE *fd, long flags)
                 if (fip->field_tag == TIFFTAG_DOTRANGE &&
                     strcmp(fip->field_name, "DotRange") == 0)
                 {
-                    /* TODO: This is an evil exception and should not have been
-                       handled this way ... likely best if we move it into
-                       the directory structure with an explicit field in
-                       libtiff 4.1 and assign it a FIELD_ value */
+                    /* DotRange uses TIFF_SETGET_UINT16_PAIR and stores two
+                     * uint16 values.  Fetch them separately into the temporary
+                     * array so TIFFPrintDirectory() can display them. */
                     raw_data = dotrange;
                     TIFFGetField(tif, tag, dotrange + 0, dotrange + 1);
                 }
