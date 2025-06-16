@@ -672,7 +672,9 @@ static void setImage1(const uint8_t *br, uint32_t rw, uint32_t rh)
     {
         const uint8_t *rows[256];
         uint32_t nrows = 1;
+#ifdef DEBUG
         fprintf(stderr, "bpr=%d, sy=%d, bpr*sy=%d\n", bpr, sy, bpr * sy);
+#endif
         rows[0] = br + bpr * sy;
         err += step;
         while (err >= limit)
@@ -720,7 +722,9 @@ static int generateThumbnail(TIFF *in, TIFF *out)
         return 0;
     rowsize = TIFFScanlineSize(in);
     rastersize = sh * rowsize;
+#ifdef DEBUG
     fprintf(stderr, "rastersize=%u\n", (unsigned int)rastersize);
+#endif
     /* +3 : add a few guard bytes since setrow() can read a bit */
     /* outside buffer */
     raster = (unsigned char *)_TIFFmalloc(rastersize + 3);
