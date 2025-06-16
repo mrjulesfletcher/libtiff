@@ -158,7 +158,7 @@ int convertHTMLcodes(char *s, int len)
                     break;
             }
             if (o < 5)
-                strcpy(s + 1, s + 1 + o);
+                memmove(s + 1, s + 1 + o, strlen(s + 1 + o) + 1);
             *s = val;
             return o;
         }
@@ -172,7 +172,8 @@ int convertHTMLcodes(char *s, int len)
             if (html_codes[i].len <= len)
                 if (STRNICMP(s, html_codes[i].code, html_codes[i].len) == 0)
                 {
-                    strcpy(s + 1, s + html_codes[i].len);
+                    memmove(s + 1, s + html_codes[i].len,
+                            strlen(s + html_codes[i].len) + 1);
                     *s = html_codes[i].val;
                     return html_codes[i].len - 1;
                 }
