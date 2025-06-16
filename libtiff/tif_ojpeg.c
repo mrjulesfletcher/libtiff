@@ -278,6 +278,7 @@ typedef struct
     uint8_t jpeg_proc;
     uint8_t subsamplingcorrect;
     uint8_t subsamplingcorrect_done;
+    uint8_t subsamplingcorrect_message;
     uint8_t subsampling_tag;
     uint8_t subsampling_hor;
     uint8_t subsampling_ver;
@@ -1107,6 +1108,7 @@ static void OJPEGSubsamplingCorrect(TIFF *tif)
         sp->subsamplingcorrect_done = 1;
         mh = sp->subsampling_hor;
         mv = sp->subsampling_ver;
+        sp->subsamplingcorrect_message = 0;
         sp->subsamplingcorrect = 1;
         OJPEGReadHeaderInfoSec(tif);
         if (sp->subsampling_force_desubsampling_inside_decompression != 0)
@@ -2220,9 +2222,20 @@ static int OJPEGReadBufferFill(OJPEGState *sp)
 {
     uint16_t m;
     tmsize_t n;
-    /* TODO: double-check: when subsamplingcorrect is set, no call to
-     * TIFFErrorExt or TIFFWarningExt should be made in any other case, seek or
-     * read errors should be passed through */
+    /* When subsamplingcorrect is set, this function is invoked while trying to
+     * guess the correct YCbCr subsampling from the JPEG stream. In that mode
+     * corrupt data should not trigger additional errors: we simply return 0 on
+     * failure and let the caller decide how to proceed.  Seek or read errors are
+     * still fatal and propagated to the caller.  The first time this happens we
+     * also emit a warning so that the user knows that subsampling correction is
+     * influencing error handling. */
+    if (sp->subsamplingcorrect && sp->subsamplingcorrect_message == 0)
+    {
+        TIFFWarningExtR(sp->tif, "OJPEGReadBufferFill",
+                        "subsamplingcorrect active: JPEG errors will be"
+                        " ignored while probing");
+        sp->subsamplingcorrect_message = 1;
+    }
     do
     {
         if (sp->in_buffer_file_togo != 0)
