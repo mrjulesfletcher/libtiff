@@ -118,7 +118,7 @@ information on the meaning of each tag and their possible values.
     * - :c:macro:`TIFFTAG_DOTRANGE`
       - 2
       - :c:expr:`uint16_t*`
-      -
+      - § values returned separately
 
     * - :c:macro:`TIFFTAG_EXTRASAMPLES`
       - 2
@@ -444,6 +444,11 @@ information on the meaning of each tag and their possible values.
   "The ICC Profile Format Specification",
   Annex B.3 "Embedding ICC Profiles in TIFF Files" (available at
   http://www.color.org) for an explanation.
+
+§:
+  ``TIFFTAG_DOTRANGE`` is stored internally as a pair of ``uint16_t`` values
+  that are returned as two separate arguments when calling
+  :c:func:`TIFFGetField` or :c:func:`TIFFSetField`.
 
 Autoregistered tags
 -------------------
