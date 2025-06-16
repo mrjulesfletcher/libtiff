@@ -169,7 +169,8 @@ int mfs_open(void *buffer, int size, char *mode)
 
         else
         {
-            tmp = malloc(0); /* Get a pointer */
+            /* Allocate at least one byte to avoid zero-sized malloc */
+            tmp = malloc(1); /* Get a pointer */
             if (tmp == (void *)NULL)
             {
                 ret = -1;
@@ -187,7 +188,8 @@ int mfs_open(void *buffer, int size, char *mode)
     {
         if (buffer == (void *)NULL) /* Create space for client */
         {
-            tmp = malloc(0); /* Get a pointer */
+            /* Allocate at least one byte to avoid zero-sized malloc */
+            tmp = malloc(1); /* Get a pointer */
             if (tmp == (void *)NULL)
             {
                 ret = -1;
@@ -534,6 +536,9 @@ static int extend_mem_file(int fd, int size)
 {
     void *new_mem;
     int ret;
+
+    if (size == 0)
+        size = 1; /* avoid realloc(0) which may return NULL */
 
     if ((new_mem = realloc(buf[fd], size)) == (void *)NULL)
         ret = -1;
