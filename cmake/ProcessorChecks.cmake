@@ -72,6 +72,21 @@ if(HAVE_ARM_CRC32)
   add_compile_definitions(HAVE_ARM_CRC32=1)
 endif()
 
+# Determine SSE flags
+set(TIFF_SSE_FLAGS "" CACHE STRING "Flags used to enable SSE instructions")
+set(_sse41_flags "${TIFF_SSE_FLAGS}")
+set(_sse42_flags "${TIFF_SSE_FLAGS}")
+if(NOT _sse41_flags)
+  if(CMAKE_C_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
+    set(_sse41_flags "-msse4.1")
+  endif()
+endif()
+if(NOT _sse42_flags)
+  if(CMAKE_C_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
+    set(_sse42_flags "-msse4.2")
+  endif()
+endif()
+
 check_c_source_compiles(
   "#include <emmintrin.h>
    int main(){ __m128i v = _mm_setzero_si128(); return _mm_cvtsi128_si32(v); }"
@@ -86,6 +101,9 @@ check_c_source_compiles(
   HAVE_SSE41)
 if(HAVE_SSE41)
   add_compile_definitions(HAVE_SSE41=1)
+  if(_sse41_flags)
+    add_compile_options("${_sse41_flags}")
+  endif()
 endif()
 
 check_c_source_compiles(
@@ -94,4 +112,7 @@ check_c_source_compiles(
   HAVE_SSE42)
 if(HAVE_SSE42)
   add_compile_definitions(HAVE_SSE42=1)
+  if(_sse42_flags)
+    add_compile_options("${_sse42_flags}")
+  endif()
 endif()
