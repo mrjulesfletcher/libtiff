@@ -87,3 +87,11 @@ check_c_source_compiles(
 if(HAVE_SSE41)
   add_compile_definitions(HAVE_SSE41=1)
 endif()
+
+check_c_source_compiles(
+  "#include <nmmintrin.h>
+   int main(){ return _mm_crc32_u64(0,0); }"
+  HAVE_SSE42)
+if(HAVE_SSE42)
+  add_compile_definitions(HAVE_SSE42=1)
+endif()

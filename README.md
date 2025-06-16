@@ -1,6 +1,6 @@
 # LibTIFF SIMD Fork
 
-This repository extends **libtiff** with optimized implementations for ARM NEON and x86 SSE4.1.  Additional helpers simplify working with 12‑bit data and assembling in-memory TIFF/DNG strips.  The fork stays API compatible with upstream while delivering substantial speedups on supported CPUs.
+This repository extends **libtiff** with optimized implementations for ARM NEON and x86 SSE4.1/4.2.  Additional helpers simplify working with 12‑bit data and assembling in-memory TIFF/DNG strips.  The fork stays API compatible with upstream while delivering substantial speedups on supported CPUs.
 
 ## Building
 
@@ -20,8 +20,8 @@ $ cmake --install . --prefix /usr/local
 SIMD support is detected and selected automatically at runtime.  You may explicitly control it or
 override the NEON compiler flags:
 ```bash
-$ cmake -DHAVE_NEON=1 -DHAVE_SSE41=0 ..   # force NEON only
-$ cmake -DHAVE_SSE41=1 ..                 # enable SSE4.1
+$ cmake -DHAVE_NEON=1 -DHAVE_SSE41=0 -DHAVE_SSE42=0 ..   # force NEON only
+$ cmake -DHAVE_SSE41=1 -DHAVE_SSE42=1 ..                 # enable SSE4.1/4.2
 $ cmake -DTIFF_NEON_FLAGS="-march=armv8-a+simd" ..  # custom NEON flags
 ```
 Cross-compiling examples:
@@ -30,9 +30,9 @@ Cross-compiling examples:
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake ..
 # Generic AArch64 target
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake ..
-# Target x86_64 with SSE4.1
+# Target x86_64 with SSE4.1/4.2
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/x86_64.cmake \
-        -DCMAKE_C_FLAGS="-msse4.1" -DHAVE_SSE41=1 ..
+        -DCMAKE_C_FLAGS="-msse4.2" -DHAVE_SSE41=1 -DHAVE_SSE42=1 ..
 ```
 
 #### Cross-compiling for ARM
@@ -76,12 +76,12 @@ $ make check
 $ make install DESTDIR=/usr/local
 ```
 Use `--disable-sse41` or `--disable-neon` to disable the respective optimizations.
-Cross-compiling for NEON or SSE4.1 requires setting appropriate host/CC flags, for example:
+Cross-compiling for NEON or SSE4.1/4.2 requires setting appropriate host/CC flags, for example:
 ```bash
 # Cross-build for AArch64 with NEON
 $ ./configure --host=aarch64-linux-gnu CFLAGS="-march=armv8-a+simd" --enable-shared
-# Cross-build for x86_64 with SSE4.1
-$ ./configure --host=x86_64-linux-gnu CFLAGS="-msse4.1" --enable-shared
+# Cross-build for x86_64 with SSE4.1/4.2
+$ ./configure --host=x86_64-linux-gnu CFLAGS="-msse4.2" --enable-shared
 ```
 
 ## New Features

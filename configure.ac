@@ -351,6 +351,23 @@ AC_COMPILE_IFELSE([
 ])
 AC_SUBST(HAVE_SSE41)
 
+dnl Check for SSE4.2 intrinsics
+AC_MSG_CHECKING([for SSE4.2 support])
+AC_COMPILE_IFELSE([
+  AC_LANG_PROGRAM([
+    #include <nmmintrin.h>
+  ],[
+    return _mm_crc32_u64(0,0);
+  ])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_SSE42],[1],[Define if SSE4.2 intrinsics are available])
+  HAVE_SSE42=1
+],[
+  AC_MSG_RESULT(no)
+  HAVE_SSE42=0
+])
+AC_SUBST(HAVE_SSE42)
+
 dnl ---------------------------------------------------------------------------
 dnl Optional internal thread pool
 dnl ---------------------------------------------------------------------------
