@@ -2436,9 +2436,7 @@ static int JPEGEncodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
     assert(sp != NULL);
     /* data is expected to be supplied in multiples of a clumpline */
     /* a clumpline is equivalent to v_sampling desubsampled scanlines */
-    /* TODO: the following calculation of bytesperclumpline should substitute
-     * calculation of sp->bytesperline, except that it is per v_sampling lines
-     */
+
     /*
      * A clumpline groups v_sampling scanlines of downsampled YCbCr samples.
      * Its size is
