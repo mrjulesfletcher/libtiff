@@ -353,10 +353,11 @@ static int cpStrips(TIFF *in, TIFF *out)
         {
             if (bytecounts[s] > (uint64_t)bufsize)
             {
-                buf =
-                    (unsigned char *)_TIFFrealloc(buf, (tmsize_t)bytecounts[s]);
-                if (!buf)
+                unsigned char *newbuf = (unsigned char *)_TIFFrealloc(
+                    buf, (tmsize_t)bytecounts[s]);
+                if (!newbuf)
                     goto bad;
+                buf = newbuf;
                 bufsize = (tmsize_t)bytecounts[s];
             }
             if (TIFFReadRawStrip(in, s, buf, (tmsize_t)bytecounts[s]) < 0 ||
@@ -390,10 +391,11 @@ static int cpTiles(TIFF *in, TIFF *out)
         {
             if (bytecounts[t] > (uint64_t)bufsize)
             {
-                buf =
-                    (unsigned char *)_TIFFrealloc(buf, (tmsize_t)bytecounts[t]);
-                if (!buf)
+                unsigned char *newbuf = (unsigned char *)_TIFFrealloc(
+                    buf, (tmsize_t)bytecounts[t]);
+                if (!newbuf)
                     goto bad;
+                buf = newbuf;
                 bufsize = (tmsize_t)bytecounts[t];
             }
             if (TIFFReadRawTile(in, t, buf, (tmsize_t)bytecounts[t]) < 0 ||

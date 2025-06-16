@@ -332,9 +332,10 @@ char *super_fgets(char *b, int *blen, FILE *file)
 
             tlen = (int)(q - b);
             len <<= 1;
-            b = (char *)realloc((char *)b, (len + 2));
-            if ((char *)b == (char *)NULL)
+            char *tmp = (char *)realloc((char *)b, (len + 2));
+            if (tmp == NULL)
                 break;
+            b = tmp;
             q = b + tlen;
         }
         *q = (unsigned char)c;

@@ -256,8 +256,11 @@ static void dump(int fd, uint64_t diroff)
             }
             else
             {
-                visited_diroff =
+                uint64_t *new_visited =
                     (uint64_t *)realloc(visited_diroff, alloc_size);
+                if (!new_visited)
+                    Fatal("Out of memory");
+                visited_diroff = new_visited;
             }
         }
         if (!visited_diroff)
