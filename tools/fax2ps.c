@@ -364,14 +364,24 @@ int main(int argc, char **argv)
             case 'p': /* print specific page */
                 pageNumber = (uint16_t)atoi(optarg);
                 if (pages)
-                    pages = (uint16_t *)realloc(pages, (npages + 1) *
-                                                           sizeof(uint16_t));
-                else
-                    pages = (uint16_t *)malloc(sizeof(uint16_t));
-                if (pages == NULL)
                 {
-                    fprintf(stderr, "Out of memory\n");
-                    exit(EXIT_FAILURE);
+                    uint16_t *new_pages =
+                        (uint16_t *)realloc(pages, (npages + 1) * sizeof(uint16_t));
+                    if (new_pages == NULL)
+                    {
+                        fprintf(stderr, "Out of memory\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    pages = new_pages;
+                }
+                else
+                {
+                    pages = (uint16_t *)malloc(sizeof(uint16_t));
+                    if (pages == NULL)
+                    {
+                        fprintf(stderr, "Out of memory\n");
+                        exit(EXIT_FAILURE);
+                    }
                 }
                 pages[npages++] = pageNumber;
                 break;
