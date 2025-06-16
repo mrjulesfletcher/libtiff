@@ -1281,6 +1281,33 @@ static int horDiff16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
             return 1;
         }
 #endif
+#if defined(HAVE_SSE41)
+        if (TIFFUseSSE41() && stride == 1 && wc >= 8)
+        {
+            uint16_t *p = wp + 1;
+            tmsize_t remaining = wc - 1;
+            __m128i prev = _mm_set1_epi16((short)wp[0]);
+            while (remaining >= 8)
+            {
+                __m128i cur = _mm_loadu_si128((const __m128i *)p);
+                __m128i prev_vec = _mm_alignr_epi8(cur, prev, 2);
+                __m128i diff = _mm_sub_epi16(cur, prev_vec);
+                _mm_storeu_si128((__m128i *)p, diff);
+                prev = cur;
+                p += 8;
+                remaining -= 8;
+            }
+            uint16_t acc = (uint16_t)_mm_extract_epi16(prev, 7);
+            while (remaining--)
+            {
+                uint16_t curWord = *p;
+                *p = (uint16_t)(curWord - acc);
+                acc = curWord;
+                ++p;
+            }
+            return 1;
+        }
+#endif
         do
         {
             REPEAT4(stride, wp[stride] = (uint16_t)(((unsigned int)wp[stride] -
