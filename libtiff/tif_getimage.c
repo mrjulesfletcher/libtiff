@@ -2813,6 +2813,86 @@ DECLARESepPutFunc(putseparate8bitYCbCr11tile)
 }
 #undef YCbCrtoRGB
 
+/*
+ * Generic routine for unpacked YCbCr data with arbitrary subsampling
+ */
+static void putseparate8bitYCbCrGenericTile(TIFFRGBAImage *img, uint32_t *dest,
+                                            uint32_t x, uint32_t y, uint32_t w,
+                                            uint32_t h, int32_t fromskew,
+                                            int32_t toskew, unsigned char *r,
+                                            unsigned char *g, unsigned char *b,
+                                            unsigned char *a, uint16_t hsub,
+                                            uint16_t vsub)
+{
+    (void)x;
+    (void)y;
+    (void)a;
+
+    int32_t stride_y = w + fromskew;
+    int32_t stride_c = (w + fromskew) / hsub;
+    uint32_t row, col;
+    unsigned char *g_line = g;
+    unsigned char *b_line = b;
+    uint16_t vcnt = 0;
+
+    for (row = 0; row < h; row++)
+    {
+        for (col = 0; col < w; col++)
+        {
+            uint32_t dr, dg, dbv;
+            uint32_t cb = g_line[col / hsub];
+            uint32_t cr = b_line[col / hsub];
+            TIFFYCbCrtoRGB(img->ycbcr, r[col], cb, cr, &dr, &dg, &dbv);
+            dest[col] = PACK(dr, dg, dbv);
+        }
+
+        r += stride_y;
+        dest += w + toskew;
+        if (++vcnt == vsub)
+        {
+            g_line += stride_c;
+            b_line += stride_c;
+            vcnt = 0;
+        }
+    }
+}
+
+DECLARESepPutFunc(putseparate8bitYCbCr44tile)
+{
+    putseparate8bitYCbCrGenericTile(img, dest, x, y, w, h, fromskew, toskew, r,
+                                    g, b, a, 4, 4);
+}
+
+DECLARESepPutFunc(putseparate8bitYCbCr42tile)
+{
+    putseparate8bitYCbCrGenericTile(img, dest, x, y, w, h, fromskew, toskew, r,
+                                    g, b, a, 4, 2);
+}
+
+DECLARESepPutFunc(putseparate8bitYCbCr41tile)
+{
+    putseparate8bitYCbCrGenericTile(img, dest, x, y, w, h, fromskew, toskew, r,
+                                    g, b, a, 4, 1);
+}
+
+DECLARESepPutFunc(putseparate8bitYCbCr22tile)
+{
+    putseparate8bitYCbCrGenericTile(img, dest, x, y, w, h, fromskew, toskew, r,
+                                    g, b, a, 2, 2);
+}
+
+DECLARESepPutFunc(putseparate8bitYCbCr21tile)
+{
+    putseparate8bitYCbCrGenericTile(img, dest, x, y, w, h, fromskew, toskew, r,
+                                    g, b, a, 2, 1);
+}
+
+DECLARESepPutFunc(putseparate8bitYCbCr12tile)
+{
+    putseparate8bitYCbCrGenericTile(img, dest, x, y, w, h, fromskew, toskew, r,
+                                    g, b, a, 1, 2);
+}
+
 static int isInRefBlackWhiteRange(float f)
 {
     return f > (float)(-0x7FFFFFFF + 128) && f < (float)0x7FFFFFFF;
@@ -3405,10 +3485,27 @@ static int PickSeparateCase(TIFFRGBAImage *img)
                                           &hs, &vs);
                     switch ((hs << 4) | vs)
                     {
+                        case 0x44:
+                            img->put.separate = putseparate8bitYCbCr44tile;
+                            break;
+                        case 0x42:
+                            img->put.separate = putseparate8bitYCbCr42tile;
+                            break;
+                        case 0x41:
+                            img->put.separate = putseparate8bitYCbCr41tile;
+                            break;
+                        case 0x22:
+                            img->put.separate = putseparate8bitYCbCr22tile;
+                            break;
+                        case 0x21:
+                            img->put.separate = putseparate8bitYCbCr21tile;
+                            break;
+                        case 0x12:
+                            img->put.separate = putseparate8bitYCbCr12tile;
+                            break;
                         case 0x11:
                             img->put.separate = putseparate8bitYCbCr11tile;
                             break;
-                            /* TODO: add other cases here */
                     }
                 }
             }
