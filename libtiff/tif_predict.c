@@ -1140,6 +1140,34 @@ static int horDiff8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
                 return 1;
             }
 #endif
+#if defined(HAVE_SSE41)
+            if (TIFFUseSSE41() && cc >= 16)
+            {
+                uint8_t *p = cp + 1;
+                tmsize_t remaining = cc - 1;
+                __m128i prev = _mm_set1_epi8((char)cp[0]);
+                while (remaining >= 16)
+                {
+                    __builtin_prefetch(p + 16);
+                    __m128i cur = _mm_loadu_si128((const __m128i *)p);
+                    __m128i prev_vec = _mm_alignr_epi8(cur, prev, 15);
+                    __m128i diff = _mm_sub_epi8(cur, prev_vec);
+                    _mm_storeu_si128((__m128i *)p, diff);
+                    prev = cur;
+                    p += 16;
+                    remaining -= 16;
+                }
+                uint8_t acc = (uint8_t)_mm_extract_epi8(prev, 15);
+                while (remaining--)
+                {
+                    uint8_t curByte = *p;
+                    *p = (uint8_t)(curByte - acc);
+                    acc = curByte;
+                    ++p;
+                }
+                return 1;
+            }
+#endif
         }
         if (stride == 3)
         {
