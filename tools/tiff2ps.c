@@ -2963,9 +2963,6 @@ void PSDataBW(FILE *fd, TIFF *tif, uint32_t w, uint32_t h)
         return;
     }
 
-    // FIXME
-    memset(tf_buf, 0, stripsize);
-
 #if defined(EXP_ASCII85ENCODER)
     if (ascii85_g)
     {
