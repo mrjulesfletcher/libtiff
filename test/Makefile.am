@@ -108,7 +108,7 @@ check_PROGRAMS = \
        bayer_simd_benchmark \
        rgb_pack_neon_test \
        bayer_neon_test \
-       packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test
+       packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test predictor_sse41_test
 endif
 
 # Test scripts to execute
@@ -357,6 +357,9 @@ rgb_pack_neon_test_LDADD = $(LIBTIFF)
 
 bayer_neon_test_SOURCES = bayer_neon_test.c
 bayer_neon_test_LDADD = $(LIBTIFF)
+
+predictor_sse41_test_SOURCES = predictor_sse41_test.c
+predictor_sse41_test_LDADD = $(LIBTIFF)
 
 predictor_threadpool_benchmark_SOURCES = predictor_threadpool_benchmark.c
 predictor_threadpool_benchmark_LDADD = $(LIBTIFF)
