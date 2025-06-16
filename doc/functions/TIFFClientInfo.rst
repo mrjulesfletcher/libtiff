@@ -17,17 +17,19 @@ Synopsis
 Description
 -----------
 
-.. TODO: Check explanation of clientinfo linked list intention and usage.
+The *clientinfo* linked list provides a mechanism to associate arbitrary
+application data with a :c:type:`TIFF` handle.  Each entry is identified by a
+name string and stores a user supplied pointer.  The library maintains the
+linked list internally but does not manage the lifetime of the stored data.
+Entries persist for the life of the :c:type:`TIFF` object and are removed when
+the file is closed; however, the caller is responsible for releasing any memory
+referenced by the pointers.
 
-The *clientinfo* linked list provides a method to hand over user defined
-data from one routine to another via the internal ``tif`` storage of the
-``libtiff`` library.
+:c:func:`TIFFGetClientInfo` returns the pointer associated with a named entry in
+the list or ``NULL`` if *name* is not present.
 
-:c:func:`TIFFGetClientInfo` returns a pointer to the data of the named entry
-in the clientinfo-list. If the *name* is not found ``NULL`` is returned.
-
-:c:func:`TIFFSetClientInfo` adds or replaces an entry in the clientinfo-list
-with the *name* and the pointer to the *data* provided by the caller.
+:c:func:`TIFFSetClientInfo` adds a new entry or replaces an existing one with
+the specified *name* and *data* pointer.
 
 Diagnostics
 -----------
