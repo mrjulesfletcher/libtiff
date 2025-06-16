@@ -99,8 +99,23 @@ static int _tiffUringThreadAdd(TIFF *tif, int fd)
     }
     e->async = 0;
     e->pending = 0;
-    pthread_mutex_init(&e->mutex, NULL);
-    pthread_cond_init(&e->cond, NULL);
+    if (pthread_mutex_init(&e->mutex, NULL) != 0)
+    {
+        pthread_mutex_unlock(&gUringThreadMutex);
+        _TIFFThreadPoolShutdown(e->pool);
+        _TIFFfreeExt(tif, e);
+        TIFFErrorExtR(tif, "tif_uring", "pthread_mutex_init failed");
+        return 0;
+    }
+    if (pthread_cond_init(&e->cond, NULL) != 0)
+    {
+        pthread_mutex_destroy(&e->mutex);
+        pthread_mutex_unlock(&gUringThreadMutex);
+        _TIFFThreadPoolShutdown(e->pool);
+        _TIFFfreeExt(tif, e);
+        TIFFErrorExtR(tif, "tif_uring", "pthread_cond_init failed");
+        return 0;
+    }
     e->next = gUringThreadList;
     gUringThreadList = e;
     pthread_mutex_unlock(&gUringThreadMutex);
@@ -616,8 +631,23 @@ static int _tiffUringAdd(TIFF *tif, int fd)
     }
     e->async = 0;
     e->pending = 0;
-    pthread_mutex_init(&e->mutex, NULL);
-    pthread_cond_init(&e->cond, NULL);
+    if (pthread_mutex_init(&e->mutex, NULL) != 0)
+    {
+        pthread_mutex_unlock(&gUringMutex);
+        _TIFFThreadPoolShutdown(e->pool);
+        _TIFFfreeExt(tif, e);
+        TIFFErrorExtR(tif, "tif_uring", "pthread_mutex_init failed");
+        return 0;
+    }
+    if (pthread_cond_init(&e->cond, NULL) != 0)
+    {
+        pthread_mutex_destroy(&e->mutex);
+        pthread_mutex_unlock(&gUringMutex);
+        _TIFFThreadPoolShutdown(e->pool);
+        _TIFFfreeExt(tif, e);
+        TIFFErrorExtR(tif, "tif_uring", "pthread_cond_init failed");
+        return 0;
+    }
     e->next = gUringList;
     gUringList = e;
     pthread_mutex_unlock(&gUringMutex);
