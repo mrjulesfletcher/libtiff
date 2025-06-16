@@ -36,6 +36,7 @@
 
 #include "tiffconf.h"
 #include "tiffiop.h"
+#include <errno.h>
 #include <float.h>
 #include <limits.h>
 #include <stdlib.h>
@@ -7695,7 +7696,22 @@ static int TIFFFetchStripThing(TIFF *tif, TIFFDirEntry *dir, uint32_t nstrips,
         const char *pszMax = getenv("LIBTIFF_STRILE_ARRAY_MAX_RESIZE_COUNT");
         uint32_t max_nstrips = 1000000;
         if (pszMax)
-            max_nstrips = (uint32_t)atoi(pszMax);
+        {
+            char *endptr = NULL;
+            errno = 0;
+            unsigned long val = strtoul(pszMax, &endptr, 10);
+            if (errno != 0 || *endptr != '\0' || endptr == pszMax ||
+                pszMax[0] == '-' || val == 0 || val > UINT32_MAX)
+            {
+                TIFFWarningExtR(
+                    tif, module,
+                    "Invalid LIBTIFF_STRILE_ARRAY_MAX_RESIZE_COUNT value '%s', "
+                    "using default",
+                    pszMax);
+            }
+            else
+                max_nstrips = (uint32_t)val;
+        }
         TIFFReadDirEntryOutputErr(tif, TIFFReadDirEntryErrCount, module,
                                   fip ? fip->field_name : "unknown tagname",
                                   (nstrips <= max_nstrips));
