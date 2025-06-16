@@ -27,6 +27,7 @@
 
 #include "tiffiop.h"
 #include <stdlib.h>
+#include <errno.h>
 
 #ifdef JPEG_SUPPORT
 
@@ -423,14 +424,30 @@ static int TIFFjpeg_has_multiple_scans(JPEGState *sp)
 static int TIFFjpeg_start_decompress(JPEGState *sp)
 {
     const char *sz_max_allowed_scan_number;
+    static const char module[] = "TIFFjpeg_start_decompress";
     /* progress monitor */
     sp->cinfo.d.progress = &sp->progress;
     sp->progress.progress_monitor = TIFFjpeg_progress_monitor;
     sp->otherSettings.max_allowed_scan_number = 100;
     sz_max_allowed_scan_number = getenv("LIBTIFF_JPEG_MAX_ALLOWED_SCAN_NUMBER");
     if (sz_max_allowed_scan_number)
-        sp->otherSettings.max_allowed_scan_number =
-            atoi(sz_max_allowed_scan_number);
+    {
+        char *endptr = NULL;
+        long val;
+
+        errno = 0;
+        val = strtol(sz_max_allowed_scan_number, &endptr, 10);
+        if (errno != 0 || endptr == sz_max_allowed_scan_number ||
+            *endptr != '\0' || val < 0 || val > INT_MAX)
+        {
+            TIFFWarningExtR(
+                sp->tif, module,
+                "Invalid LIBTIFF_JPEG_MAX_ALLOWED_SCAN_NUMBER value '%s',"
+                " using default", sz_max_allowed_scan_number);
+        }
+        else
+            sp->otherSettings.max_allowed_scan_number = (int)val;
+    }
 
     return CALLVJPEG(sp, jpeg_start_decompress(&sp->cinfo.d));
 }
