@@ -171,7 +171,9 @@ static void tiff_bad_ppm(char *file)
 
 static tmsize_t tiff_multiply_ms(tmsize_t m1, tmsize_t m2)
 {
-    if (m1 == 0 || m2 > TIFF_TMSIZE_T_MAX / m1)
+    if (m1 <= 0 || m2 <= 0)
+        return 0;
+    if (m1 > TIFF_TMSIZE_T_MAX / m2)
         return 0;
     return m1 * m2;
 }
@@ -306,6 +308,11 @@ int main(int argc, char *argv[])
     {
         if (fscanf(in, " %u %u", &w, &h) != 2)
             tiff_bad_ppm(infile);
+        if (w == 0 || h == 0)
+        {
+            TIFF_TOOL_ERROR(infile, "Invalid image dimensions %u x %u", w, h);
+            exit(EXIT_FAILURE);
+        }
         if (fgetc(in) != '\n')
             tiff_bad_ppm(infile);
         bpp = 1;
@@ -315,6 +322,11 @@ int main(int argc, char *argv[])
     {
         if (fscanf(in, " %u %u %u", &w, &h, &prec) != 3)
             tiff_bad_ppm(infile);
+        if (w == 0 || h == 0)
+        {
+            TIFF_TOOL_ERROR(infile, "Invalid image dimensions %u x %u", w, h);
+            exit(EXIT_FAILURE);
+        }
         if (fgetc(in) != '\n' || 0 == prec || 65535 < prec)
             tiff_bad_ppm(infile);
 
