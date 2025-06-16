@@ -416,7 +416,9 @@ static void swapBytesInScanline(void *buf, uint32_t width, TIFFDataType dtype)
         case TIFF_SLONG:
             TIFFSwabArrayOfLong((uint32_t *)buf, (unsigned long)width);
             break;
-        /* case TIFF_FLOAT: */ /* FIXME */
+        case TIFF_FLOAT:
+            TIFFSwabArrayOfFloat((float *)buf, (unsigned long)width);
+            break;
         case TIFF_DOUBLE:
             TIFFSwabArrayOfDouble((double *)buf, (unsigned long)width);
             break;
