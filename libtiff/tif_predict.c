@@ -1475,6 +1475,33 @@ static int horDiff64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
             return 1;
         }
 #endif
+#if defined(HAVE_SSE41)
+        if (TIFFUseSSE41() && stride == 1 && wc >= 2)
+        {
+            uint64_t *p = wp + 1;
+            tmsize_t remaining = wc - 1;
+            __m128i prev = _mm_set1_epi64x((long long)wp[0]);
+            while (remaining >= 2)
+            {
+                __m128i cur = _mm_loadu_si128((const __m128i *)p);
+                __m128i prev_vec = _mm_alignr_epi8(cur, prev, 8);
+                __m128i diff = _mm_sub_epi64(cur, prev_vec);
+                _mm_storeu_si128((__m128i *)p, diff);
+                prev = cur;
+                p += 2;
+                remaining -= 2;
+            }
+            uint64_t acc = (uint64_t)_mm_extract_epi64(prev, 1);
+            while (remaining--)
+            {
+                uint64_t curQWord = *p;
+                *p = curQWord - acc;
+                acc = curQWord;
+                ++p;
+            }
+            return 1;
+        }
+#endif
         do
         {
             REPEAT4(stride, wp[stride] -= wp[0]; wp--)
