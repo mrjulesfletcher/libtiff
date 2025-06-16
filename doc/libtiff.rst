@@ -135,6 +135,15 @@ the application is not permitted to know about its contents.
 All subsequent library calls for this file must pass the handle
 as an argument.
 
+.. note::
+
+   The type used for file offsets in the API is :c:type:`toff_t`.  When
+   working with BigTIFF or other files that may exceed 2 GiB, this type must
+   be **unsigned** so that large offsets are represented correctly.  Older
+   libtiff builds sometimes used a signed :c:type:`toff_t`, so existing
+   applications should verify that they are compiled with an unsigned
+   definition to ensure compatibility with large files.
+
 To create or overwrite a TIFF image the file is also opened, but with
 a ``"w"`` argument:
 
