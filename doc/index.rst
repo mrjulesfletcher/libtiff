@@ -66,6 +66,7 @@ The following sections are included in this documentation:
     addingtags
     tools
     contrib
+    vectorization_policy
     rfcs/index
     project/index
     releases/index
