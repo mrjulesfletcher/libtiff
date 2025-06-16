@@ -1141,33 +1141,38 @@ static int horDiff8(TIFF *tif, uint8_t *cp0, tmsize_t cc)
             }
 #endif
 #if defined(HAVE_SSE41)
-            if (TIFFUseSSE41() && cc >= 16)
+            if (TIFFUseSSE41())
             {
-                uint8_t *p = cp + 1;
-                tmsize_t remaining = cc - 1;
-                __m128i prev = _mm_set1_epi8((char)cp[0]);
-                while (remaining >= 16)
+                if (cc >= 16)
                 {
-                    __builtin_prefetch(p + 16);
-                    __m128i cur = _mm_loadu_si128((const __m128i *)p);
-                    __m128i prev_vec = _mm_alignr_epi8(cur, prev, 15);
-                    __m128i diff = _mm_sub_epi8(cur, prev_vec);
-                    _mm_storeu_si128((__m128i *)p, diff);
-                    prev = cur;
-                    p += 16;
-                    remaining -= 16;
+                    uint8_t *p = cp + 1;
+                    tmsize_t remaining = cc - 1;
+                    __m128i prev = _mm_set1_epi8((char)cp[0]);
+                    while (remaining >= 16)
+                    {
+                        __builtin_prefetch(p + 16);
+                        __m128i cur = _mm_loadu_si128((const __m128i *)p);
+                        __m128i prev_vec = _mm_alignr_epi8(cur, prev, 15);
+                        __m128i diff = _mm_sub_epi8(cur, prev_vec);
+                        _mm_storeu_si128((__m128i *)p, diff);
+                        prev = cur;
+                        p += 16;
+                        remaining -= 16;
+                    }
+                    uint8_t acc = (uint8_t)_mm_extract_epi8(prev, 15);
+                    while (remaining--)
+                    {
+                        uint8_t curByte = *p;
+                        *p = (uint8_t)(curByte - acc);
+                        acc = curByte;
+                        ++p;
+                    }
+                    return 1;
                 }
-                uint8_t acc = (uint8_t)_mm_extract_epi8(prev, 15);
-                while (remaining--)
-                {
-                    uint8_t curByte = *p;
-                    *p = (uint8_t)(curByte - acc);
-                    acc = curByte;
-                    ++p;
-                }
-                return 1;
             }
+            else
 #endif
+                (void)0;
         }
         if (stride == 3)
         {
@@ -1282,32 +1287,37 @@ static int horDiff16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         }
 #endif
 #if defined(HAVE_SSE41)
-        if (TIFFUseSSE41() && stride == 1 && wc >= 8)
+        if (TIFFUseSSE41())
         {
-            uint16_t *p = wp + 1;
-            tmsize_t remaining = wc - 1;
-            __m128i prev = _mm_set1_epi16((short)wp[0]);
-            while (remaining >= 8)
+            if (stride == 1 && wc >= 8)
             {
-                __m128i cur = _mm_loadu_si128((const __m128i *)p);
-                __m128i prev_vec = _mm_alignr_epi8(cur, prev, 2);
-                __m128i diff = _mm_sub_epi16(cur, prev_vec);
-                _mm_storeu_si128((__m128i *)p, diff);
-                prev = cur;
-                p += 8;
-                remaining -= 8;
+                uint16_t *p = wp + 1;
+                tmsize_t remaining = wc - 1;
+                __m128i prev = _mm_set1_epi16((short)wp[0]);
+                while (remaining >= 8)
+                {
+                    __m128i cur = _mm_loadu_si128((const __m128i *)p);
+                    __m128i prev_vec = _mm_alignr_epi8(cur, prev, 2);
+                    __m128i diff = _mm_sub_epi16(cur, prev_vec);
+                    _mm_storeu_si128((__m128i *)p, diff);
+                    prev = cur;
+                    p += 8;
+                    remaining -= 8;
+                }
+                uint16_t acc = (uint16_t)_mm_extract_epi16(prev, 7);
+                while (remaining--)
+                {
+                    uint16_t curWord = *p;
+                    *p = (uint16_t)(curWord - acc);
+                    acc = curWord;
+                    ++p;
+                }
+                return 1;
             }
-            uint16_t acc = (uint16_t)_mm_extract_epi16(prev, 7);
-            while (remaining--)
-            {
-                uint16_t curWord = *p;
-                *p = (uint16_t)(curWord - acc);
-                acc = curWord;
-                ++p;
-            }
-            return 1;
         }
+        else
 #endif
+            (void)0;
         do
         {
             REPEAT4(stride, wp[stride] = (uint16_t)(((unsigned int)wp[stride] -
@@ -1374,32 +1384,37 @@ static int horDiff32(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         }
 #endif
 #if defined(HAVE_SSE41)
-        if (TIFFUseSSE41() && stride == 1 && wc >= 4)
+        if (TIFFUseSSE41())
         {
-            uint32_t *p = wp + 1;
-            tmsize_t remaining = wc - 1;
-            __m128i prev = _mm_set1_epi32((int)wp[0]);
-            while (remaining >= 4)
+            if (stride == 1 && wc >= 4)
             {
-                __m128i cur = _mm_loadu_si128((const __m128i *)p);
-                __m128i prev_vec = _mm_alignr_epi8(cur, prev, 4);
-                __m128i diff = _mm_sub_epi32(cur, prev_vec);
-                _mm_storeu_si128((__m128i *)p, diff);
-                prev = cur;
-                p += 4;
-                remaining -= 4;
+                uint32_t *p = wp + 1;
+                tmsize_t remaining = wc - 1;
+                __m128i prev = _mm_set1_epi32((int)wp[0]);
+                while (remaining >= 4)
+                {
+                    __m128i cur = _mm_loadu_si128((const __m128i *)p);
+                    __m128i prev_vec = _mm_alignr_epi8(cur, prev, 4);
+                    __m128i diff = _mm_sub_epi32(cur, prev_vec);
+                    _mm_storeu_si128((__m128i *)p, diff);
+                    prev = cur;
+                    p += 4;
+                    remaining -= 4;
+                }
+                uint32_t acc = (uint32_t)_mm_extract_epi32(prev, 3);
+                while (remaining--)
+                {
+                    uint32_t curDWord = *p;
+                    *p = curDWord - acc;
+                    acc = curDWord;
+                    ++p;
+                }
+                return 1;
             }
-            uint32_t acc = (uint32_t)_mm_extract_epi32(prev, 3);
-            while (remaining--)
-            {
-                uint32_t curDWord = *p;
-                *p = curDWord - acc;
-                acc = curDWord;
-                ++p;
-            }
-            return 1;
         }
+        else
 #endif
+            (void)0;
         do
         {
             REPEAT4(stride, wp[stride] -= wp[0]; wp--)
@@ -1476,32 +1491,37 @@ static int horDiff64(TIFF *tif, uint8_t *cp0, tmsize_t cc)
         }
 #endif
 #if defined(HAVE_SSE41)
-        if (TIFFUseSSE41() && stride == 1 && wc >= 2)
+        if (TIFFUseSSE41())
         {
-            uint64_t *p = wp + 1;
-            tmsize_t remaining = wc - 1;
-            __m128i prev = _mm_set1_epi64x((long long)wp[0]);
-            while (remaining >= 2)
+            if (stride == 1 && wc >= 2)
             {
-                __m128i cur = _mm_loadu_si128((const __m128i *)p);
-                __m128i prev_vec = _mm_alignr_epi8(cur, prev, 8);
-                __m128i diff = _mm_sub_epi64(cur, prev_vec);
-                _mm_storeu_si128((__m128i *)p, diff);
-                prev = cur;
-                p += 2;
-                remaining -= 2;
+                uint64_t *p = wp + 1;
+                tmsize_t remaining = wc - 1;
+                __m128i prev = _mm_set1_epi64x((long long)wp[0]);
+                while (remaining >= 2)
+                {
+                    __m128i cur = _mm_loadu_si128((const __m128i *)p);
+                    __m128i prev_vec = _mm_alignr_epi8(cur, prev, 8);
+                    __m128i diff = _mm_sub_epi64(cur, prev_vec);
+                    _mm_storeu_si128((__m128i *)p, diff);
+                    prev = cur;
+                    p += 2;
+                    remaining -= 2;
+                }
+                uint64_t acc = (uint64_t)_mm_extract_epi64(prev, 1);
+                while (remaining--)
+                {
+                    uint64_t curQWord = *p;
+                    *p = curQWord - acc;
+                    acc = curQWord;
+                    ++p;
+                }
+                return 1;
             }
-            uint64_t acc = (uint64_t)_mm_extract_epi64(prev, 1);
-            while (remaining--)
-            {
-                uint64_t curQWord = *p;
-                *p = curQWord - acc;
-                acc = curQWord;
-                ++p;
-            }
-            return 1;
         }
+        else
 #endif
+            (void)0;
         do
         {
             REPEAT4(stride, wp[stride] -= wp[0]; wp--)
