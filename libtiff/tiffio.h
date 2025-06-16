@@ -575,8 +575,10 @@ extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
     extern void TIFFInitSIMD(void);
     extern int TIFFUseNEON(void);
     extern int TIFFUseSSE41(void);
+    extern int TIFFUseSSE2(void);
     extern void TIFFSetUseNEON(int);
     extern void TIFFSetUseSSE41(int);
+    extern void TIFFSetUseSSE2(int);
     extern void TIFFSetMapSize(tmsize_t size);
     extern void TIFFSetMapAdvice(int fadvise_flags, int madvise_flags);
     extern int TIFFSetURingQueueDepth(TIFF *tif, unsigned int depth);

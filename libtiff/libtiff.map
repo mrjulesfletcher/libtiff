@@ -246,8 +246,10 @@ LIBTIFF_4.7.1 {
     TIFFInitSIMD;
     TIFFUseNEON;
     TIFFUseSSE41;
+    TIFFUseSSE2;
     TIFFSetUseNEON;
     TIFFSetUseSSE41;
+    TIFFSetUseSSE2;
     TIFFSetMapSize;
     TIFFSetMapAdvice;
     TIFFSetURingQueueDepth;

@@ -28,8 +28,15 @@
  * XXX We assume short = 16-bits and long = 32-bits XXX
  */
 #include "tiffiop.h"
+#include "tiff_simd.h"
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
+#endif
+#if defined(HAVE_SSE2)
+#include <emmintrin.h>
+#endif
+#if defined(HAVE_SSE41)
+#include <smmintrin.h>
 #endif
 
 #if defined(__GNUC__) || defined(__clang__)
@@ -120,13 +127,57 @@ static void TIFFSwabArrayOfShortNeon(uint16_t *wp, tmsize_t n)
 }
 #endif
 
+#if defined(HAVE_SSE41)
+static void TIFFSwabArrayOfShortSSE41(uint16_t *wp, tmsize_t n)
+{
+    const __m128i mask = _mm_set_epi8(1,0,3,2,5,4,7,6,9,8,11,10,13,12,15,14);
+    size_t i = 0;
+    for (; i + 8 <= (size_t)n; i += 8)
+    {
+        __m128i v = _mm_loadu_si128((__m128i *)(wp + i));
+        v = _mm_shuffle_epi8(v, mask);
+        _mm_storeu_si128((__m128i *)(wp + i), v);
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfShortScalar(wp + i, n - i);
+}
+#endif
+
+#if defined(HAVE_SSE2)
+static void TIFFSwabArrayOfShortSSE2(uint16_t *wp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 8 <= (size_t)n; i += 8)
+    {
+        __m128i v = _mm_loadu_si128((__m128i *)(wp + i));
+        __m128i hi = _mm_slli_epi16(v, 8);
+        __m128i lo = _mm_srli_epi16(v, 8);
+        v = _mm_or_si128(hi, lo);
+        _mm_storeu_si128((__m128i *)(wp + i), v);
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfShortScalar(wp + i, n - i);
+}
+#endif
+
 void TIFFSwabArrayOfShort(uint16_t *wp, tmsize_t n)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    TIFFSwabArrayOfShortNeon(wp, n);
-#else
-    TIFFSwabArrayOfShortScalar(wp, n);
+    if (tiff_use_neon)
+        TIFFSwabArrayOfShortNeon(wp, n);
+    else
 #endif
+#if defined(HAVE_SSE41)
+    if (tiff_use_sse41)
+        TIFFSwabArrayOfShortSSE41(wp, n);
+    else
+#endif
+#if defined(HAVE_SSE2)
+    if (tiff_use_sse2)
+        TIFFSwabArrayOfShortSSE2(wp, n);
+    else
+#endif
+        TIFFSwabArrayOfShortScalar(wp, n);
 }
 #endif
 
@@ -186,13 +237,57 @@ static void TIFFSwabArrayOfLongNeon(uint32_t *lp, tmsize_t n)
 }
 #endif
 
+#if defined(HAVE_SSE41)
+static void TIFFSwabArrayOfLongSSE41(uint32_t *lp, tmsize_t n)
+{
+    const __m128i mask = _mm_set_epi8(3,2,1,0,7,6,5,4,11,10,9,8,15,14,13,12);
+    size_t i = 0;
+    for (; i + 4 <= (size_t)n; i += 4)
+    {
+        __m128i v = _mm_loadu_si128((__m128i *)(lp + i));
+        v = _mm_shuffle_epi8(v, mask);
+        _mm_storeu_si128((__m128i *)(lp + i), v);
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfLongScalar(lp + i, n - i);
+}
+#endif
+
+#if defined(HAVE_SSE2)
+static void TIFFSwabArrayOfLongSSE2(uint32_t *lp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 4 <= (size_t)n; i += 4)
+    {
+        __m128i v = _mm_loadu_si128((__m128i *)(lp + i));
+        v = _mm_or_si128(_mm_slli_epi16(v, 8), _mm_srli_epi16(v, 8));
+        v = _mm_shufflehi_epi16(v, _MM_SHUFFLE(2,3,0,1));
+        v = _mm_shufflelo_epi16(v, _MM_SHUFFLE(2,3,0,1));
+        _mm_storeu_si128((__m128i *)(lp + i), v);
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfLongScalar(lp + i, n - i);
+}
+#endif
+
 void TIFFSwabArrayOfLong(uint32_t *lp, tmsize_t n)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    TIFFSwabArrayOfLongNeon(lp, n);
-#else
-    TIFFSwabArrayOfLongScalar(lp, n);
+    if (tiff_use_neon)
+        TIFFSwabArrayOfLongNeon(lp, n);
+    else
 #endif
+#if defined(HAVE_SSE41)
+    if (tiff_use_sse41)
+        TIFFSwabArrayOfLongSSE41(lp, n);
+    else
+#endif
+#if defined(HAVE_SSE2)
+    if (tiff_use_sse2)
+        TIFFSwabArrayOfLongSSE2(lp, n);
+    else
+#endif
+        TIFFSwabArrayOfLongScalar(lp, n);
 }
 #endif
 
@@ -279,13 +374,58 @@ static void TIFFSwabArrayOfLong8Neon(uint64_t *lp, tmsize_t n)
 }
 #endif
 
+#if defined(HAVE_SSE41)
+static void TIFFSwabArrayOfLong8SSE41(uint64_t *lp, tmsize_t n)
+{
+    const __m128i mask = _mm_set_epi8(7,6,5,4,3,2,1,0,15,14,13,12,11,10,9,8);
+    size_t i = 0;
+    for (; i + 2 <= (size_t)n; i += 2)
+    {
+        __m128i v = _mm_loadu_si128((__m128i *)(lp + i));
+        v = _mm_shuffle_epi8(v, mask);
+        _mm_storeu_si128((__m128i *)(lp + i), v);
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfLong8Scalar(lp + i, n - i);
+}
+#endif
+
+#if defined(HAVE_SSE2)
+static void TIFFSwabArrayOfLong8SSE2(uint64_t *lp, tmsize_t n)
+{
+    size_t i = 0;
+    for (; i + 2 <= (size_t)n; i += 2)
+    {
+        __m128i v = _mm_loadu_si128((__m128i *)(lp + i));
+        v = _mm_or_si128(_mm_slli_epi16(v, 8), _mm_srli_epi16(v, 8));
+        v = _mm_shufflehi_epi16(v, _MM_SHUFFLE(2,3,0,1));
+        v = _mm_shufflelo_epi16(v, _MM_SHUFFLE(2,3,0,1));
+        v = _mm_shuffle_epi32(v, _MM_SHUFFLE(1,0,3,2));
+        _mm_storeu_si128((__m128i *)(lp + i), v);
+    }
+    if (i < (size_t)n)
+        TIFFSwabArrayOfLong8Scalar(lp + i, n - i);
+}
+#endif
+
 void TIFFSwabArrayOfLong8(uint64_t *lp, tmsize_t n)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
-    TIFFSwabArrayOfLong8Neon(lp, n);
-#else
-    TIFFSwabArrayOfLong8Scalar(lp, n);
+    if (tiff_use_neon)
+        TIFFSwabArrayOfLong8Neon(lp, n);
+    else
 #endif
+#if defined(HAVE_SSE41)
+    if (tiff_use_sse41)
+        TIFFSwabArrayOfLong8SSE41(lp, n);
+    else
+#endif
+#if defined(HAVE_SSE2)
+    if (tiff_use_sse2)
+        TIFFSwabArrayOfLong8SSE2(lp, n);
+    else
+#endif
+        TIFFSwabArrayOfLong8Scalar(lp, n);
 }
 #endif
 

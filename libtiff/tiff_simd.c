@@ -23,6 +23,7 @@
 tiff_simd_funcs tiff_simd;
 int tiff_use_neon = 0;
 int tiff_use_sse41 = 0;
+int tiff_use_sse2 = 0;
 #include <zlib.h>
 
 /* Scalar implementations */
@@ -178,11 +179,22 @@ static int detect_neon(void)
 
 static int detect_sse41(void)
 {
-#if defined(HAVE_SSE41) && (defined(__x86_64__) || defined(__i386__) ||        \
+#if defined(HAVE_SSE41) && (defined(__x86_64__) || defined(__i386__) || \
                             defined(_M_X64) || defined(_M_IX86))
     unsigned int eax, ebx, ecx, edx;
     if (__get_cpuid(1, &eax, &ebx, &ecx, &edx))
         return (ecx & bit_SSE4_1) != 0;
+#endif
+    return 0;
+}
+
+static int detect_sse2(void)
+{
+#if defined(HAVE_SSE2) && (defined(__x86_64__) || defined(__i386__) || \
+                            defined(_M_X64) || defined(_M_IX86))
+    unsigned int eax, ebx, ecx, edx;
+    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx))
+        return (edx & bit_SSE2) != 0;
 #endif
     return 0;
 }
@@ -213,6 +225,13 @@ void TIFFInitSIMD(void)
         tiff_simd.add_u8 = add_u8_sse41;
         tiff_simd.sub_u8 = sub_u8_sse41;
     }
+    else
+#endif
+#if defined(HAVE_SSE2)
+    if (detect_sse2())
+    {
+        tiff_use_sse2 = 1;
+    }
 #endif
 }
 
@@ -220,9 +239,13 @@ int TIFFUseNEON(void) { return tiff_use_neon; }
 
 int TIFFUseSSE41(void) { return tiff_use_sse41; }
 
+int TIFFUseSSE2(void) { return tiff_use_sse2; }
+
 void TIFFSetUseNEON(int enable) { tiff_use_neon = enable; }
 
 void TIFFSetUseSSE41(int enable) { tiff_use_sse41 = enable; }
+
+void TIFFSetUseSSE2(int enable) { tiff_use_sse2 = enable; }
 
 #if defined(HAVE_ARM_CRC32) && defined(__ARM_FEATURE_CRC32)
 static uint32_t crc32_neon(uint32_t crc, const uint8_t *p, size_t len)

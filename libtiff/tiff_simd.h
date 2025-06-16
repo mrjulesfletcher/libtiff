@@ -7,6 +7,9 @@
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
 #include <arm_neon.h>
 #endif
+#if defined(HAVE_SSE2)
+#include <emmintrin.h>
+#endif
 #if defined(HAVE_SSE41)
 #include <smmintrin.h>
 #endif
@@ -26,7 +29,12 @@ extern "C"
 #else
 #define TIFF_SIMD_SSE41 0
 #endif
-#if TIFF_SIMD_NEON || TIFF_SIMD_SSE41
+#if defined(HAVE_SSE2)
+#define TIFF_SIMD_SSE2 1
+#else
+#define TIFF_SIMD_SSE2 0
+#endif
+#if TIFF_SIMD_NEON || TIFF_SIMD_SSE41 || TIFF_SIMD_SSE2
 #define TIFF_SIMD_ENABLED 1
 #else
 #define TIFF_SIMD_ENABLED 0
@@ -38,7 +46,7 @@ extern "C"
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
         uint8x16_t n;
 #endif
-#if defined(HAVE_SSE41)
+#if defined(HAVE_SSE41) || defined(HAVE_SSE2)
         __m128i x;
 #endif
     } tiff_v16u8;
@@ -54,10 +62,13 @@ extern "C"
     extern tiff_simd_funcs tiff_simd;
     extern int tiff_use_neon;
     extern int tiff_use_sse41;
+    extern int tiff_use_sse2;
     int TIFFUseNEON(void);
     int TIFFUseSSE41(void);
+    int TIFFUseSSE2(void);
     void TIFFSetUseNEON(int);
     void TIFFSetUseSSE41(int);
+    void TIFFSetUseSSE2(int);
 
     static inline tiff_v16u8 tiff_loadu_u8(const uint8_t *p)
     {
