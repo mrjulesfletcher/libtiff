@@ -104,7 +104,7 @@ if TIFF_TESTS
 check_PROGRAMS = \
        ascii_tag long_tag short_tag strip_rw rewrite custom_dir custom_dir_EXIF_231 \
        defer_strile_loading defer_strile_writing test_directory test_IFD_enlargement test_open_options \
-       test_append_to_strip test_ifd_loop_detection swab_neon_test assemble_strip_neon_test gray_flip_neon_test memmove_simd_test reverse_bits_neon_test bayer_pack_test swab_benchmark predictor_threadpool_benchmark pack_uring_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS) \
+       test_append_to_strip test_seek_partial test_ifd_loop_detection swab_neon_test assemble_strip_neon_test gray_flip_neon_test memmove_simd_test reverse_bits_neon_test bayer_pack_test swab_benchmark predictor_threadpool_benchmark pack_uring_benchmark testtypes test_signed_tags uring_rw $(JPEG_DEPENDENT_CHECK_PROG) $(STATIC_CHECK_PROGS) \
        bayer_simd_benchmark \
        rgb_pack_neon_test \
        packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test
@@ -315,6 +315,8 @@ test_open_options_SOURCES = test_open_options.c
 test_open_options_LDADD = $(LIBTIFF)
 test_append_to_strip_SOURCES = test_append_to_strip.c
 test_append_to_strip_LDADD = $(LIBTIFF)
+test_seek_partial_SOURCES = test_seek_partial.c
+test_seek_partial_LDADD = $(LIBTIFF)
 test_ifd_loop_detection_CFLAGS = -DSOURCE_DIR=\"@srcdir@\"
 test_ifd_loop_detection_SOURCES = test_ifd_loop_detection.c
 test_ifd_loop_detection_LDADD = $(LIBTIFF)
