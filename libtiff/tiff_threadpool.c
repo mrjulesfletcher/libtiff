@@ -14,21 +14,34 @@
  */
 static pthread_once_t gThreadPoolMutexOnce = PTHREAD_ONCE_INIT;
 static pthread_mutex_t gThreadPoolMutex;
+static int gThreadPoolMutexInitialized = 0;
 
 static void initThreadPoolMutex(void)
 {
-    (void)pthread_mutex_init(&gThreadPoolMutex, NULL);
+    int err = pthread_mutex_init(&gThreadPoolMutex, NULL);
+    if (err != 0)
+    {
+        TIFFErrorExtR(NULL, "initThreadPoolMutex",
+                      "pthread_mutex_init failed: %d", err);
+        gThreadPoolMutexInitialized = 0;
+    }
+    else
+    {
+        gThreadPoolMutexInitialized = 1;
+    }
 }
 
 static void lockThreadPoolMutex(void)
 {
     pthread_once(&gThreadPoolMutexOnce, initThreadPoolMutex);
-    pthread_mutex_lock(&gThreadPoolMutex);
+    if (gThreadPoolMutexInitialized)
+        pthread_mutex_lock(&gThreadPoolMutex);
 }
 
 static void unlockThreadPoolMutex(void)
 {
-    pthread_mutex_unlock(&gThreadPoolMutex);
+    if (gThreadPoolMutexInitialized)
+        pthread_mutex_unlock(&gThreadPoolMutex);
 }
 
 #define TIFF_THREADPOOL_MAX_QUEUE 256
