@@ -17,7 +17,7 @@ $ cmake --build . -j$(nproc)
 $ ctest
 $ cmake --install . --prefix /usr/local
 ```
-SIMD support is detected automatically.  You may explicitly control it or
+SIMD support is detected and selected automatically at runtime.  You may explicitly control it or
 override the NEON compiler flags:
 ```bash
 $ cmake -DHAVE_NEON=1 -DHAVE_SSE41=0 ..   # force NEON only
@@ -135,7 +135,7 @@ Fax3 fill runs are also vectorized, providing snappier handling of bilevel
 images.
 
 ### SSE2 Predictor Optimization
-Float32 predictor decoding on x86‑64 interleaves four vectors at once and now prefetches upcoming data. The 8‑bit and 16‑bit accumulators also fall back to SSE2 when SSE4.1 is unavailable. This yields about a **25 %** improvement:
+Float32 predictor decoding on x86‑64 interleaves four vectors at once and now prefetches upcoming data. Horizontal predictor functions use SSE4.1 when `TIFFUseSSE41()` is enabled at runtime with an SSE2 fallback. This yields about a **25 %** improvement:
 ```c
 #if defined(__x86_64__) || defined(_M_X64)
     if (bps == 4)
@@ -294,7 +294,7 @@ tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
 |---------|-----|-----------|-----------------|
 |12‑bit Bayer pack/unpack|`TIFFPackRaw12`, `TIFFUnpackRaw12`|ARM NEON|6× pack, 5× unpack|
 |Byte swapping|`TIFFSwabArrayOfShort`, `TIFFSwabArrayOfLong8`|ARM NEON|~3×¹|
-|Predictor acceleration|`PredictorDecodeRow`|ARM NEON / SSE2|up to 25 %|
+|Predictor acceleration|`PredictorDecodeRow`|ARM NEON / SSE4.1 (SSE2 fallback)|up to 25 %|
 |Strip assembly|`TIFFAssembleStripNEON`|ARM NEON|>5× pack|
 |RGB packing|`TIFFPackRGB24` etc.|ARM NEON|>2×|
 |YCbCr to RGBA|`TIFFReadRGBAImage`|ARM NEON|~2×|
@@ -385,7 +385,7 @@ requires custom flags, set them via `-DTIFF_NEON_FLAGS="-march=armv8-a+simd"`.
 Install CharLS and configure with `-Djpegls=ON` (CMake) or `--with-jpegls` (Autotools).
 
 **Q: Can I disable SIMD at runtime?**
-The library selects SIMD code at compile time. Build with `-DHAVE_NEON=0` or `-DHAVE_SSE41=0` to obtain purely scalar routines.
+Yes. SIMD paths are chosen after runtime CPU detection. Use `TIFFSetUseNEON(0)` or `TIFFSetUseSSE41(0)` to disable a vector implementation.
 
 **Q: The program crashes with "illegal instruction". What can I do?**
 Your CPU might not support the required SIMD level. Rebuild libtiff with
@@ -397,10 +397,10 @@ Compile your program including `tiff_simd.h` and check the macros
 was compiled in.
 
 ## Fallback Behaviour
-SIMD support is selected at build time with `HAVE_NEON` and `HAVE_SSE41`.
-If neither is enabled the library builds a fully scalar implementation.
-There is currently no runtime toggle, but you can rebuild with
-`-DHAVE_NEON=0` or `-DHAVE_SSE41=0` to force scalar code and verify behaviour.
+SIMD code is compiled when `HAVE_NEON` or `HAVE_SSE41` are enabled.
+The library checks CPU capabilities at startup and uses the best available
+implementation. Call `TIFFUseNEON()` or `TIFFUseSSE41()` to query the active
+path and `TIFFSetUseNEON(0)` / `TIFFSetUseSSE41(0)` to force scalar routines.
 Including `tiff_simd.h` exposes `TIFF_SIMD_ENABLED`, `TIFF_SIMD_NEON` and
 `TIFF_SIMD_SSE41` so applications can log which path was compiled.
 
