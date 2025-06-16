@@ -213,8 +213,10 @@ EXPORTS	TIFFAccessTagMethods
         TIFFInitSIMD
         TIFFUseNEON
         TIFFUseSSE41
+        TIFFUseSSE2
         TIFFSetUseNEON
         TIFFSetUseSSE41
+        TIFFSetUseSSE2
         TIFFSetMapSize
         TIFFSetMapAdvice
         TIFFSetURingQueueDepth
