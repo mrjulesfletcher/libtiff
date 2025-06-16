@@ -1862,6 +1862,13 @@ static int OJPEGReadHeaderInfoSecStreamSof(TIFF *tif, uint8_t marker_id)
                           "JPEG compressed data indicates unexpected height");
             return (0);
         }
+        if ((uint32_t)p > sp->strile_length_total)
+        {
+            TIFFErrorExtR(tif, module,
+                          "JPEG compressed data image height exceeds expected "
+                          "image height");
+            return (0);
+        }
         sp->sof_y = p;
         /* X: Number of samples per line */
         if (OJPEGReadWord(sp, &p) == 0)
