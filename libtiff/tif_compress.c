@@ -28,6 +28,7 @@
  * Compression Scheme Configuration Support.
  */
 #include "tiffiop.h"
+#include <pthread.h>
 
 static int TIFFNoEncode(TIFF *tif, const char *method)
 {
@@ -188,6 +189,24 @@ typedef struct _codec
     TIFFCodec *info;
 } codec_t;
 static codec_t *registeredCODECS = NULL;
+static pthread_once_t registeredCODECS_mutex_once = PTHREAD_ONCE_INIT;
+static pthread_mutex_t registeredCODECS_mutex;
+
+static void init_registeredCODECS_mutex(void)
+{
+    pthread_mutex_init(&registeredCODECS_mutex, NULL);
+}
+
+static void lock_registered_codecs(void)
+{
+    pthread_once(&registeredCODECS_mutex_once, init_registeredCODECS_mutex);
+    pthread_mutex_lock(&registeredCODECS_mutex);
+}
+
+static void unlock_registered_codecs(void)
+{
+    pthread_mutex_unlock(&registeredCODECS_mutex);
+}
 
 const TIFFCodec *TIFFFindCODEC(uint16_t scheme)
 {
@@ -217,8 +236,10 @@ TIFFCodec *TIFFRegisterCODEC(uint16_t scheme, const char *name,
         strcpy(cd->info->name, name);
         cd->info->scheme = scheme;
         cd->info->init = init;
+        lock_registered_codecs();
         cd->next = registeredCODECS;
         registeredCODECS = cd;
+        unlock_registered_codecs();
     }
     else
     {
@@ -234,13 +255,16 @@ void TIFFUnRegisterCODEC(TIFFCodec *c)
     codec_t *cd;
     codec_t **pcd;
 
+    lock_registered_codecs();
     for (pcd = &registeredCODECS; (cd = *pcd) != NULL; pcd = &cd->next)
         if (cd->info == c)
         {
             *pcd = cd->next;
+            unlock_registered_codecs();
             _TIFFfreeExt(NULL, cd);
             return;
         }
+    unlock_registered_codecs();
     TIFFErrorExt(0, "TIFFUnRegisterCODEC",
                  "Cannot remove compression scheme %s; not registered",
                  c->name);
@@ -266,6 +290,7 @@ TIFFCodec *TIFFGetConfiguredCODECs()
     TIFFCodec *codecs = NULL;
     TIFFCodec *new_codecs;
 
+    lock_registered_codecs();
     for (cd = registeredCODECS; cd; cd = cd->next)
     {
         new_codecs =
@@ -273,12 +298,14 @@ TIFFCodec *TIFFGetConfiguredCODECs()
         if (!new_codecs)
         {
             _TIFFfreeExt(NULL, codecs);
+            unlock_registered_codecs();
             return NULL;
         }
         codecs = new_codecs;
         _TIFFmemcpy(codecs + i - 1, cd->info, sizeof(TIFFCodec));
         i++;
     }
+    unlock_registered_codecs();
     for (c = _TIFFBuiltinCODECS; c->name; c++)
     {
         if (TIFFIsCODECConfigured(c->scheme))
