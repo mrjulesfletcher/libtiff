@@ -324,25 +324,227 @@ static void unpack12_scalar(const uint8_t *src, uint16_t *dst, size_t count,
 static void pack10_neon(const uint16_t *src, uint8_t *dst, size_t count,
                         int bigendian)
 {
-    pack10_scalar(src, dst, count, bigendian);
+    size_t i = 0;
+    for (; i + 8 <= count; i += 8)
+    {
+        __builtin_prefetch(src + i + 16);
+        uint16x8_t v = vld1q_u16(src + i);
+        uint64_t p0, p1;
+        if (!bigendian)
+        {
+            p0 = ((uint64_t)vgetq_lane_u16(v, 0)) |
+                 ((uint64_t)vgetq_lane_u16(v, 1) << 10) |
+                 ((uint64_t)vgetq_lane_u16(v, 2) << 20) |
+                 ((uint64_t)vgetq_lane_u16(v, 3) << 30);
+            p1 = ((uint64_t)vgetq_lane_u16(v, 4)) |
+                 ((uint64_t)vgetq_lane_u16(v, 5) << 10) |
+                 ((uint64_t)vgetq_lane_u16(v, 6) << 20) |
+                 ((uint64_t)vgetq_lane_u16(v, 7) << 30);
+            dst[0] = (uint8_t)(p0 & 0xff);
+            dst[1] = (uint8_t)((p0 >> 8) & 0xff);
+            dst[2] = (uint8_t)((p0 >> 16) & 0xff);
+            dst[3] = (uint8_t)((p0 >> 24) & 0xff);
+            dst[4] = (uint8_t)((p0 >> 32) & 0xff);
+            dst[5] = (uint8_t)(p1 & 0xff);
+            dst[6] = (uint8_t)((p1 >> 8) & 0xff);
+            dst[7] = (uint8_t)((p1 >> 16) & 0xff);
+            dst[8] = (uint8_t)((p1 >> 24) & 0xff);
+            dst[9] = (uint8_t)((p1 >> 32) & 0xff);
+        }
+        else
+        {
+            p0 = ((uint64_t)vgetq_lane_u16(v, 0) << 30) |
+                 ((uint64_t)vgetq_lane_u16(v, 1) << 20) |
+                 ((uint64_t)vgetq_lane_u16(v, 2) << 10) |
+                 ((uint64_t)vgetq_lane_u16(v, 3));
+            p1 = ((uint64_t)vgetq_lane_u16(v, 4) << 30) |
+                 ((uint64_t)vgetq_lane_u16(v, 5) << 20) |
+                 ((uint64_t)vgetq_lane_u16(v, 6) << 10) |
+                 ((uint64_t)vgetq_lane_u16(v, 7));
+            dst[0] = (uint8_t)((p0 >> 32) & 0xff);
+            dst[1] = (uint8_t)((p0 >> 24) & 0xff);
+            dst[2] = (uint8_t)((p0 >> 16) & 0xff);
+            dst[3] = (uint8_t)((p0 >> 8) & 0xff);
+            dst[4] = (uint8_t)(p0 & 0xff);
+            dst[5] = (uint8_t)((p1 >> 32) & 0xff);
+            dst[6] = (uint8_t)((p1 >> 24) & 0xff);
+            dst[7] = (uint8_t)((p1 >> 16) & 0xff);
+            dst[8] = (uint8_t)((p1 >> 8) & 0xff);
+            dst[9] = (uint8_t)(p1 & 0xff);
+        }
+        dst += 10;
+    }
+    if (i < count)
+        pack10_scalar(src + i, dst, count - i, bigendian);
 }
 
 static void unpack10_neon(const uint8_t *src, uint16_t *dst, size_t count,
                           int bigendian)
 {
-    unpack10_scalar(src, dst, count, bigendian);
+    size_t i = 0;
+    for (; i + 8 <= count; i += 8)
+    {
+        uint64_t p0, p1;
+        if (!bigendian)
+        {
+            p0 = ((uint64_t)src[0]) |
+                 ((uint64_t)src[1] << 8) |
+                 ((uint64_t)src[2] << 16) |
+                 ((uint64_t)src[3] << 24) |
+                 ((uint64_t)src[4] << 32);
+            p1 = ((uint64_t)src[5]) |
+                 ((uint64_t)src[6] << 8) |
+                 ((uint64_t)src[7] << 16) |
+                 ((uint64_t)src[8] << 24) |
+                 ((uint64_t)src[9] << 32);
+        }
+        else
+        {
+            p0 = ((uint64_t)src[0] << 32) |
+                 ((uint64_t)src[1] << 24) |
+                 ((uint64_t)src[2] << 16) |
+                 ((uint64_t)src[3] << 8) |
+                 ((uint64_t)src[4]);
+            p1 = ((uint64_t)src[5] << 32) |
+                 ((uint64_t)src[6] << 24) |
+                 ((uint64_t)src[7] << 16) |
+                 ((uint64_t)src[8] << 8) |
+                 ((uint64_t)src[9]);
+        }
+        uint16x8_t out = { (uint16_t)(p0 & 0x3ff),
+                           (uint16_t)((p0 >> 10) & 0x3ff),
+                           (uint16_t)((p0 >> 20) & 0x3ff),
+                           (uint16_t)((p0 >> 30) & 0x3ff),
+                           (uint16_t)(p1 & 0x3ff),
+                           (uint16_t)((p1 >> 10) & 0x3ff),
+                           (uint16_t)((p1 >> 20) & 0x3ff),
+                           (uint16_t)((p1 >> 30) & 0x3ff) };
+        vst1q_u16(dst + i, out);
+        src += 10;
+    }
+    if (i < count)
+        unpack10_scalar(src, dst + i, count - i, bigendian);
 }
 
 static void pack14_neon(const uint16_t *src, uint8_t *dst, size_t count,
                         int bigendian)
 {
-    pack14_scalar(src, dst, count, bigendian);
+    size_t i = 0;
+    for (; i + 8 <= count; i += 8)
+    {
+        __builtin_prefetch(src + i + 16);
+        uint16x8_t v = vld1q_u16(src + i);
+        uint64_t p0, p1;
+        if (!bigendian)
+        {
+            p0 = ((uint64_t)vgetq_lane_u16(v, 0)) |
+                 ((uint64_t)vgetq_lane_u16(v, 1) << 14) |
+                 ((uint64_t)vgetq_lane_u16(v, 2) << 28) |
+                 ((uint64_t)vgetq_lane_u16(v, 3) << 42);
+            p1 = ((uint64_t)vgetq_lane_u16(v, 4)) |
+                 ((uint64_t)vgetq_lane_u16(v, 5) << 14) |
+                 ((uint64_t)vgetq_lane_u16(v, 6) << 28) |
+                 ((uint64_t)vgetq_lane_u16(v, 7) << 42);
+            dst[0] = (uint8_t)(p0 & 0xff);
+            dst[1] = (uint8_t)((p0 >> 8) & 0xff);
+            dst[2] = (uint8_t)((p0 >> 16) & 0xff);
+            dst[3] = (uint8_t)((p0 >> 24) & 0xff);
+            dst[4] = (uint8_t)((p0 >> 32) & 0xff);
+            dst[5] = (uint8_t)((p0 >> 40) & 0xff);
+            dst[6] = (uint8_t)((p0 >> 48) & 0xff);
+            dst[7] = (uint8_t)(p1 & 0xff);
+            dst[8] = (uint8_t)((p1 >> 8) & 0xff);
+            dst[9] = (uint8_t)((p1 >> 16) & 0xff);
+            dst[10] = (uint8_t)((p1 >> 24) & 0xff);
+            dst[11] = (uint8_t)((p1 >> 32) & 0xff);
+            dst[12] = (uint8_t)((p1 >> 40) & 0xff);
+            dst[13] = (uint8_t)((p1 >> 48) & 0xff);
+        }
+        else
+        {
+            p0 = ((uint64_t)vgetq_lane_u16(v, 0) << 42) |
+                 ((uint64_t)vgetq_lane_u16(v, 1) << 28) |
+                 ((uint64_t)vgetq_lane_u16(v, 2) << 14) |
+                 ((uint64_t)vgetq_lane_u16(v, 3));
+            p1 = ((uint64_t)vgetq_lane_u16(v, 4) << 42) |
+                 ((uint64_t)vgetq_lane_u16(v, 5) << 28) |
+                 ((uint64_t)vgetq_lane_u16(v, 6) << 14) |
+                 ((uint64_t)vgetq_lane_u16(v, 7));
+            dst[0] = (uint8_t)((p0 >> 48) & 0xff);
+            dst[1] = (uint8_t)((p0 >> 40) & 0xff);
+            dst[2] = (uint8_t)((p0 >> 32) & 0xff);
+            dst[3] = (uint8_t)((p0 >> 24) & 0xff);
+            dst[4] = (uint8_t)((p0 >> 16) & 0xff);
+            dst[5] = (uint8_t)((p0 >> 8) & 0xff);
+            dst[6] = (uint8_t)(p0 & 0xff);
+            dst[7] = (uint8_t)((p1 >> 48) & 0xff);
+            dst[8] = (uint8_t)((p1 >> 40) & 0xff);
+            dst[9] = (uint8_t)((p1 >> 32) & 0xff);
+            dst[10] = (uint8_t)((p1 >> 24) & 0xff);
+            dst[11] = (uint8_t)((p1 >> 16) & 0xff);
+            dst[12] = (uint8_t)((p1 >> 8) & 0xff);
+            dst[13] = (uint8_t)(p1 & 0xff);
+        }
+        dst += 14;
+    }
+    if (i < count)
+        pack14_scalar(src + i, dst, count - i, bigendian);
 }
 
 static void unpack14_neon(const uint8_t *src, uint16_t *dst, size_t count,
                           int bigendian)
 {
-    unpack14_scalar(src, dst, count, bigendian);
+    size_t i = 0;
+    for (; i + 8 <= count; i += 8)
+    {
+        uint64_t p0, p1;
+        if (!bigendian)
+        {
+            p0 = ((uint64_t)src[0]) |
+                 ((uint64_t)src[1] << 8) |
+                 ((uint64_t)src[2] << 16) |
+                 ((uint64_t)src[3] << 24) |
+                 ((uint64_t)src[4] << 32) |
+                 ((uint64_t)src[5] << 40) |
+                 ((uint64_t)src[6] << 48);
+            p1 = ((uint64_t)src[7]) |
+                 ((uint64_t)src[8] << 8) |
+                 ((uint64_t)src[9] << 16) |
+                 ((uint64_t)src[10] << 24) |
+                 ((uint64_t)src[11] << 32) |
+                 ((uint64_t)src[12] << 40) |
+                 ((uint64_t)src[13] << 48);
+        }
+        else
+        {
+            p0 = ((uint64_t)src[0] << 48) |
+                 ((uint64_t)src[1] << 40) |
+                 ((uint64_t)src[2] << 32) |
+                 ((uint64_t)src[3] << 24) |
+                 ((uint64_t)src[4] << 16) |
+                 ((uint64_t)src[5] << 8) |
+                 ((uint64_t)src[6]);
+            p1 = ((uint64_t)src[7] << 48) |
+                 ((uint64_t)src[8] << 40) |
+                 ((uint64_t)src[9] << 32) |
+                 ((uint64_t)src[10] << 24) |
+                 ((uint64_t)src[11] << 16) |
+                 ((uint64_t)src[12] << 8) |
+                 ((uint64_t)src[13]);
+        }
+        uint16x8_t out = { (uint16_t)(p0 & 0x3fff),
+                           (uint16_t)((p0 >> 14) & 0x3fff),
+                           (uint16_t)((p0 >> 28) & 0x3fff),
+                           (uint16_t)((p0 >> 42) & 0x3fff),
+                           (uint16_t)(p1 & 0x3fff),
+                           (uint16_t)((p1 >> 14) & 0x3fff),
+                           (uint16_t)((p1 >> 28) & 0x3fff),
+                           (uint16_t)((p1 >> 42) & 0x3fff) };
+        vst1q_u16(dst + i, out);
+        src += 14;
+    }
+    if (i < count)
+        unpack14_scalar(src, dst + i, count - i, bigendian);
 }
 
 static void pack16_neon(const uint16_t *src, uint8_t *dst, size_t count,
