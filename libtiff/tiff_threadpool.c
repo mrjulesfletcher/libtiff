@@ -7,6 +7,30 @@
 #include <stdlib.h>
 #include <unistd.h>
 
+/*
+ * Global mutex protecting tif->tif_threadpool assignments so that
+ * initialization and shutdown can safely be invoked from multiple
+ * threads concurrently.
+ */
+static pthread_once_t gThreadPoolMutexOnce = PTHREAD_ONCE_INIT;
+static pthread_mutex_t gThreadPoolMutex;
+
+static void initThreadPoolMutex(void)
+{
+    (void)pthread_mutex_init(&gThreadPoolMutex, NULL);
+}
+
+static void lockThreadPoolMutex(void)
+{
+    pthread_once(&gThreadPoolMutexOnce, initThreadPoolMutex);
+    pthread_mutex_lock(&gThreadPoolMutex);
+}
+
+static void unlockThreadPoolMutex(void)
+{
+    pthread_mutex_unlock(&gThreadPoolMutex);
+}
+
 #define TIFF_THREADPOOL_MAX_QUEUE 256
 
 typedef struct _TPTask
@@ -240,17 +264,37 @@ void TIFFSetThreadCount(TIFF *tif, int count)
 {
     if (count < 1)
         count = 1;
-    _TIFFThreadPoolShutdown(tif ? tif->tif_threadpool : NULL);
+    TIFFThreadPool *old_pool = NULL;
     if (tif)
-        tif->tif_threadpool =
+    {
+        lockThreadPoolMutex();
+        old_pool = tif->tif_threadpool;
+        tif->tif_threadpool = NULL;
+        unlockThreadPoolMutex();
+    }
+    _TIFFThreadPoolShutdown(old_pool);
+    if (tif)
+    {
+        TIFFThreadPool *new_pool =
             _TIFFThreadPoolInitWithSize(count, TIFF_THREADPOOL_MAX_QUEUE);
+        lockThreadPoolMutex();
+        tif->tif_threadpool = new_pool;
+        unlockThreadPoolMutex();
+    }
 }
 
 void TIFFSetThreadPoolSize(TIFF *tif, int count, int max_queue)
 {
     if (max_queue < 1)
         max_queue = TIFF_THREADPOOL_MAX_QUEUE;
-    TIFFThreadPool *pool = tif ? tif->tif_threadpool : NULL;
+    TIFFThreadPool *pool = NULL;
+    if (tif)
+    {
+        lockThreadPoolMutex();
+        pool = tif->tif_threadpool;
+        tif->tif_threadpool = NULL;
+        unlockThreadPoolMutex();
+    }
     if (count == 0 && pool)
     {
         /* auto-size based on current queue depth */
@@ -270,14 +314,23 @@ void TIFFSetThreadPoolSize(TIFF *tif, int count, int max_queue)
         count = 1;
     _TIFFThreadPoolShutdown(pool);
     if (tif)
-        tif->tif_threadpool = _TIFFThreadPoolInitWithSize(count, max_queue);
+    {
+        TIFFThreadPool *new_pool =
+            _TIFFThreadPoolInitWithSize(count, max_queue);
+        lockThreadPoolMutex();
+        tif->tif_threadpool = new_pool;
+        unlockThreadPoolMutex();
+    }
 }
 
 int TIFFGetThreadCount(TIFF *tif)
 {
     if (!tif)
         return 1;
-    if (!tif->tif_threadpool)
+    lockThreadPoolMutex();
+    TIFFThreadPool *pool = tif->tif_threadpool;
+    unlockThreadPoolMutex();
+    if (!pool)
     {
         int workers = 0;
         const char *env = getenv("TIFF_THREAD_COUNT");
@@ -310,11 +363,28 @@ int TIFFGetThreadCount(TIFF *tif)
                 nproc = 1;
             workers = (int)nproc;
         }
-        tif->tif_threadpool = _TIFFThreadPoolInit(workers);
+        TIFFThreadPool *new_pool = _TIFFThreadPoolInit(workers);
+        lockThreadPoolMutex();
         if (!tif->tif_threadpool)
+        {
+            tif->tif_threadpool = new_pool;
+            pool = new_pool;
+            new_pool = NULL;
+        }
+        else
+        {
+            pool = tif->tif_threadpool;
+        }
+        unlockThreadPoolMutex();
+        if (new_pool)
+        {
+            _TIFFThreadPoolShutdown(new_pool);
+            return 1;
+        }
+        if (!pool)
             return 1;
     }
-    return tif->tif_threadpool->workers;
+    return pool->workers;
 }
 
 #else
