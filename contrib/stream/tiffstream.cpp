@@ -61,8 +61,8 @@ TIFF *TiffStream::makeFileStream(iostream *str)
 
 tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
 {
-    istream *istr;
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
+    istream *istr = NULL;
     if (ts->m_inStream != NULL)
     {
         istr = ts->m_inStream;
@@ -72,7 +72,13 @@ tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
         istr = ts->m_ioStream;
     }
 
+    if (istr == NULL)
+        return 0;
+
     int remain = ts->m_streamLength - ts->tell(fd);
+    if (remain <= 0)
+        return 0;
+
     int actual = remain < size ? remain : size;
     istr->read(reinterpret_cast<char *>(buf), actual);
     return istr->gcount();
@@ -81,7 +87,7 @@ tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
 tsize_t TiffStream::write(thandle_t fd, tdata_t buf, tsize_t size)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    ostream *ostr;
+    ostream *ostr = NULL;
     if (ts->m_outStream != NULL)
     {
         ostr = ts->m_outStream;
@@ -90,6 +96,9 @@ tsize_t TiffStream::write(thandle_t fd, tdata_t buf, tsize_t size)
     {
         ostr = ts->m_ioStream;
     }
+
+    if (ostr == NULL)
+        return 0;
 
     streampos start = ostr->tellp();
     ostr->write(reinterpret_cast<const char *>(buf), size);
