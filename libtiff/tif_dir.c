@@ -1037,20 +1037,8 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
                                 }
                                 else
                                 {
-                                    /*-- default should be tv_size == 4 */
                                     float v3 = (float)va_arg(ap, double);
                                     _TIFFmemcpy(val, &v3, tv_size);
-                                    /*-- ToDo: After Testing, this should be
-                                     * removed and tv_size==4 should be set as
-                                     * default. */
-                                    if (tv_size != 4)
-                                    {
-                                        TIFFErrorExtR(tif, module,
-                                                      "Rational2Double: "
-                                                      ".set_get_field_type "
-                                                      "in not 4 but %d",
-                                                      tv_size);
-                                    }
                                 }
                             }
                             break;
@@ -1571,20 +1559,9 @@ static int _TIFFVGetField(TIFF *tif, uint32_t tag, va_list ap)
                                 }
                                 else
                                 {
-                                    /*-- default should be tv_size == 4  */
+                                    /* default tv_size is 4 */
                                     *va_arg(ap, float *) = *(float *)val;
                                     ret_val = 1;
-                                    /*-- ToDo: After Testing, this should be
-                                     * removed and tv_size==4 should be set as
-                                     * default. */
-                                    if (tv_size != 4)
-                                    {
-                                        TIFFErrorExtR(tif, "_TIFFVGetField",
-                                                      "Rational2Double: "
-                                                      ".set_get_field_type "
-                                                      "in not 4 but %d",
-                                                      tv_size);
-                                    }
                                 }
                             }
                             break;

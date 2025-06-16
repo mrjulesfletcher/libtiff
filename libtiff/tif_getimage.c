@@ -484,12 +484,6 @@ int TIFFRGBAImageBegin(TIFFRGBAImage *img, TIFF *tif, int stop,
                 switch (compress)
                 {
                     case COMPRESSION_JPEG:
-                        /*
-                         * TODO: when complete tests verify complete
-                         * desubsampling and YCbCr handling, remove use of
-                         * TIFFTAG_JPEGCOLORMODE in favor of tif_getimage.c
-                         * native handling
-                         */
                         TIFFSetField(tif, TIFFTAG_JPEGCOLORMODE,
                                      JPEGCOLORMODE_RGB);
                         img->photometric = PHOTOMETRIC_RGB;
@@ -499,12 +493,7 @@ int TIFFRGBAImageBegin(TIFFRGBAImage *img, TIFF *tif, int stop,
                         break;
                 }
 #endif
-            /*
-             * TODO: if at all meaningful and useful, make more complete
-             * support check here, or better still, refactor to let supporting
-             * code decide whether there is support and what meaningful
-             * error to return
-             */
+            /* placeholder for more comprehensive support checks */
             break;
         case PHOTOMETRIC_RGB:
             if (colorchannels < 3)
@@ -2796,8 +2785,7 @@ DECLARESepPutFunc(putseparate8bitYCbCr11tile)
 {
     (void)y;
     (void)a;
-    /* TODO: naming of input vars is still off, change obfuscating declaration
-     * inside define, or resolve obfuscation */
+
     for (; h > 0; --h)
     {
         x = w;

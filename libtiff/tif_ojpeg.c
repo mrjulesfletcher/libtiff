@@ -1900,8 +1900,6 @@ static int OJPEGReadHeaderInfoSecStreamSof(TIFF *tif, uint8_t marker_id)
         return (0);
     }
     /* per component stuff */
-    /* TODO: double-check that flow implies that n cannot be as big as to make
-     * us overflow sof_c, sof_hv and sof_tq arrays */
     for (q = 0; q < n; q++)
     {
         /* C: Component identifier */
