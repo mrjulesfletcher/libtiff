@@ -3040,7 +3040,7 @@ static int dump_short(FILE *dumpfile, int format, char *dump_tag, uint16_t data)
     }
     else
     {
-        if ((fwrite(&data, 2, 1, dumpfile)) != 2)
+        if ((fwrite(&data, 2, 1, dumpfile)) != 1)
         {
             TIFFError("", "Unable to write binary data to dump file");
             return (1);
@@ -3077,7 +3077,7 @@ static int dump_long(FILE *dumpfile, int format, char *dump_tag, uint32_t data)
     }
     else
     {
-        if ((fwrite(&data, 4, 1, dumpfile)) != 4)
+        if ((fwrite(&data, 4, 1, dumpfile)) != 1)
         {
             TIFFError("", "Unable to write binary data to dump file");
             return (1);
@@ -3113,7 +3113,7 @@ static int dump_wide(FILE *dumpfile, int format, char *dump_tag, uint64_t data)
     }
     else
     {
-        if ((fwrite(&data, 8, 1, dumpfile)) != 8)
+        if ((fwrite(&data, 8, 1, dumpfile)) != 1)
         {
             TIFFError("", "Unable to write binary data to dump file");
             return (1);
