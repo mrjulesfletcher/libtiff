@@ -495,6 +495,16 @@ static tmsize_t t2p_writeproc(thandle_t handle, tdata_t data, tmsize_t size)
     if (t2p->outputdisable <= 0 && t2p->outputfile)
     {
         tsize_t written = fwrite(data, 1, size, t2p->outputfile);
+        if ((tmsize_t)written != size)
+        {
+            /*
+             * Propagate an error if fwrite() fails to write the requested
+             * number of bytes.  Callers check for negative return values
+             * via t2pWriteFile() and will set t2p_error accordingly.
+             */
+            t2p->t2p_error = T2P_ERR_ERROR;
+            return (tmsize_t)-1;
+        }
         t2p->outputwritten += written;
         return written;
     }
