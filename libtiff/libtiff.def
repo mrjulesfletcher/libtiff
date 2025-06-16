@@ -121,6 +121,7 @@ EXPORTS	TIFFAccessTagMethods
 	TIFFRegisterCODEC
         TIFFReverseBits
         TIFFReverseBitsNeon
+        TIFFReverseBitsSSE
         TIFFRewriteDirectory
 	TIFFScanlineSize
 	TIFFScanlineSize64

@@ -52,6 +52,7 @@ set(tiff_private_HEADERS
         strip_sse41.h
         strip_simd.h
         reverse_bits_neon.h
+        reverse_bits_sse.h
         ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h)
 
 
