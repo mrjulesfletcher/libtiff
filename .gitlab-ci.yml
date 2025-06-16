@@ -3,6 +3,7 @@ image: registry.gitlab.com/libtiff/libtiff-ci-ubuntu24.04:latest
 stages:
   - build
   - static-analysis
+  - vectorization
   - pages
 
 
@@ -54,6 +55,16 @@ coverity:
   only:
     refs:
       - master
+
+vectorization-audit:
+  stage: vectorization
+  image: registry.gitlab.com/libtiff/libtiff-ci-ubuntu24.04:latest
+  script:
+    - python3 scripts/vectorization_audit.py
+  artifacts:
+    paths:
+      - vector_build/build.log
+      - vector_build/cmake.log
 
 pages:
   stage: pages
