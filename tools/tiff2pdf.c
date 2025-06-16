@@ -3015,25 +3015,27 @@ tsize_t t2p_readwrite_pdf_image(T2P *t2p, TIFF *input, TIFF *output)
 
         if (t2p->pdf_sample & T2P_SAMPLE_REALIZE_PALETTE)
         {
-            // FIXME: overflow?
-            samplebuffer = (unsigned char *)_TIFFrealloc(
-                (tdata_t)buffer,
-                t2p->tiff_datasize * t2p->tiff_samplesperpixel);
-            if (samplebuffer == NULL)
+            if (t2p->tiff_datasize <= 0 || t2p->tiff_samplesperpixel <= 0 ||
+                t2p->tiff_datasize >
+                    TIFF_TMSIZE_T_MAX / t2p->tiff_samplesperpixel)
             {
-                TIFFError(TIFF2PDF_MODULE,
-                          "Can't allocate %" TIFF_SSIZE_FORMAT
-                          " bytes of memory for t2p_readwrite_pdf_image, %s",
-                          t2p->tiff_datasize, TIFFFileName(input));
+                /* Overflow or invalid argument */
                 t2p->t2p_error = T2P_ERR_ERROR;
                 _TIFFfree(buffer);
                 return (0);
             }
-            else
+            samplebuffer = (unsigned char *)_TIFFCheckRealloc(
+                input, buffer, t2p->tiff_datasize, t2p->tiff_samplesperpixel,
+                "t2p_readwrite_pdf_image");
+            if (samplebuffer == NULL)
             {
-                buffer = samplebuffer;
-                t2p->tiff_datasize *= t2p->tiff_samplesperpixel;
+                t2p->t2p_error = T2P_ERR_ERROR;
+                _TIFFfree(buffer);
+                return (0);
             }
+
+            buffer = samplebuffer;
+            t2p->tiff_datasize *= t2p->tiff_samplesperpixel;
             t2p_sample_realize_palette(t2p, buffer);
         }
 
