@@ -28,6 +28,9 @@
  */
 #include "tiff_simd.h"
 #include "tiffiop.h"
+#ifdef TIFF_USE_THREADPOOL
+#include "tiff_threadpool.h"
+#endif
 #include <stdio.h>
 
 int TIFFFillStrip(TIFF *tif, uint32_t strip);
