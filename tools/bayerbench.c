@@ -5,6 +5,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <errno.h>
+#include <limits.h>
 
 static double now(void)
 {
@@ -13,12 +15,27 @@ static double now(void)
     return ts.tv_sec + ts.tv_nsec / 1e9;
 }
 
+static void usage(void)
+{
+    fprintf(stderr, "usage: bayerbench [loops]\n");
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
     size_t pixels = 1 << 20; /* 1M pixels */
-    int loops = 100;
+    /* optional command line argument: number of iterations */
+    int loops = 100; /* number of pack/unpack iterations */
     if (argc > 1)
-        loops = atoi(argv[1]);
+    {
+        char *endptr = NULL;
+        errno = 0;
+        long val = strtol(argv[1], &endptr, 10);
+        if (errno != 0 || endptr == argv[1] || *endptr != '\0' || val <= 0 ||
+            val > INT_MAX)
+            usage();
+        loops = (int)val;
+    }
 
     uint16_t *src = (uint16_t *)malloc(pixels * sizeof(uint16_t));
     uint8_t *buf = (uint8_t *)malloc(pixels * 3 / 2);
@@ -30,6 +47,8 @@ int main(int argc, char **argv)
         return 1;
     }
 
+    /* seed RNG to provide varied input */
+    srand((unsigned)time(NULL));
     for (size_t i = 0; i < pixels; i++)
         src[i] = rand() & 0xFFF;
 
