@@ -164,16 +164,16 @@ Float32 predictor decoding on x86‑64 interleaves four vectors at once and now 
 ```
 【F:libtiff/tif_predict.c†L596-L626】
 
-### NEON TIFF Strip Assembly
-`TIFFAssembleStripNEON()` assembles a strip from a 16‑bit buffer and optionally applies the predictor before packing samples to 12‑bit form:
+### SIMD TIFF Strip Assembly
+`TIFFAssembleStripSIMD()` assembles a strip from a 16‑bit buffer and optionally applies the predictor before packing samples to 12‑bit form.  It selects a NEON or SSE4.1 backend at runtime:
 ```c
-uint8_t *TIFFAssembleStripNEON(TIFF *tif, const uint16_t *src, uint32_t width,
+uint8_t *TIFFAssembleStripSIMD(TIFF *tif, const uint16_t *src, uint32_t width,
                                uint32_t height, int apply_predictor,
                                int bigendian, size_t *out_size,
                                uint16_t *scratch, uint8_t *out_buf);
 ```
-【F:libtiff/strip_neon.h†L1-L19】
-The implementation computes differences and packs data efficiently【F:libtiff/tif_strip_neon.c†L1-L63】.
+【F:libtiff/strip_simd.h†L1-L19】
+The vector implementations compute differences and pack data efficiently【F:libtiff/tif_strip_neon.c†L1-L63】【F:libtiff/tif_strip_sse41.c†L1-L63】.
 
 ### ZIP NEON Decompression
 When libdeflate is unavailable the Deflate codec now accelerates small memcpy
@@ -239,7 +239,7 @@ uint16_t *buf = malloc(width * height * sizeof(uint16_t));
 size_t strip_size = ((width * height + 1) / 2) * 3;
 uint16_t *tmp = malloc(width * height * sizeof(uint16_t));
 uint8_t *strip = malloc(strip_size);
-TIFFAssembleStripNEON(NULL, buf, width, height, 1, 1, &strip_size, tmp, strip);
+TIFFAssembleStripSIMD(NULL, buf, width, height, 1, 1, &strip_size, tmp, strip);
 
 TIFF *tif = TIFFOpen("out.dng", "w");
 TIFFSetField(tif, TIFFTAG_IMAGEWIDTH, width);
@@ -264,7 +264,7 @@ size_t buf_sz = ((w * rows + 1) / 2) * 3;
 uint16_t *tmp = malloc(w * rows * sizeof(uint16_t));
 uint8_t *s = malloc(buf_sz);
 for (...) {
-    TIFFAssembleStripNEON(tif, src, w, rows, 1, 1, &sz, tmp, s);
+    TIFFAssembleStripSIMD(tif, src, w, rows, 1, 1, &sz, tmp, s);
     _tiffUringWriteProc((thandle_t)TIFFFileno(tif), s, (tmsize_t)sz);
 }
 _TIFFThreadPoolWait(pool);
@@ -295,7 +295,7 @@ tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
 |12‑bit Bayer pack/unpack|`TIFFPackRaw12`, `TIFFUnpackRaw12`|ARM NEON|6× pack, 5× unpack|
 |Byte swapping|`TIFFSwabArrayOfShort`, `TIFFSwabArrayOfLong8`|ARM NEON|~3×¹|
 |Predictor acceleration|`PredictorDecodeRow`|ARM NEON / SSE4.1 (SSE2 fallback)|up to 25 %|
-|Strip assembly|`TIFFAssembleStripNEON`|ARM NEON|>5× pack|
+|Strip assembly|`TIFFAssembleStripSIMD`|ARM NEON / SSE4.1|>5× pack|
 |RGB packing|`TIFFPackRGB24` etc.|ARM NEON|>2×|
 |YCbCr to RGBA|`TIFFReadRGBAImage`|ARM NEON|~2×|
 |SIMD abstraction|`tiff_v16u8` etc.|NEON / SSE4.1 / scalar|N/A|

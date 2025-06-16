@@ -49,6 +49,8 @@ set(tiff_private_HEADERS
         tif_bayer.h
         rgb_neon.h
         strip_neon.h
+        strip_sse41.h
+        strip_simd.h
         reverse_bits_neon.h
         ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h)
 
@@ -94,6 +96,8 @@ target_sources(tiff PRIVATE
         tif_strip.c
         tif_swab.c
         tif_strip_neon.c
+        tif_strip_sse41.c
+        tif_strip_simd.c
         tiff_simd.c
         tif_thunder.c
         tif_tile.c

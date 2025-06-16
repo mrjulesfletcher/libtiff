@@ -232,6 +232,8 @@ LIBTIFF_4.7.1 {
     TIFFPackRaw16;
     TIFFUnpackRaw16;
     TIFFAssembleStripNEON;
+    TIFFAssembleStripSSE41;
+    TIFFAssembleStripSIMD;
     TIFFPackRGB24;
     TIFFPackRGBA32;
     TIFFPackRGB48;

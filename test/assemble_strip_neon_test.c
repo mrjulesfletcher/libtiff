@@ -1,4 +1,4 @@
-#include "strip_neon.h"
+#include "strip_simd.h"
 #include "tiffio.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +16,7 @@ int main(void)
         buf[i] = (uint16_t)i;
 
     size_t strip_size = 0;
-    uint8_t *strip = TIFFAssembleStripNEON(NULL, buf, width, height, 0, 1,
+    uint8_t *strip = TIFFAssembleStripSIMD(NULL, buf, width, height, 0, 1,
                                            &strip_size, NULL, NULL);
     free(buf);
     if (!strip)
