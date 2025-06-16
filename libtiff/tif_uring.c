@@ -501,7 +501,9 @@ static tmsize_t io_uring_rw(int readflag, thandle_t fd, struct iovec *iov,
     if (!e)
     {
         pthread_mutex_unlock(&gUringMutex);
-        return (tmsize_t)-1;
+        ssize_t ret = readflag ? readv((int)(intptr_t)fd, iov, iovcnt)
+                               : writev((int)(intptr_t)fd, iov, iovcnt);
+        return ret < 0 ? (tmsize_t)-1 : (tmsize_t)ret;
     }
     struct io_uring *ring = e->ring;
 
@@ -765,7 +767,11 @@ static tmsize_t aio_rw(int readflag, thandle_t fd, struct iovec *iov,
     _TIFFURingEntry *e = _tiffUringFind((int)(intptr_t)fd);
     pthread_mutex_unlock(&gUringMutex);
     if (!e)
-        return (tmsize_t)-1;
+    {
+        ssize_t ret = readflag ? readv((int)(intptr_t)fd, iov, iovcnt)
+                               : writev((int)(intptr_t)fd, iov, iovcnt);
+        return ret < 0 ? (tmsize_t)-1 : (tmsize_t)ret;
+    }
 
     if (!e->async)
     {
