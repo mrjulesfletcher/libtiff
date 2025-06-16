@@ -276,7 +276,13 @@ static int cvtRaster(TIFF *tif, uint32_t *raster, uint32_t width,
     cc = (tsize_t)rnrows * rwidth +
          2 * ((rnrows * rwidth) / (horizSubSampling * vertSubSampling));
     buf = (unsigned char *)_TIFFmalloc(cc);
-    // FIXME unchecked malloc
+    if (buf == NULL)
+    {
+        TIFFError(TIFFFileName(tif),
+                  "Failed to allocate buffer (%" TIFF_SSIZE_FORMAT " bytes)",
+                  (TIFF_SSIZE_T)cc);
+        return (0);
+    }
     for (y = height; (int32_t)y > 0; y -= nrows)
     {
         uint32_t nr = (y > nrows ? nrows : y);
