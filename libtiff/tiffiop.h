@@ -268,11 +268,8 @@ struct tiff
     tmsize_t tif_max_single_mem_alloc;    /* in bytes. 0 for unlimited */
     tmsize_t tif_max_cumulated_mem_alloc; /* in bytes. 0 for unlimited */
     tmsize_t tif_cur_cumulated_mem_alloc; /* in bytes */
-#ifdef USE_IO_URING
-    struct io_uring *tif_uring; /* persistent io_uring handle */
-#else
-    void *tif_uring; /* fallback async I/O handle */
-#endif
+    void *tif_uring;         /* async I/O handle */
+    int tif_uring_is_thread; /* 1 if thread-based fallback is used */
     int tif_uring_async;          /* async flush/wait semantics */
     unsigned int tif_uring_depth; /* queue depth. 0 for default */
     int tif_warn_about_unknown_tags;

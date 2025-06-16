@@ -6,11 +6,9 @@
 #include <sys/uio.h>
 #ifdef USE_IO_URING
 #include <liburing.h>
-#else
-#include "tiff_threadpool.h"
-
-#include <unistd.h>
 #endif
+#include "tiff_threadpool.h"
+#include <unistd.h>
 
 #ifdef USE_IO_URING
 
@@ -35,6 +33,246 @@ typedef struct _TIFFURingEntry
 
 static _TIFFURingEntry *gUringList = NULL;
 static pthread_mutex_t gUringMutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Thread-based fallback structures */
+typedef struct _TIFFURingThreadEntry
+{
+    int fd;
+    TIFFThreadPool *pool;
+    int async;
+    int pending;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    struct _TIFFURingThreadEntry *next;
+} _TIFFURingThreadEntry;
+
+static _TIFFURingThreadEntry *gUringThreadList = NULL;
+static pthread_mutex_t gUringThreadMutex = PTHREAD_MUTEX_INITIALIZER;
+
+/* Forward declarations for fallback code */
+static int _tiffUringThreadInit(TIFF *tif);
+static void _tiffUringThreadTeardown(TIFF *tif);
+static void _tiffUringThreadSetAsync(TIFF *tif, int enable);
+static void _tiffUringThreadFlush(TIFF *tif);
+static void _tiffUringThreadWait(TIFF *tif);
+static tmsize_t _tiffUringThreadRW(int readflag, thandle_t fd, struct iovec *iov,
+                                   unsigned int iovcnt, tmsize_t total_size);
+
+/* Fallback helpers */
+static _TIFFURingThreadEntry *_tiffUringThreadFind(int fd)
+{
+    _TIFFURingThreadEntry *cur;
+    for (cur = gUringThreadList; cur; cur = cur->next)
+    {
+        if (cur->fd == fd)
+            return cur;
+    }
+    return NULL;
+}
+
+static int _tiffUringThreadAdd(TIFF *tif, int fd)
+{
+    pthread_mutex_lock(&gUringThreadMutex);
+    if (_tiffUringThreadFind(fd))
+    {
+        pthread_mutex_unlock(&gUringThreadMutex);
+        TIFFErrorExtR(tif, "tif_uring", "fd %d already registered", fd);
+        return 0;
+    }
+
+    _TIFFURingThreadEntry *e = (_TIFFURingThreadEntry *)_TIFFmallocExt(tif, sizeof(*e));
+    if (!e)
+    {
+        pthread_mutex_unlock(&gUringThreadMutex);
+        TIFFErrorExtR(tif, "tif_uring", "Out of memory allocating ring entry");
+        return 0;
+    }
+    e->fd = fd;
+    unsigned int workers = tif->tif_uring_depth > 0 ? tif->tif_uring_depth : 1;
+    e->pool = _TIFFThreadPoolInit((int)workers);
+    if (!e->pool)
+    {
+        pthread_mutex_unlock(&gUringThreadMutex);
+        _TIFFfreeExt(tif, e);
+        TIFFErrorExtR(tif, "tif_uring", "Thread pool init failed");
+        return 0;
+    }
+    e->async = 0;
+    e->pending = 0;
+    pthread_mutex_init(&e->mutex, NULL);
+    pthread_cond_init(&e->cond, NULL);
+    e->next = gUringThreadList;
+    gUringThreadList = e;
+    pthread_mutex_unlock(&gUringThreadMutex);
+    return 1;
+}
+
+static void _tiffUringThreadRemove(int fd)
+{
+    pthread_mutex_lock(&gUringThreadMutex);
+    _TIFFURingThreadEntry **pp = &gUringThreadList;
+    while (*pp)
+    {
+        if ((*pp)->fd == fd)
+        {
+            _TIFFURingThreadEntry *tmp = *pp;
+            *pp = tmp->next;
+            pthread_mutex_unlock(&gUringThreadMutex);
+            _TIFFThreadPoolShutdown(tmp->pool);
+            pthread_mutex_destroy(&tmp->mutex);
+            pthread_cond_destroy(&tmp->cond);
+            _TIFFfreeExt(NULL, tmp);
+            return;
+        }
+        pp = &(*pp)->next;
+    }
+    pthread_mutex_unlock(&gUringThreadMutex);
+}
+
+static void _tiffUringThreadWait(TIFF *tif)
+{
+    if (!tif || !tif->tif_uring)
+        return;
+    _TIFFURingThreadEntry *e = (_TIFFURingThreadEntry *)tif->tif_uring;
+    pthread_mutex_lock(&e->mutex);
+    while (e->pending > 0)
+        pthread_cond_wait(&e->cond, &e->mutex);
+    pthread_mutex_unlock(&e->mutex);
+}
+
+static int _tiffUringThreadInit(TIFF *tif)
+{
+    if (!_tiffUringThreadAdd(tif, tif->tif_fd))
+        return 0;
+    tif->tif_uring = _tiffUringThreadFind(tif->tif_fd);
+    tif->tif_uring_async = 0;
+    tif->tif_uring_is_thread = 1;
+    return tif->tif_uring != NULL;
+}
+
+static void _tiffUringThreadTeardown(TIFF *tif)
+{
+    if (!tif || !tif->tif_uring)
+        return;
+    _tiffUringThreadWait(tif);
+    _tiffUringThreadRemove(tif->tif_fd);
+    tif->tif_uring = NULL;
+    tif->tif_uring_is_thread = 0;
+}
+
+static void _tiffUringThreadSetAsync(TIFF *tif, int enable)
+{
+    if (!tif || !tif->tif_uring)
+        return;
+    _TIFFURingThreadEntry *e = (_TIFFURingThreadEntry *)tif->tif_uring;
+    pthread_mutex_lock(&e->mutex);
+    e->async = enable ? 1 : 0;
+    pthread_mutex_unlock(&e->mutex);
+    tif->tif_uring_async = enable ? 1 : 0;
+}
+
+static void _tiffUringThreadFlush(TIFF *tif) { (void)tif; }
+
+typedef struct _aio_task_thread
+{
+    _TIFFURingThreadEntry *e;
+    int readflag;
+    thandle_t fd;
+    struct iovec *iov;
+    unsigned int iovcnt;
+} _aio_task_thread;
+
+static void _tiffURingThreadAioWorker(void *arg)
+{
+    _aio_task_thread *t = (_aio_task_thread *)arg;
+    if (t->readflag)
+        readv((int)(intptr_t)t->fd, t->iov, t->iovcnt);
+    else
+        writev((int)(intptr_t)t->fd, t->iov, t->iovcnt);
+    pthread_mutex_lock(&t->e->mutex);
+    t->e->pending--;
+    if (t->e->pending == 0)
+        pthread_cond_broadcast(&t->e->cond);
+    pthread_mutex_unlock(&t->e->mutex);
+    _TIFFfreeExt(NULL, t->iov);
+    _TIFFfreeExt(NULL, t);
+}
+
+static tmsize_t _tiffUringThreadRW(int readflag, thandle_t fd, struct iovec *iov,
+                                   unsigned int iovcnt, tmsize_t total_size)
+{
+    pthread_mutex_lock(&gUringThreadMutex);
+    _TIFFURingThreadEntry *e = _tiffUringThreadFind((int)(intptr_t)fd);
+    pthread_mutex_unlock(&gUringThreadMutex);
+    if (!e)
+        return (tmsize_t)-1;
+
+    if (!e->async)
+    {
+        ssize_t ret = readflag ? readv((int)(intptr_t)fd, iov, iovcnt)
+                               : writev((int)(intptr_t)fd, iov, iovcnt);
+        return ret < 0 ? (tmsize_t)-1 : (tmsize_t)ret;
+    }
+
+    _aio_task_thread *task =
+        (_aio_task_thread *)_TIFFmallocExt(NULL, sizeof(_aio_task_thread));
+    if (!task)
+        return (tmsize_t)-1;
+    struct iovec *iov_copy =
+        (struct iovec *)_TIFFmallocExt(NULL, sizeof(struct iovec) * iovcnt);
+    if (!iov_copy)
+    {
+        _TIFFfreeExt(NULL, task);
+        return (tmsize_t)-1;
+    }
+    memcpy(iov_copy, iov, sizeof(struct iovec) * iovcnt);
+    task->e = e;
+    task->readflag = readflag;
+    task->fd = fd;
+    task->iov = iov_copy;
+    task->iovcnt = iovcnt;
+
+    pthread_mutex_lock(&e->mutex);
+    e->pending++;
+    pthread_mutex_unlock(&e->mutex);
+
+    if (!_TIFFThreadPoolSubmit(e->pool, _tiffURingThreadAioWorker, task))
+    {
+        pthread_mutex_lock(&e->mutex);
+        e->pending--;
+        if (e->pending == 0)
+            pthread_cond_broadcast(&e->cond);
+        pthread_mutex_unlock(&e->mutex);
+        _TIFFfreeExt(NULL, iov_copy);
+        _TIFFfreeExt(NULL, task);
+        return (tmsize_t)-1;
+    }
+    return total_size;
+}
+
+static tmsize_t _tiffUringThreadReadProc(thandle_t fd, void *buf, tmsize_t size)
+{
+    struct iovec iov = {buf, (size_t)size};
+    return _tiffUringThreadRW(1, fd, &iov, 1, size);
+}
+
+static tmsize_t _tiffUringThreadWriteProc(thandle_t fd, void *buf, tmsize_t size)
+{
+    struct iovec iov = {buf, (size_t)size};
+    return _tiffUringThreadRW(0, fd, &iov, 1, size);
+}
+
+static tmsize_t _tiffUringThreadReadV(thandle_t fd, struct iovec *iov,
+                                      unsigned int iovcnt, tmsize_t size)
+{
+    return _tiffUringThreadRW(1, fd, iov, iovcnt, size);
+}
+
+static tmsize_t _tiffUringThreadWriteV(thandle_t fd, struct iovec *iov,
+                                       unsigned int iovcnt, tmsize_t size)
+{
+    return _tiffUringThreadRW(0, fd, iov, iovcnt, size);
+}
 
 static _TIFFURingEntry *_tiffUringFind(int fd)
 {
@@ -96,10 +334,11 @@ static void _tiffUringRemove(int fd)
 
 int _tiffUringInit(TIFF *tif)
 {
+    tif->tif_uring_is_thread = 0;
     tif->tif_uring =
         (struct io_uring *)_TIFFmallocExt(tif, sizeof(struct io_uring));
     if (!tif->tif_uring)
-        return 0;
+        return _tiffUringThreadInit(tif);
     unsigned int depth = 8;
     const char *env = getenv("TIFF_URING_DEPTH");
     if (tif->tif_uring_depth > 0)
@@ -127,8 +366,8 @@ int _tiffUringInit(TIFF *tif)
     {
         _TIFFfreeExt(tif, tif->tif_uring);
         tif->tif_uring = NULL;
-        /* queue creation failed: nothing added to the mapping list */
-        return 0;
+        /* queue creation failed: fallback to thread implementation */
+        return _tiffUringThreadInit(tif);
     }
     tif->tif_uring_async = 0;
     if (!_tiffUringAdd(tif, tif->tif_fd, tif->tif_uring))
@@ -136,24 +375,35 @@ int _tiffUringInit(TIFF *tif)
         io_uring_queue_exit(tif->tif_uring);
         _TIFFfreeExt(tif, tif->tif_uring);
         tif->tif_uring = NULL;
-        return 0;
+        /* mapping failed: fall back */
+        return _tiffUringThreadInit(tif);
     }
     return 1;
 }
 
 void _tiffUringTeardown(TIFF *tif)
 {
-    if (!tif->tif_uring)
+    if (!tif || !tif->tif_uring)
         return;
+    if (tif->tif_uring_is_thread)
+    {
+        _tiffUringThreadTeardown(tif);
+        return;
+    }
     _tiffUringRemove(tif->tif_fd);
     _tiffUringWait(tif);
-    io_uring_queue_exit(tif->tif_uring);
+    io_uring_queue_exit((struct io_uring *)tif->tif_uring);
     _TIFFfreeExt(tif, tif->tif_uring);
     tif->tif_uring = NULL;
 }
 
 void _tiffUringSetAsync(TIFF *tif, int enable)
 {
+    if (tif->tif_uring_is_thread)
+    {
+        _tiffUringThreadSetAsync(tif, enable);
+        return;
+    }
     _TIFFURingEntry *e;
     pthread_mutex_lock(&gUringMutex);
     e = _tiffUringFind(tif->tif_fd);
@@ -165,8 +415,19 @@ void _tiffUringSetAsync(TIFF *tif, int enable)
 
 void _tiffUringFlush(TIFF *tif)
 {
-    if (tif && tif->tif_uring)
-        io_uring_submit(tif->tif_uring);
+    if (!tif || !tif->tif_uring)
+        return;
+    if (tif->tif_uring_is_thread)
+    {
+        _tiffUringThreadFlush(tif);
+        return;
+    }
+    int ret = io_uring_submit((struct io_uring *)tif->tif_uring);
+    if (ret < 0)
+    {
+        TIFFErrorExtR(tif, "tif_uring", "io_uring_submit failed: %s",
+                      strerror(-ret));
+    }
 }
 
 /*
@@ -177,7 +438,12 @@ void _tiffUringWait(TIFF *tif)
 {
     if (!tif || !tif->tif_uring)
         return;
-    struct io_uring *ring = tif->tif_uring;
+    if (tif->tif_uring_is_thread)
+    {
+        _tiffUringThreadWait(tif);
+        return;
+    }
+    struct io_uring *ring = (struct io_uring *)tif->tif_uring;
     struct io_uring_cqe *cqe;
     while (io_uring_wait_cqe(ring, &cqe) == 0)
     {
@@ -211,6 +477,10 @@ unsigned int TIFFGetURingQueueDepth(TIFF *tif)
 static tmsize_t io_uring_rw(int readflag, thandle_t fd, struct iovec *iov,
                             unsigned int iovcnt, tmsize_t total_size)
 {
+    if (gUringThreadList && _tiffUringThreadFind((int)(intptr_t)fd))
+    {
+        return _tiffUringThreadRW(readflag, fd, iov, iovcnt, total_size);
+    }
     pthread_mutex_lock(&gUringMutex);
     _TIFFURingEntry *e = _tiffUringFind((int)(intptr_t)fd);
     if (!e)
@@ -232,9 +502,12 @@ static tmsize_t io_uring_rw(int readflag, thandle_t fd, struct iovec *iov,
     else
         io_uring_prep_writev(sqe, (int)(intptr_t)fd, iov, iovcnt, -1);
 
-    if (io_uring_submit(ring) < 0)
+    int ret = io_uring_submit(ring);
+    if (ret < 0)
     {
         pthread_mutex_unlock(&gUringMutex);
+        TIFFErrorExtR(NULL, "tif_uring", "io_uring_submit failed: %s",
+                      strerror(-ret));
         return (tmsize_t)-1;
     }
 
