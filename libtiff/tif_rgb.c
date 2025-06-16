@@ -6,7 +6,7 @@
 #endif
 #if defined(HAVE_SSE41)
 #include <smmintrin.h>
-
+#endif
 
 static void pack_rgb24_scalar(const uint8_t *src, uint32_t *dst, size_t count)
 {
@@ -43,27 +43,28 @@ static void pack_rgba64_scalar(const uint16_t *src, uint32_t *dst, size_t count)
     }
 }
 
+#if defined(HAVE_SSE41)
 static void pack_rgb24_sse41(const uint8_t *src, uint32_t *dst, size_t count)
 {
     const __m128i alpha = _mm_set1_epi8((char)0xFF);
-    const __m128i rmask0 =
-        _mm_setr_epi8(0, 3, 6, 9, 12, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i rmask1 =
-        _mm_setr_epi8(2, 5, 8, 11, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i rmask2 =
-        _mm_setr_epi8(1, 4, 7, 10, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i gmask0 =
-        _mm_setr_epi8(1, 4, 7, 10, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i gmask1 =
-        _mm_setr_epi8(0, 3, 6, 9, 12, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i gmask2 =
-        _mm_setr_epi8(2, 5, 8, 11, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i bmask0 =
-        _mm_setr_epi8(2, 5, 8, 11, 14, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i bmask1 =
-        _mm_setr_epi8(1, 4, 7, 10, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i bmask2 =
-        _mm_setr_epi8(0, 3, 6, 9, 12, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+    const __m128i rmask0 = _mm_setr_epi8(0, 3, 6, 9, 12, 15, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
+    const __m128i rmask1 = _mm_setr_epi8(2, 5, 8, 11, 14, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i rmask2 = _mm_setr_epi8(1, 4, 7, 10, 13, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i gmask0 = _mm_setr_epi8(1, 4, 7, 10, 13, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i gmask1 = _mm_setr_epi8(0, 3, 6, 9, 12, 15, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
+    const __m128i gmask2 = _mm_setr_epi8(2, 5, 8, 11, 14, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i bmask0 = _mm_setr_epi8(2, 5, 8, 11, 14, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i bmask1 = _mm_setr_epi8(1, 4, 7, 10, 13, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i bmask2 = _mm_setr_epi8(0, 3, 6, 9, 12, 15, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
     size_t i = 0;
     for (; i + 16 <= count; i += 16)
     {
@@ -129,24 +130,24 @@ static void pack_rgba32_sse41(const uint8_t *src, uint32_t *dst, size_t count)
 static void pack_rgb48_sse41(const uint16_t *src, uint32_t *dst, size_t count)
 {
     const __m128i alpha = _mm_set1_epi8((char)0xFF);
-    const __m128i rmask0 =
-        _mm_setr_epi8(0, 1, 6, 7, 12, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i rmask1 =
-        _mm_setr_epi8(2, 3, 8, 9, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i rmask2 =
-        _mm_setr_epi8(4, 5, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i gmask0 =
-        _mm_setr_epi8(2, 3, 8, 9, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i gmask1 =
-        _mm_setr_epi8(4, 5, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i gmask2 =
-        _mm_setr_epi8(0, 1, 6, 7, 12, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i bmask0 =
-        _mm_setr_epi8(4, 5, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i bmask1 =
-        _mm_setr_epi8(0, 1, 6, 7, 12, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i bmask2 =
-        _mm_setr_epi8(2, 3, 8, 9, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
+    const __m128i rmask0 = _mm_setr_epi8(0, 1, 6, 7, 12, 13, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
+    const __m128i rmask1 = _mm_setr_epi8(2, 3, 8, 9, 14, 15, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
+    const __m128i rmask2 = _mm_setr_epi8(4, 5, 10, 11, -1, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i gmask0 = _mm_setr_epi8(2, 3, 8, 9, 14, 15, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
+    const __m128i gmask1 = _mm_setr_epi8(4, 5, 10, 11, -1, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i gmask2 = _mm_setr_epi8(0, 1, 6, 7, 12, 13, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
+    const __m128i bmask0 = _mm_setr_epi8(4, 5, 10, 11, -1, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1, -1);
+    const __m128i bmask1 = _mm_setr_epi8(0, 1, 6, 7, 12, 13, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
+    const __m128i bmask2 = _mm_setr_epi8(2, 3, 8, 9, 14, 15, -1, -1, -1, -1, -1,
+                                         -1, -1, -1, -1, -1);
 
     const __m128i low8 =
         _mm_setr_epi8(0, 1, 2, 3, 4, 5, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1);
@@ -181,10 +182,8 @@ static void pack_rgb48_sse41(const uint16_t *src, uint32_t *dst, size_t count)
 
         __m128i rg = _mm_unpacklo_epi8(r8, g8);
         __m128i ba = _mm_unpacklo_epi8(b8, alpha);
-        _mm_storeu_si128((__m128i *)(dst + i + 0),
-                         _mm_unpacklo_epi16(rg, ba));
-        _mm_storeu_si128((__m128i *)(dst + i + 4),
-                         _mm_unpackhi_epi16(rg, ba));
+        _mm_storeu_si128((__m128i *)(dst + i + 0), _mm_unpacklo_epi16(rg, ba));
+        _mm_storeu_si128((__m128i *)(dst + i + 4), _mm_unpackhi_epi16(rg, ba));
     }
     if (i < count)
         pack_rgb48_scalar(src + i * 3, dst + i, count - i);
@@ -192,17 +191,14 @@ static void pack_rgb48_sse41(const uint16_t *src, uint32_t *dst, size_t count)
 
 static void pack_rgba64_sse41(const uint16_t *src, uint32_t *dst, size_t count)
 {
-    const __m128i rmask =
-        _mm_setr_epi8(0, 1, 8, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1);
-    const __m128i gmask =
-        _mm_setr_epi8(2, 3, 10, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                      -1);
-    const __m128i bmask =
-        _mm_setr_epi8(4, 5, 12, 13, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                      -1);
-    const __m128i amask =
-        _mm_setr_epi8(6, 7, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1,
-                      -1);
+    const __m128i rmask = _mm_setr_epi8(0, 1, 8, 9, -1, -1, -1, -1, -1, -1, -1,
+                                        -1, -1, -1, -1, -1);
+    const __m128i gmask = _mm_setr_epi8(2, 3, 10, 11, -1, -1, -1, -1, -1, -1,
+                                        -1, -1, -1, -1, -1, -1);
+    const __m128i bmask = _mm_setr_epi8(4, 5, 12, 13, -1, -1, -1, -1, -1, -1,
+                                        -1, -1, -1, -1, -1, -1);
+    const __m128i amask = _mm_setr_epi8(6, 7, 14, 15, -1, -1, -1, -1, -1, -1,
+                                        -1, -1, -1, -1, -1, -1);
     const __m128i alpha_mask =
         _mm_setr_epi8(0, 1, 2, 3, 4, 5, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1);
 
@@ -247,10 +243,8 @@ static void pack_rgba64_sse41(const uint16_t *src, uint32_t *dst, size_t count)
 
         __m128i rg = _mm_unpacklo_epi8(r8, g8);
         __m128i ba = _mm_unpacklo_epi8(b8, a8);
-        _mm_storeu_si128((__m128i *)(dst + i + 0),
-                         _mm_unpacklo_epi16(rg, ba));
-        _mm_storeu_si128((__m128i *)(dst + i + 4),
-                         _mm_unpackhi_epi16(rg, ba));
+        _mm_storeu_si128((__m128i *)(dst + i + 0), _mm_unpacklo_epi16(rg, ba));
+        _mm_storeu_si128((__m128i *)(dst + i + 4), _mm_unpackhi_epi16(rg, ba));
     }
     if (i < count)
         pack_rgba64_scalar(src + i * 4, dst + i, count - i);
@@ -330,7 +324,7 @@ void TIFFPackRGB24(const uint8_t *src, uint32_t *dst, size_t count)
     else
 #endif
 #if defined(HAVE_SSE41)
-    if (tiff_use_sse41)
+        if (tiff_use_sse41)
         pack_rgb24_sse41(src, dst, count);
     else
 #endif
@@ -345,7 +339,7 @@ void TIFFPackRGBA32(const uint8_t *src, uint32_t *dst, size_t count)
     else
 #endif
 #if defined(HAVE_SSE41)
-    if (tiff_use_sse41)
+        if (tiff_use_sse41)
         pack_rgba32_sse41(src, dst, count);
     else
 #endif
@@ -360,7 +354,7 @@ void TIFFPackRGB48(const uint16_t *src, uint32_t *dst, size_t count)
     else
 #endif
 #if defined(HAVE_SSE41)
-    if (tiff_use_sse41)
+        if (tiff_use_sse41)
         pack_rgb48_sse41(src, dst, count);
     else
 #endif
@@ -375,7 +369,7 @@ void TIFFPackRGBA64(const uint16_t *src, uint32_t *dst, size_t count)
     else
 #endif
 #if defined(HAVE_SSE41)
-    if (tiff_use_sse41)
+        if (tiff_use_sse41)
         pack_rgba64_sse41(src, dst, count);
     else
 #endif
