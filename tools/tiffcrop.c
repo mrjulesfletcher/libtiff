@@ -2958,7 +2958,7 @@ static int dump_data(FILE *dumpfile, int format, char *dump_tag,
             for (j = 0, k = 7; j < 8; j++, k--)
             {
                 bitset = (*(data + i)) & (((unsigned char)1 << k)) ? 1 : 0;
-                sprintf(&dump_array[j], (bitset) ? "1" : "0");
+                dump_array[j] = bitset ? '1' : '0';
             }
             dump_array[8] = '\0';
             fprintf(dumpfile, " %s", dump_array);
@@ -2996,7 +2996,7 @@ static int dump_byte(FILE *dumpfile, int format, char *dump_tag,
         for (j = 0, k = 7; j < 8; j++, k--)
         {
             bitset = data & (((unsigned char)1 << k)) ? 1 : 0;
-            sprintf(&dump_array[j], (bitset) ? "1" : "0");
+            dump_array[j] = bitset ? '1' : '0';
         }
         dump_array[8] = '\0';
         fprintf(dumpfile, " %s\n", dump_array);
@@ -3031,9 +3031,9 @@ static int dump_short(FILE *dumpfile, int format, char *dump_tag, uint16_t data)
         for (j = 0, k = 15; k >= 0; j++, k--)
         {
             bitset = data & (((unsigned char)1 << k)) ? 1 : 0;
-            sprintf(&dump_array[j], (bitset) ? "1" : "0");
+            dump_array[j] = bitset ? '1' : '0';
             if ((k % 8) == 0)
-                sprintf(&dump_array[++j], " ");
+                dump_array[++j] = ' ';
         }
         dump_array[17] = '\0';
         fprintf(dumpfile, " %s\n", dump_array);
@@ -3068,9 +3068,9 @@ static int dump_long(FILE *dumpfile, int format, char *dump_tag, uint32_t data)
         for (j = 0, k = 31; k >= 0; j++, k--)
         {
             bitset = data & (((uint32_t)1 << k)) ? 1 : 0;
-            sprintf(&dump_array[j], (bitset) ? "1" : "0");
+            dump_array[j] = bitset ? '1' : '0';
             if ((k % 8) == 0)
-                sprintf(&dump_array[++j], " ");
+                dump_array[++j] = ' ';
         }
         dump_array[35] = '\0';
         fprintf(dumpfile, " %s\n", dump_array);
@@ -3104,9 +3104,9 @@ static int dump_wide(FILE *dumpfile, int format, char *dump_tag, uint64_t data)
         for (j = 0, k = 63; k >= 0; j++, k--)
         {
             bitset = data & (((uint64_t)1 << k)) ? 1 : 0;
-            sprintf(&dump_array[j], (bitset) ? "1" : "0");
+            dump_array[j] = bitset ? '1' : '0';
             if ((k % 8) == 0)
-                sprintf(&dump_array[++j], " ");
+                dump_array[++j] = ' ';
         }
         dump_array[71] = '\0';
         fprintf(dumpfile, " %s\n", dump_array);
@@ -5802,7 +5802,8 @@ static void initDumpOptions(struct dump_opts *dump)
     dump->debug = 0;
     dump->format = DUMP_NONE;
     dump->level = 1;
-    sprintf(dump->mode, "w");
+    dump->mode[0] = 'w';
+    dump->mode[1] = '\0';
     memset(dump->infilename, '\0', PATH_MAX + 1);
     memset(dump->outfilename, '\0', PATH_MAX + 1);
     dump->infile = NULL;
@@ -7892,17 +7893,17 @@ static int extractImageSection(struct image_data *image,
             {
                 bitset =
                     *(src_buff + offset1) & (((unsigned char)1 << k)) ? 1 : 0;
-                sprintf(&bitarray[j], (bitset) ? "1" : "0");
+                bitarray[j] = bitset ? '1' : '0';
             }
-            sprintf(&bitarray[8], " ");
-            sprintf(&bitarray[9], " ");
+            bitarray[8] = ' ';
+            bitarray[9] = ' ';
             for (j = 10, k = 7; j < 18; j++, k--)
             {
                 bitset = *(src_buff + offset1 + full_bytes) &
                                  (((unsigned char)1 << k))
                              ? 1
                              : 0;
-                sprintf(&bitarray[j], (bitset) ? "1" : "0");
+                bitarray[j] = bitset ? '1' : '0';
             }
             bitarray[18] = '\0';
             TIFFError(
@@ -7929,15 +7930,15 @@ static int extractImageSection(struct image_data *image,
                           "        Aligned data src offset1: %8" PRIu32
                           ", Dst offset: %8" PRIu32 "\n",
                           offset1, dst_offset);
-                sprintf(&bitarray[18], "\n");
-                sprintf(&bitarray[19], "\t");
+                bitarray[18] = '\n';
+                bitarray[19] = '\t';
                 for (j = 20, k = 7; j < 28; j++, k--)
                 {
                     bitset =
                         *(sect_buff + dst_offset) & (((unsigned char)1 << k))
                             ? 1
                             : 0;
-                    sprintf(&bitarray[j], (bitset) ? "1" : "0");
+                    bitarray[j] = bitset ? '1' : '0';
                 }
                 bitarray[28] = ' ';
                 bitarray[29] = ' ';
@@ -7968,7 +7969,7 @@ static int extractImageSection(struct image_data *image,
                                          (((unsigned char)1 << k))
                                      ? 1
                                      : 0;
-                        sprintf(&bitarray[j], (bitset) ? "1" : "0");
+                        bitarray[j] = bitset ? '1' : '0';
                     }
                     bitarray[38] = '\0';
                     TIFFError("",
@@ -8008,15 +8009,15 @@ static int extractImageSection(struct image_data *image,
                         (bytebuff1 << shift1) | (bytebuff2 >> (8 - shift1));
                 }
 #ifdef DEVELMODE
-                sprintf(&bitarray[18], "\n");
-                sprintf(&bitarray[19], "\t");
+                bitarray[18] = '\n';
+                bitarray[19] = '\t';
                 for (j = 20, k = 7; j < 28; j++, k--)
                 {
                     bitset =
                         *(sect_buff + dst_offset) & (((unsigned char)1 << k))
                             ? 1
                             : 0;
-                    sprintf(&bitarray[j], (bitset) ? "1" : "0");
+                    bitarray[j] = bitset ? '1' : '0';
                 }
                 bitarray[28] = ' ';
                 bitarray[29] = ' ';
@@ -8042,15 +8043,15 @@ static int extractImageSection(struct image_data *image,
                         ((uint8_t)0xFF << (8 - trailing_bits));
                 }
 #ifdef DEVELMODE
-                sprintf(&bitarray[28], " ");
-                sprintf(&bitarray[29], " ");
+                bitarray[28] = ' ';
+                bitarray[29] = ' ';
                 for (j = 30, k = 7; j < 38; j++, k--)
                 {
                     bitset =
                         *(sect_buff + dst_offset) & (((unsigned char)1 << k))
                             ? 1
                             : 0;
-                    sprintf(&bitarray[j], (bitset) ? "1" : "0");
+                    bitarray[j] = bitset ? '1' : '0';
                 }
                 bitarray[38] = '\0';
                 TIFFError("",
