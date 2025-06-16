@@ -138,9 +138,19 @@ int main(int argc, char *argv[])
         (void)TIFFClose(in);
     }
     (void)TIFFClose(out);
+    if (thumbnail)
+    {
+        _TIFFfree(thumbnail);
+        thumbnail = NULL;
+    }
     return EXIT_SUCCESS;
 bad:
     (void)TIFFClose(out);
+    if (thumbnail)
+    {
+        _TIFFfree(thumbnail);
+        thumbnail = NULL;
+    }
     return EXIT_FAILURE;
 }
 
@@ -353,8 +363,8 @@ static int cpStrips(TIFF *in, TIFF *out)
         {
             if (bytecounts[s] > (uint64_t)bufsize)
             {
-                unsigned char *newbuf = (unsigned char *)_TIFFrealloc(
-                    buf, (tmsize_t)bytecounts[s]);
+                unsigned char *newbuf =
+                    (unsigned char *)_TIFFrealloc(buf, (tmsize_t)bytecounts[s]);
                 if (!newbuf)
                     goto bad;
                 buf = newbuf;
@@ -391,8 +401,8 @@ static int cpTiles(TIFF *in, TIFF *out)
         {
             if (bytecounts[t] > (uint64_t)bufsize)
             {
-                unsigned char *newbuf = (unsigned char *)_TIFFrealloc(
-                    buf, (tmsize_t)bytecounts[t]);
+                unsigned char *newbuf =
+                    (unsigned char *)_TIFFrealloc(buf, (tmsize_t)bytecounts[t]);
                 if (!newbuf)
                     goto bad;
                 buf = newbuf;
