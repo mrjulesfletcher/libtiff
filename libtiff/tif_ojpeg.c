@@ -1663,42 +1663,40 @@ static int OJPEGReadHeaderInfoSecStreamDqt(TIFF *tif)
     else
     {
         m -= 2;
-        do
+        if (m != 65)
         {
-            if (m < 65)
-            {
-                TIFFErrorExtR(tif, module, "Corrupt DQT marker in JPEG data");
-                return (0);
-            }
-            na = sizeof(uint32_t) + 69;
-            nb = _TIFFmallocExt(tif, na);
-            if (nb == 0)
-            {
-                TIFFErrorExtR(tif, module, "Out of memory");
-                return (0);
-            }
-            *(uint32_t *)nb = na;
-            nb[sizeof(uint32_t)] = 255;
-            nb[sizeof(uint32_t) + 1] = JPEG_MARKER_DQT;
-            nb[sizeof(uint32_t) + 2] = 0;
-            nb[sizeof(uint32_t) + 3] = 67;
-            if (OJPEGReadBlock(sp, 65, &nb[sizeof(uint32_t) + 4]) == 0)
-            {
-                _TIFFfreeExt(tif, nb);
-                return (0);
-            }
-            o = nb[sizeof(uint32_t) + 4] & 15;
-            if (3 < o)
-            {
-                TIFFErrorExtR(tif, module, "Corrupt DQT marker in JPEG data");
-                _TIFFfreeExt(tif, nb);
-                return (0);
-            }
-            if (sp->qtable[o] != 0)
-                _TIFFfreeExt(tif, sp->qtable[o]);
-            sp->qtable[o] = nb;
-            m -= 65;
-        } while (m > 0);
+            if (sp->subsamplingcorrect == 0)
+                TIFFErrorExtR(tif, module,
+                              "Expecting a single quantization table per DQT marker");
+            return (0);
+        }
+        na = sizeof(uint32_t) + 69;
+        nb = _TIFFmallocExt(tif, na);
+        if (nb == 0)
+        {
+            TIFFErrorExtR(tif, module, "Out of memory");
+            return (0);
+        }
+        *(uint32_t *)nb = na;
+        nb[sizeof(uint32_t)] = 255;
+        nb[sizeof(uint32_t) + 1] = JPEG_MARKER_DQT;
+        nb[sizeof(uint32_t) + 2] = 0;
+        nb[sizeof(uint32_t) + 3] = 67;
+        if (OJPEGReadBlock(sp, 65, &nb[sizeof(uint32_t) + 4]) == 0)
+        {
+            _TIFFfreeExt(tif, nb);
+            return (0);
+        }
+        o = nb[sizeof(uint32_t) + 4] & 15;
+        if (3 < o)
+        {
+            TIFFErrorExtR(tif, module, "Corrupt DQT marker in JPEG data");
+            _TIFFfreeExt(tif, nb);
+            return (0);
+        }
+        if (sp->qtable[o] != 0)
+            _TIFFfreeExt(tif, sp->qtable[o]);
+        sp->qtable[o] = nb;
     }
     return (1);
 }
@@ -1707,8 +1705,7 @@ static int OJPEGReadHeaderInfoSecStreamDht(TIFF *tif)
 {
     /* this is a table marker, and it is to be saved as a whole for exact
      * pushing on the jpeg stream later on */
-    /* TODO: the following assumes there is only one table in this marker... but
-     * i'm not quite sure that assumption is guaranteed correct */
+    /* Only a single Huffman table is expected per marker */
     static const char module[] = "OJPEGReadHeaderInfoSecStreamDht";
     OJPEGState *sp = (OJPEGState *)tif->tif_data;
     uint16_t m;
@@ -1745,6 +1742,18 @@ static int OJPEGReadHeaderInfoSecStreamDht(TIFF *tif)
         {
             _TIFFfreeExt(tif, nb);
             return (0);
+        }
+        {
+            uint32_t i, tlen = 17;
+            for (i = 0; i < 16; i++)
+                tlen += nb[sizeof(uint32_t) + 5 + i];
+            if (tlen != (uint32_t)(m - 2))
+            {
+                TIFFErrorExtR(tif, module,
+                              "Expecting a single Huffman table per DHT marker");
+                _TIFFfreeExt(tif, nb);
+                return (0);
+            }
         }
         o = nb[sizeof(uint32_t) + 4];
         if ((o & 240) == 0)
