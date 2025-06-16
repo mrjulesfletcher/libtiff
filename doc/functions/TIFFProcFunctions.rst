@@ -27,9 +27,8 @@ Synopsis
 Description
 -----------
 
-.. TODO: Explain or link to explanation of procedure handling.
-
-The following routines return ?????? an open TIFF file.
+The internal :c:type:`TIFF` structure stores procedure pointers for I/O. These members (``tif_readproc``, ``tif_writeproc``, etc.) are defined in :file:`libtiff/tiffiop.h` and are assigned by :c:func:`TIFFClientOpen` or :c:func:`TIFFOpen` in :file:`libtiff/tif_open.c`. The library invokes them through macros such as :c:macro:`TIFFReadFile` and :c:macro:`TIFFWriteFile`.
+The following routines return the current callbacks associated with an open TIFF file.
 
 :c:func:`TIFFGetCloseProc` returns a pointer to file close method.
 
