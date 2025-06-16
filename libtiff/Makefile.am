@@ -58,7 +58,8 @@ noinst_HEADERS = \
         strip_neon.h \
         strip_sse41.h \
         strip_simd.h \
-        reverse_bits_neon.h
+        reverse_bits_neon.h \
+        reverse_bits_sse.h
 
 nodist_libtiffinclude_HEADERS = \
 	tiffconf.h

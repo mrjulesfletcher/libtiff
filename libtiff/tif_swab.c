@@ -695,6 +695,30 @@ static void TIFFReverseBitsNeonImpl(uint8_t *cp, tmsize_t n)
 }
 #endif
 
+#if defined(HAVE_SSE41)
+static void TIFFReverseBitsSSEImpl(uint8_t *cp, tmsize_t n)
+{
+    const __m128i table =
+        _mm_setr_epi8(0x0, 0x8, 0x4, 0xc, 0x2, 0xa, 0x6, 0xe, 0x1, 0x9, 0x5,
+                       0xd, 0x3, 0xb, 0x7, 0xf);
+    const __m128i mask = _mm_set1_epi8(0x0f);
+    size_t i = 0;
+    for (; i + 16 <= (size_t)n; i += 16)
+    {
+        __builtin_prefetch(cp + i + 64);
+        __m128i v = _mm_loadu_si128((const __m128i *)(cp + i));
+        __m128i lo = _mm_and_si128(v, mask);
+        __m128i hi = _mm_and_si128(_mm_srli_epi16(v, 4), mask);
+        __m128i rlo = _mm_shuffle_epi8(table, lo);
+        __m128i rhi = _mm_shuffle_epi8(table, hi);
+        __m128i out = _mm_or_si128(_mm_slli_epi16(rlo, 4), rhi);
+        _mm_storeu_si128((__m128i *)(cp + i), out);
+    }
+    if (i < (size_t)n)
+        TIFFReverseBitsScalar(cp + i, n - i);
+}
+#endif
+
 void TIFFReverseBitsNeon(uint8_t *cp, tmsize_t n)
 {
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
@@ -704,11 +728,30 @@ void TIFFReverseBitsNeon(uint8_t *cp, tmsize_t n)
 #endif
 }
 
-void TIFFReverseBits(uint8_t *cp, tmsize_t n)
+void TIFFReverseBitsSSE(uint8_t *cp, tmsize_t n)
 {
-#if defined(HAVE_NEON) && defined(__ARM_NEON)
-    TIFFReverseBitsNeon(cp, n);
+#if defined(HAVE_SSE41)
+    TIFFReverseBitsSSEImpl(cp, n);
 #else
     TIFFReverseBitsScalar(cp, n);
 #endif
+}
+
+void TIFFReverseBits(uint8_t *cp, tmsize_t n)
+{
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    if (tiff_use_neon)
+    {
+        TIFFReverseBitsNeon(cp, n);
+        return;
+    }
+#endif
+#if defined(HAVE_SSE41)
+    if (tiff_use_sse41)
+    {
+        TIFFReverseBitsSSE(cp, n);
+        return;
+    }
+#endif
+    TIFFReverseBitsScalar(cp, n);
 }
