@@ -32,7 +32,7 @@ $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake ..
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/aarch64.cmake ..
 # Target x86_64 with SSE4.1/4.2
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/x86_64.cmake \
-        -DCMAKE_C_FLAGS="-msse4.2" -DHAVE_SSE41=1 -DHAVE_SSE42=1 ..
+        -DHAVE_SSE41=1 -DHAVE_SSE42=1 ..
 ```
 
 #### Cross-compiling for ARM
@@ -292,8 +292,8 @@ tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
 ## SIMD Feature Summary
 | Feature | API | Platforms | Typical Speedup |
 |---------|-----|-----------|-----------------|
-|12‑bit Bayer pack/unpack|`TIFFPackRaw12`, `TIFFUnpackRaw12`|ARM NEON|6× pack, 5× unpack|
-|Byte swapping|`TIFFSwabArrayOfShort`, `TIFFSwabArrayOfLong8`|ARM NEON|~3×¹|
+|12‑bit Bayer pack/unpack|`TIFFPackRaw12`, `TIFFUnpackRaw12`|ARM NEON / SSE4.1|6× pack, 5× unpack (NEON)²|
+|Byte swapping|`TIFFSwabArrayOfShort`, `TIFFSwabArrayOfLong8`|ARM NEON / SSE4.1|~3×¹|
 |Predictor acceleration|`PredictorDecodeRow`|ARM NEON / SSE4.1 (SSE2 fallback)|up to 25 %|
 |Strip assembly|`TIFFAssembleStripSIMD`|ARM NEON / SSE4.1|>5× pack|
 |RGB packing|`TIFFPackRGB24` etc.|ARM NEON|>2×|
@@ -301,6 +301,7 @@ tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
 |SIMD abstraction|`tiff_v16u8` etc.|NEON / SSE4.1 / scalar|N/A|
 
 ¹Measured with `swab_benchmark` on an RK3588.
+²SSE4.1 figures were obtained with `bayerbench` on an Intel Xeon Platinum 8370C.
 
 ## Benchmarks
 Run the provided utilities to reproduce the numbers below.  These were measured
