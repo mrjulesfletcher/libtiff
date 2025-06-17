@@ -141,8 +141,9 @@ BASE_TESTSCRIPTS = \
 	tiff2ps-PS2.sh \
 	tiff2ps-PS3.sh \
 	tiff2ps-EPS1.sh \
-	tiff2pdf.sh \
-	tiffcrop-doubleflip-logluv-3c-16b.sh \
+        tiff2pdf.sh \
+        tools-jpeg-dng.sh \
+        tiffcrop-doubleflip-logluv-3c-16b.sh \
 	tiffcrop-doubleflip-minisblack-1c-16b.sh \
 	tiffcrop-doubleflip-minisblack-1c-8b.sh \
 	tiffcrop-doubleflip-minisblack-2c-8b-alpha.sh \
