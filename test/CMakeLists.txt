@@ -760,6 +760,11 @@ if(tiff-tools)
   # Test extracting the first and fourth quarters from the left side.
   add_convert_tests(tiffcrop  extractz14 "-E left -Z1:4,2:4"        TIFFIMAGES TRUE)
 
+  add_test(NAME "pipeline-full"
+           COMMAND "${CMAKE_CURRENT_SOURCE_DIR}/pipeline_full_test.sh")
+  set_tests_properties("pipeline-full" PROPERTIES ENVIRONMENT
+          "srcdir=${CMAKE_CURRENT_SOURCE_DIR}")
+
   # addtiffo default overview levels
   add_test(NAME "addtiffo-default-small"
            COMMAND "${CMAKE_COMMAND}"
