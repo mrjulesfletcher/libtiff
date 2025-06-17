@@ -110,7 +110,7 @@ check_PROGRAMS = \
        bayer_neon_test \
        dng_simd_compare \
        packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test predictor_sse41_test \
-       concurrent_rw test_open_jpeg_dng test_bigtiff_roundtrip open_dng_alloc_fail
+       concurrent_rw test_open_jpeg_dng test_bigtiff_roundtrip test_client_open_stream open_dng_alloc_fail
 endif
 
 # Test scripts to execute
@@ -381,6 +381,9 @@ test_open_jpeg_dng_LDADD = $(LIBTIFF)
 
 test_bigtiff_roundtrip_SOURCES = test_bigtiff_roundtrip.c
 test_bigtiff_roundtrip_LDADD = $(LIBTIFF)
+
+test_client_open_stream_SOURCES = test_client_open_stream.c
+test_client_open_stream_LDADD = $(LIBTIFF)
 
 predictor_threadpool_benchmark_SOURCES = predictor_threadpool_benchmark.c
 predictor_threadpool_benchmark_LDADD = $(LIBTIFF)

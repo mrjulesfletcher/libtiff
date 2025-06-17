@@ -269,6 +269,12 @@ set_target_properties(test_invalid_callbacks PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(test_invalid_callbacks PRIVATE tiff tiff_port)
 list(APPEND simple_tests test_invalid_callbacks)
 
+add_executable(test_client_open_stream ../placeholder.h)
+target_sources(test_client_open_stream PRIVATE test_client_open_stream.c)
+set_target_properties(test_client_open_stream PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(test_client_open_stream PRIVATE tiff tiff_port)
+list(APPEND simple_tests test_client_open_stream)
+
 add_executable(swab_neon_test ../placeholder.h)
 target_sources(swab_neon_test PRIVATE swab_neon_test.c)
 set_target_properties(swab_neon_test PROPERTIES LINKER_LANGUAGE CXX)
