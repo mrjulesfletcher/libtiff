@@ -119,6 +119,12 @@ set_target_properties(ascii_tag PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(ascii_tag PRIVATE tiff tiff_port)
 list(APPEND simple_tests ascii_tag)
 
+add_executable(register_custom_tags ../placeholder.h)
+target_sources(register_custom_tags PRIVATE register_custom_tags.c)
+set_target_properties(register_custom_tags PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(register_custom_tags PRIVATE tiff tiff_port)
+list(APPEND simple_tests register_custom_tags)
+
 add_executable(test_open_jpeg_dng ../placeholder.h)
 target_sources(test_open_jpeg_dng PRIVATE test_open_jpeg_dng.c)
 set_target_properties(test_open_jpeg_dng PROPERTIES LINKER_LANGUAGE CXX)
