@@ -76,7 +76,8 @@ f_test_convert ()
   outfile=$3
   rm -f "$outfile"
   echo "${MEMCHECK[@]} $command $infile $outfile"
-  "${MEMCHECK[@]}" "$command" "$infile" "$outfile"
+  cmd="${MEMCHECK[*]} $command \"$infile\" \"$outfile\""
+  eval "$cmd"
   status=$?
   if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
@@ -96,7 +97,8 @@ f_test_stdout ()
   outfile=$3
   rm -f "$outfile"
   echo "${MEMCHECK[@]} $command $infile > $outfile"
-  "${MEMCHECK[@]}" "$command" "$infile" > "$outfile"
+  cmd="${MEMCHECK[*]} $command \"$infile\""
+  eval "$cmd" > "$outfile"
   status=$?
   if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
@@ -114,7 +116,8 @@ f_test_reader ()
   command=$1
   infile=$2
   echo "${MEMCHECK[@]} $command $infile"
-  "${MEMCHECK[@]}" "$command" "$infile"
+  cmd="${MEMCHECK[*]} $command \"$infile\""
+  eval "$cmd"
   status=$?
   if [ "$status" != 0 ] ; then
     echo "Returned failed status $status!"
