@@ -29,11 +29,35 @@ int main(int argc, char **argv)
         }
     }
 
+    int generated = 0;
     TIFF *in = TIFFOpen(filepath, "r");
     if (!in)
     {
-        fprintf(stderr, "Cannot open %s\n", filepath);
-        return 1;
+        const char *srcdir = getenv("srcdir");
+        if (!srcdir)
+            srcdir = ".";
+        char jpeg[1024];
+        snprintf(jpeg, sizeof(jpeg), "%s/images/TEST_JPEG.jpg", srcdir);
+        const char *tiffcp = getenv("TIFFCP");
+        if (!tiffcp)
+            tiffcp = "../tools/tiffcp";
+        char script[1024];
+        snprintf(script, sizeof(script), "%s/gen_bigtiff_from_jpeg.py", srcdir);
+        char cmd[4096];
+        snprintf(cmd, sizeof(cmd), "python3 \"%s\" \"%s\" \"%s\" \"%s\"",
+                 script, jpeg, filepath, tiffcp);
+        if (system(cmd) != 0)
+        {
+            fprintf(stderr, "Cannot generate %s\n", filepath);
+            return 1;
+        }
+        generated = 1;
+        in = TIFFOpen(filepath, "r");
+        if (!in)
+        {
+            fprintf(stderr, "Cannot open %s\n", filepath);
+            return 1;
+        }
     }
     if (!TIFFIsBigTIFF(in))
     {
@@ -106,6 +130,8 @@ int main(int argc, char **argv)
     TIFFGetField(out, TIFFTAG_IMAGELENGTH, &rlength);
     TIFFClose(out);
     unlink(outfile);
+    if (generated)
+        unlink(filepath);
     if (!isBig || rwidth != width || rlength != length)
         return 1;
     return 0;
