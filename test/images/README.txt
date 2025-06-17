@@ -33,3 +33,7 @@ G3 Fax files :
 
 deflate-last-strip-extra-data.tiff is
 https://github.com/OSGeo/gdal/blob/master/autotest/alg/data/utmsmall_near.tiff
+
+Additional test images:
+  TEST_CINEPI_LIBTIFF_DNG.dng
+  TEST_JPEG.jpg

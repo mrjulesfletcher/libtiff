@@ -95,6 +95,8 @@ set(IMAGES_EXTRA_DIST
     images/README.txt
     images/miniswhite-1c-1b.g3
     images/32bpp-None-jpeg.tiff
+    images/TEST_CINEPI_LIBTIFF_DNG.dng
+    images/TEST_JPEG.jpg
     ${BMPIMAGES}
     ${GIFIMAGES}
     ${PNMIMAGES}

@@ -262,10 +262,12 @@ IMAGES_EXTRA_DIST = \
 	images/test_ifd_loop_to_first.tif \
 	images/test_two_ifds.tif \
 	images/test_ifd_loop_subifd.tif \
-	images/webp_lossless_rgba_alpha_fully_opaque.tif \
-	images/32bpp-None-jpeg.tiff \
-	$(PNMIMAGES) \
-	$(TIFFIMAGES)
+        images/webp_lossless_rgba_alpha_fully_opaque.tif \
+        images/32bpp-None-jpeg.tiff \
+        images/TEST_CINEPI_LIBTIFF_DNG.dng \
+        images/TEST_JPEG.jpg \
+        $(PNMIMAGES) \
+        $(TIFFIMAGES)
 
 noinst_HEADERS = tifftest.h
 
