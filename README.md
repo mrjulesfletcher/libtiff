@@ -346,7 +346,8 @@ API. The queue depth defaults to 8 but may be tuned through the
 `TIFF_URING_DEPTH` environment variable, via
 `TIFFOpenOptionsSetURingQueueDepth()` before opening a file, or at runtime with
 `TIFFSetURingQueueDepth()`. Any positive value accepted by the kernel is
-allowed.
+allowed. Set `TIFF_USE_IOURING=0` to force the portable thread fallback when
+the kernel or runtime environment does not support `io_uring`.
 
 ## Memory Mapping Tuning
 

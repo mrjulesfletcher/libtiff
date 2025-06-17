@@ -3,6 +3,7 @@
 #include <errno.h>
 #include <pthread.h>
 #include <stdlib.h>
+#include <strings.h>
 #include <sys/uio.h>
 #ifdef USE_IO_URING
 #include <liburing.h>
@@ -350,6 +351,12 @@ static void _tiffUringRemove(int fd)
 int _tiffUringInit(TIFF *tif)
 {
     tif->tif_uring_is_thread = 0;
+    const char *env_use = getenv("TIFF_USE_IOURING");
+    if (env_use &&
+        (strcmp(env_use, "0") == 0 || strcasecmp(env_use, "no") == 0))
+    {
+        return _tiffUringThreadInit(tif);
+    }
     tif->tif_uring =
         (struct io_uring *)_TIFFmallocExt(tif, sizeof(struct io_uring));
     if (!tif->tif_uring)

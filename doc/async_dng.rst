@@ -14,6 +14,9 @@ starts at eight. Tune it through the ``TIFF_URING_DEPTH`` environment
 variable, ``TIFFOpenOptionsSetURingQueueDepth()`` before opening a file,
 or at runtime with ``TIFFSetURingQueueDepth()``.
 
+Set ``TIFF_USE_IOURING=0`` to disable ``io_uring`` at runtime and fall
+back to the thread-based implementation when the kernel lacks support.
+
 An application typically assembles each strip and queues the write while
 the next strip is prepared::
 
