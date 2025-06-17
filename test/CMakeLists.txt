@@ -387,6 +387,12 @@ set_target_properties(uring_thread_stress PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(uring_thread_stress PRIVATE tiff tiff_port)
 list(APPEND simple_tests uring_thread_stress)
 
+add_executable(concurrent_rw ../placeholder.h)
+target_sources(concurrent_rw PRIVATE concurrent_rw.c)
+set_target_properties(concurrent_rw PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(concurrent_rw PRIVATE tiff tiff_port)
+list(APPEND simple_tests concurrent_rw)
+
 add_library(failalloc STATIC failalloc.c)
 
 add_executable(threadpool_alloc_fail ../placeholder.h)
