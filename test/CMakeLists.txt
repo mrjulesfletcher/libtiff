@@ -125,6 +125,12 @@ set_target_properties(test_open_jpeg_dng PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(test_open_jpeg_dng PRIVATE tiff tiff_port)
 list(APPEND simple_tests test_open_jpeg_dng)
 
+add_executable(test_bigtiff_roundtrip ../placeholder.h)
+target_sources(test_bigtiff_roundtrip PRIVATE test_bigtiff_roundtrip.c)
+set_target_properties(test_bigtiff_roundtrip PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(test_bigtiff_roundtrip PRIVATE tiff tiff_port)
+list(APPEND simple_tests test_bigtiff_roundtrip)
+
 add_executable(long_tag ../placeholder.h)
 target_sources(long_tag PRIVATE long_tag.c check_tag.c)
 set_target_properties(long_tag PROPERTIES LINKER_LANGUAGE CXX)
