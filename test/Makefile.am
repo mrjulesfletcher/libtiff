@@ -96,7 +96,7 @@ JPEGLS_DEPENDENT_TESTSCRIPTS_TO_RUN=
 endif
 
 if BUILD_STATIC
-STATIC_CHECK_PROGS=rational_precision2double test_write_read_tags test_transferfunction_write_read
+STATIC_CHECK_PROGS=rational_precision2double test_write_read_tags test_transferfunction_write_read test_open_jpeg_dng
 endif
 
 # Executable programs which need to be built in order to support tests
@@ -108,7 +108,8 @@ check_PROGRAMS = \
        bayer_simd_benchmark \
        rgb_pack_neon_test \
        bayer_neon_test \
-       packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test predictor_sse41_test
+       packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test predictor_sse41_test \
+       test_open_jpeg_dng
 endif
 
 # Test scripts to execute
@@ -362,6 +363,9 @@ bayer_neon_test_LDADD = $(LIBTIFF)
 
 predictor_sse41_test_SOURCES = predictor_sse41_test.c
 predictor_sse41_test_LDADD = $(LIBTIFF)
+
+test_open_jpeg_dng_SOURCES = test_open_jpeg_dng.c
+test_open_jpeg_dng_LDADD = $(LIBTIFF)
 
 predictor_threadpool_benchmark_SOURCES = predictor_threadpool_benchmark.c
 predictor_threadpool_benchmark_LDADD = $(LIBTIFF)
