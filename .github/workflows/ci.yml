@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [gcc, clang]
+        build_type: [Debug, Release]
+        arch: [x86_64, i386]
+    env:
+      CC: ${{ matrix.compiler }}
+      CXX: ${{ matrix.compiler == 'gcc' && 'g++' || 'clang++' }}
+    steps:
+    - uses: actions/checkout@v3
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y cmake build-essential libjpeg-dev zlib1g-dev
+        if [ "${{ matrix.arch }}" = "i386" ]; then
+          sudo dpkg --add-architecture i386
+          sudo apt-get update
+          sudo apt-get install -y gcc-multilib g++-multilib libjpeg-dev:i386 zlib1g-dev:i386
+        fi
+    - name: Configure
+      run: |
+        mkdir build
+        cd build
+        if [ "${{ matrix.arch }}" = "i386" ]; then
+          CFLAGS="-m32" CXXFLAGS="-m32" LDFLAGS="-m32" cmake -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
+        else
+          cmake -DBUILD_TESTING=ON -DCMAKE_BUILD_TYPE=${{ matrix.build_type }} ..
+        fi
+    - name: Build
+      run: cmake --build build --parallel
+    - name: Test
+      run: |
+        cd build
+        ctest --output-on-failure
