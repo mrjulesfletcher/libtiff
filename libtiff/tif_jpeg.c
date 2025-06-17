@@ -212,6 +212,7 @@ typedef struct
 
 static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGDecodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
+static int JPEGDecode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGEncode(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGEncodeRaw(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s);
 static int JPEGInitializeLibJPEG(TIFF *tif, int decode);

@@ -108,6 +108,7 @@ check_PROGRAMS = \
        bayer_simd_benchmark \
        rgb_pack_neon_test \
        bayer_neon_test \
+       dng_simd_compare \
        packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test predictor_sse41_test \
        test_open_jpeg_dng test_bigtiff_roundtrip
 endif
@@ -371,6 +372,9 @@ bayer_neon_test_LDADD = $(LIBTIFF)
 
 predictor_sse41_test_SOURCES = predictor_sse41_test.c
 predictor_sse41_test_LDADD = $(LIBTIFF)
+
+dng_simd_compare_SOURCES = dng_simd_compare.c
+dng_simd_compare_LDADD = $(LIBTIFF)
 
 test_open_jpeg_dng_SOURCES = test_open_jpeg_dng.c
 test_open_jpeg_dng_LDADD = $(LIBTIFF)

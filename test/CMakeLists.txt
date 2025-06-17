@@ -323,6 +323,12 @@ set_target_properties(bayer_neon_test PROPERTIES LINKER_LANGUAGE CXX)
 target_link_libraries(bayer_neon_test PRIVATE tiff tiff_port)
 list(APPEND simple_tests bayer_neon_test)
 
+add_executable(dng_simd_compare ../placeholder.h)
+target_sources(dng_simd_compare PRIVATE dng_simd_compare.c)
+set_target_properties(dng_simd_compare PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(dng_simd_compare PRIVATE tiff tiff_port)
+list(APPEND simple_tests dng_simd_compare)
+
 add_executable(predictor_sse41_test ../placeholder.h)
 target_sources(predictor_sse41_test PRIVATE predictor_sse41_test.c)
 set_target_properties(predictor_sse41_test PROPERTIES LINKER_LANGUAGE CXX)
