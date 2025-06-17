@@ -109,6 +109,21 @@ macro(tiffinfo_validate file)
   test_reader("${TIFFINFO};-D" "${file}")
 endmacro()
 
+#
+# Compare two TIFF files using tiffcmp
+#
+# tiff_compare file1 file2
+macro(tiff_compare file1 file2)
+  file(TO_NATIVE_PATH "${file1}" native_file1)
+  file(TO_NATIVE_PATH "${file2}" native_file2)
+  message(STATUS "Running ${MEMCHECK} ${TIFFCMP} ${native_file1} ${native_file2}")
+  execute_process(COMMAND ${MEMCHECK} ${TIFFCMP} "${native_file1}" "${native_file2}"
+                  RESULT_VARIABLE TEST_STATUS)
+  if(TEST_STATUS)
+    message(FATAL_ERROR "Returned failed status ${TEST_STATUS}! Files differ")
+  endif()
+endmacro()
+
 # Add the directory containing libtiff to the PATH (Windows only)
 if(WIN32)
   get_filename_component(LIBTIFF_DIR "${LIBTIFF}" DIRECTORY)
