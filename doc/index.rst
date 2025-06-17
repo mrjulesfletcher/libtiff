@@ -61,6 +61,7 @@ The following sections are included in this documentation:
     internals
     bayer12neon
     bayer16neon
+    cross_simd
     zipneon
     async_dng
     addingtags

@@ -66,6 +66,14 @@ $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake \
 ```
 Benchmarking a 10MB image gave about 2x faster compression with `zip:p9:s1` (libdeflate) versus `zip:p9:s0` (zlib).
 
+### Cross testing NEON and SSE
+The `scripts/cross_simd_test.py` helper builds the library for both
+SSE4 and NEON and runs a couple of validation and benchmark tools under
+each build (the NEON binaries execute under `qemu-aarch64`).  Install
+`qemu-user` and the AArch64 cross compiler, then run::
+
+    python3 scripts/cross_simd_test.py
+
 
 ### Autotools
 ```bash
