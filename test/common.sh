@@ -1,5 +1,10 @@
 # Common code fragment for tests
 set -euo pipefail
+
+# Ensure VERBOSE is defined to avoid "unbound variable" errors when
+# running tests in environments where it is not set (such as the Codex
+# runner).
+VERBOSE=${VERBOSE:-FALSE}
 #
 srcdir=${srcdir:-.}
 BUILDDIR=$(pwd)
