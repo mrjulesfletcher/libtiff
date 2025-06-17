@@ -127,8 +127,11 @@ BASE_TESTSCRIPTS = \
 	tiffcp-logluv.sh \
 	tiffcp-thumbnail.sh \
 	tiffcp-lzw-compat.sh \
-	tiffcp-lzw-scanline-decode.sh \
-	tiffdump.sh \
+        tiffcp-lzw-scanline-decode.sh \
+        tiffcp-dng-codecs.sh \
+        tiffcp-jpeg-invalid.sh \
+        tiffcp-invalid-compression.sh \
+        tiffdump.sh \
 	tiffinfo.sh \
 	tiffcp-split.sh \
 	tiffcp-split-join.sh \

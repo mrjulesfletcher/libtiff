@@ -408,6 +408,7 @@ set(tiff_test_extra_args "-DLIBTIFF=$<TARGET_FILE:tiff>")
 if(tiff-tools)
   list(APPEND tiff_test_extra_args "-DTIFFCP=$<TARGET_FILE:tiffcp>")
   list(APPEND tiff_test_extra_args "-DTIFFINFO=$<TARGET_FILE:tiffinfo>")
+  list(APPEND tiff_test_extra_args "-DTIFFCMP=$<TARGET_FILE:tiffcmp>")
   list(APPEND tiff_test_extra_args "-DTIFFSPLIT=$<TARGET_FILE:tiffsplit>")
   list(APPEND tiff_test_extra_args "-DRGB2YCBCR=$<TARGET_FILE:rgb2ycbcr>")
   if(tiff-contrib)
@@ -629,6 +630,35 @@ if(tiff-tools)
   if(JPEGLS_SUPPORT)
     add_convert_test(tiffcp   jpegls       "-c jpegls"      "images/miniswhite-1c-1b.tiff" TRUE)
   endif()
+
+  foreach(codec none lzw zip packbits)
+    string(REPLACE ";" "_" codecname "${codec}")
+    add_test(NAME "tiffcp-dng-${codecname}"
+             COMMAND "${CMAKE_COMMAND}"
+             "-DCODEC=${codec}"
+             "-DINFILE=${CMAKE_CURRENT_SOURCE_DIR}/images/TEST_CINEPI_LIBTIFF_DNG.dng"
+             "-DOUTFILE=${TEST_OUTPUT}/tiffcp-dng-${codecname}.tiff"
+             ${tiff_test_extra_args}
+             -P "${CMAKE_CURRENT_SOURCE_DIR}/TiffCpCodecTest.cmake")
+  endforeach()
+
+  add_test(NAME "tiffcp-jpeg-invalid"
+           COMMAND "${CMAKE_COMMAND}"
+           "-DCODEC=none"
+           "-DINFILE=${CMAKE_CURRENT_SOURCE_DIR}/images/TEST_JPEG.jpg"
+           "-DOUTFILE=${TEST_OUTPUT}/tiffcp-jpeg-invalid.tiff"
+           ${tiff_test_extra_args}
+           -P "${CMAKE_CURRENT_SOURCE_DIR}/TiffCpCodecTest.cmake")
+  set_tests_properties("tiffcp-jpeg-invalid" PROPERTIES WILL_FAIL TRUE)
+
+  add_test(NAME "tiffcp-invalid-compression"
+           COMMAND "${CMAKE_COMMAND}"
+           "-DCODEC=bogus"
+           "-DINFILE=${CMAKE_CURRENT_SOURCE_DIR}/images/TEST_CINEPI_LIBTIFF_DNG.dng"
+           "-DOUTFILE=${TEST_OUTPUT}/tiffcp-invalid-compression.tiff"
+           ${tiff_test_extra_args}
+           -P "${CMAKE_CURRENT_SOURCE_DIR}/TiffCpCodecTest.cmake")
+  set_tests_properties("tiffcp-invalid-compression" PROPERTIES WILL_FAIL TRUE)
   
   # Old-JPEG tests
   #--- tiffcp does not support subsampled images, as the OldJPEG ones are ---
