@@ -67,6 +67,7 @@ The following sections are included in this documentation:
     tools
     contrib
     vectorization_policy
+    doc_coverage_policy
     rfcs/index
     project/index
     releases/index
