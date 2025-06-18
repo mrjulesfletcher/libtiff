@@ -1,0 +1,4 @@
+TIFFSetUseNEON
+==============
+
+See :doc:`TIFFThreadControl`.

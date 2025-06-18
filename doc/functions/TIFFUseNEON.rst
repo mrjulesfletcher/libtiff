@@ -1,0 +1,4 @@
+TIFFUseNEON
+===========
+
+See :doc:`TIFFThreadControl`.
