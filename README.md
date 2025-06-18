@@ -366,9 +366,10 @@ advice flags with `TIFFSetMapSize()` and `TIFFSetMapAdvice()`.
 
 
 ## Testing and Validation
-Configure with testing enabled and run the full suite:
+Configure with testing enabled and run the full suite. Enabling the internal
+thread pool avoids several timeouts during the tests:
 ```bash
-$ cmake -DBUILD_TESTING=ON ..
+$ cmake -DBUILD_TESTING=ON -Dthreadpool=ON ..
 $ cmake --build .
 $ ctest       # or: make check
 ```
