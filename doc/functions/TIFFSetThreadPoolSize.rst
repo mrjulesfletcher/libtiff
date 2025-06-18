@@ -1,0 +1,4 @@
+TIFFSetThreadPoolSize
+=====================
+
+See :doc:`TIFFThreadControl`.

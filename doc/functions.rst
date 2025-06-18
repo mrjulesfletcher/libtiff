@@ -63,6 +63,7 @@ TIFF Functions Overview
     functions/TIFFWriteScanline
     functions/TIFFWriteTile
     functions/_TIFFauxiliary
+    functions/TIFFThreadControl
     functions/_TIFFRewriteField
 
 Digital Negative (DNG) tags

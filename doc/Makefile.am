@@ -164,8 +164,9 @@ rst_sources = \
 	functions/TIFFFieldWriteCount.rst \
 	functions/TIFFbuffer.rst \
 	functions/TIFFWriteRawTile.rst \
-	functions/TIFFWarning.rst \
-	functions/TIFFFieldDataType.rst \
+        functions/TIFFWarning.rst \
+        functions/TIFFThreadControl.rst \
+        functions/TIFFFieldDataType.rst \
 	functions/TIFFWriteEncodedStrip.rst \
 	functions/TIFFFieldPassCount.rst \
 	functions/TIFFReadRGBAImage.rst \

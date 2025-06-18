@@ -452,6 +452,7 @@ if(tiff-tools)
   list(APPEND tiff_test_extra_args "-DTIFFCMP=$<TARGET_FILE:tiffcmp>")
   list(APPEND tiff_test_extra_args "-DTIFFSPLIT=$<TARGET_FILE:tiffsplit>")
   list(APPEND tiff_test_extra_args "-DRGB2YCBCR=$<TARGET_FILE:rgb2ycbcr>")
+  list(APPEND tiff_test_extra_args "-DRAW2TIFF=$<TARGET_FILE:raw2tiff>")
   if(tiff-contrib)
     list(APPEND tiff_test_extra_args "-DADDTIFFO=$<TARGET_FILE:addtiffo>")
   endif()
@@ -776,7 +777,8 @@ if(tiff-tools)
 
   add_test(NAME "addtiffo-default-large"
            COMMAND "${CMAKE_COMMAND}"
-           "-DIMAGE=${CMAKE_CURRENT_SOURCE_DIR}/images/lzw-single-strip.tiff"
+           "-DIMAGE=${TEST_OUTPUT}/generated_large_8b.tiff"
+           "-DGENERATOR_PY=${CMAKE_CURRENT_SOURCE_DIR}/gen_large_gray_tiff.py"
            "-DEXPECT_GT1=TRUE"
            "-DOUTDIR=${TEST_OUTPUT}"
            ${tiff_test_extra_args}

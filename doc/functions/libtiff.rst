@@ -518,6 +518,16 @@ will work.
       - user-specific re-entrant library warning handling function,
         to which its TIFF structure is passed
         containing the pointer to a user-specific data object
+    * - :c:func:`TIFFSetThreadPoolSize`
+      - configure the number of worker threads for the internal thread pool
+    * - :c:func:`TIFFSetUseNEON`
+      - enable or disable ARM NEON optimized routines
+    * - :c:func:`TIFFSetUseSSE41`
+      - enable or disable SSE4.1 optimized routines
+    * - :c:func:`TIFFUseNEON`
+      - query if NEON optimizations are enabled
+    * - :c:func:`TIFFUseSSE41`
+      - query if SSE4.1 optimizations are enabled
     * - :c:func:`TIFFWriteBufferSetup`
       - sets up the data buffer used to write raw (encoded) data to a file
     * - :c:func:`TIFFWriteCheck`
