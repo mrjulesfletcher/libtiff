@@ -398,6 +398,35 @@ AC_COMPILE_IFELSE([
 ])
 AC_SUBST(HAVE_HW_AES)
 
+dnl Check for PMULL / PCLMULQDQ intrinsics
+AC_MSG_CHECKING([for PMULL/CLMUL instruction support])
+AC_COMPILE_IFELSE([
+  AC_LANG_PROGRAM([
+#if defined(__aarch64__) || defined(__arm__)
+    #include <arm_neon.h>
+#else
+    #include <wmmintrin.h>
+#endif
+  ],[
+#if defined(__aarch64__) || defined(__arm__)
+    poly64_t a = 0, b = 0; (void)vmull_p64(a, b);
+    return 0;
+#else
+    __m128i x = _mm_setzero_si128();
+    __m128i y = _mm_setzero_si128();
+    __m128i r = _mm_clmulepi64_si128(x, y, 0x00);
+    return _mm_cvtsi128_si32(r);
+#endif
+  ])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_PMULL],[1],[Define if PMULL/CLMUL intrinsics are available])
+  HAVE_PMULL=1
+],[
+  AC_MSG_RESULT(no)
+  HAVE_PMULL=0
+])
+AC_SUBST(HAVE_PMULL)
+
 dnl ---------------------------------------------------------------------------
 dnl Optional internal thread pool
 dnl ---------------------------------------------------------------------------

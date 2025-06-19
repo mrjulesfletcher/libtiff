@@ -145,3 +145,31 @@ if(HAVE_HW_AES)
     add_compile_options("${_aes_flags}")
   endif()
 endif()
+
+# Detect PMULL / CLMUL instruction support
+set(_pmull_flags "${TIFF_SSE_FLAGS}")
+if(NOT _pmull_flags)
+  if(CMAKE_C_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|arm)")
+      set(_pmull_flags "-march=armv8-a+crypto")
+    else()
+      set(_pmull_flags "-mpclmul")
+    endif()
+  endif()
+endif()
+
+check_c_source_compiles(
+  "#if defined(__aarch64__) || defined(__arm__)
+   #include <arm_neon.h>
+   int main(){ poly64_t a=0,b=0; (void)vmull_p64(a,b); return 0; }
+   #else
+   #include <wmmintrin.h>
+   int main(){ __m128i x=_mm_setzero_si128(); __m128i y=_mm_setzero_si128(); __m128i r=_mm_clmulepi64_si128(x,y,0); return _mm_cvtsi128_si32(r); }
+   #endif"
+  HAVE_PMULL)
+if(HAVE_PMULL)
+  add_compile_definitions(HAVE_PMULL=1)
+  if(_pmull_flags)
+    add_compile_options("${_pmull_flags}")
+  endif()
+endif()

@@ -225,6 +225,9 @@ EXPORTS	TIFFAccessTagMethods
         TIFFSetUseSSE41
         TIFFSetUseSSE2
         TIFFSetUseAES
+        TIFFUsePMULL
+        TIFFSetUsePMULL
+        tiff_pmull_hash
         TIFFSetUseVulkan
         TIFFYCbCr8ToRGBAVulkan
         TIFFPredictorDiff16Vulkan
