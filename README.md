@@ -352,27 +352,32 @@ the SIMD paths. Example summary:
 
 ```bash
 $ python3 scripts/cross_simd_test.py
-SSE pack speed : 4320.16 MPix/s
-SSE unpack speed : 4265.02 MPix/s
-NEON pack speed : 756.23 MPix/s
-NEON unpack speed : 393.28 MPix/s
+SSE pack speed : 4190.95 MPix/s
+SSE unpack speed : 4219.14 MPix/s
+threadpool benchmark : 5.86 ms
+NEON pack speed : 747.12 MPix/s
+NEON unpack speed : 382.29 MPix/s
 ```
 
 ## Thread Pool Usage
 
-Build with `-Dthreadpool=ON` (CMake) or `--enable-multithreading` (Autotools)
-to enable the internal worker pool. By default the number of threads matches
+Threadpool support is enabled by default when the required threading library is
+available. Use `-Dthreadpool=OFF` (CMake) or `--disable-multithreading`
+(Autotools) to turn it off. By default the number of threads matches
 the available processors. Override this with the `TIFF_THREAD_COUNT`
 environment variable (set to an integer or `auto`) or by calling
 `TIFFSetThreadCount()`. The task queue limit may be changed via
 `TIFFSetThreadPoolSize()`. Passing `0` to `TIFFSetThreadPoolSize()` sizes the
 pool automatically based on the queued tasks. Strip and tile decoding both
 submit work items to this pool when more than one thread is available.
+Running `predictor_threadpool_benchmark` with four threads on the Codex
+container completes about 10 loops in roughly **5.9 ms**.
 
 ## io_uring Configuration
 
-io_uring support requires Linux 5.1 and liburing. Enable it with
-`-Dio-uring=ON` (CMake) or `--enable-io-uring` (Autotools). When unavailable,
+io_uring support requires Linux 5.1 and liburing. It is enabled by default when
+the library is found. Use `-Dio-uring=OFF` (CMake) or `--disable-io-uring`
+(Autotools) to disable it. When unavailable,
 the library falls back to a portable thread-based helper that shares the same
 API. The queue depth defaults to 8 but may be tuned through the
 `TIFF_URING_DEPTH` environment variable, via
@@ -390,10 +395,11 @@ advice flags with `TIFFSetMapSize()` and `TIFFSetMapAdvice()`.
 
 
 ## Testing and Validation
-Configure with testing enabled and run the full suite. Enabling the internal
-thread pool avoids several timeouts during the tests:
+Configure with testing enabled and run the full suite. The internal thread
+pool is on by default and avoids several timeouts during the tests. Disable it
+with `-Dthreadpool=OFF` if necessary:
 ```bash
-$ cmake -DBUILD_TESTING=ON -Dthreadpool=ON ..
+$ cmake -DBUILD_TESTING=ON ..
 $ cmake --build .
 $ ctest       # or: make check
 ```

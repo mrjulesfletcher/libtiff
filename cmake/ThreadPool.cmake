@@ -1,5 +1,5 @@
 # Thread pool support
-option(threadpool "enable internal thread pool" OFF)
+option(threadpool "enable internal thread pool" ON)
 set(TIFF_THREADPOOL ${threadpool})
 set(TIFF_USE_THREADPOOL ${threadpool})
 if(TIFF_THREADPOOL)

@@ -120,3 +120,35 @@ SSE unpack speed : 4265.02 MPix/s
 NEON pack speed : 756.23 MPix/s
 NEON unpack speed : 393.28 MPix/s
 ```
+
+## Updated Benchmarks
+
+Running the benchmarks with the default threadpool enabled produced the following numbers on the Codex container:
+
+```
+$ ./tools/bayerbench 10
+pack:   534.73 MPix/s
+unpack: 544.40 MPix/s
+
+$ ./test/swab_benchmark
+TIFFSwabArrayOfShort: 0.181 ms
+scalar_swab_short: 0.158 ms
+TIFFSwabArrayOfLong: 0.256 ms
+scalar_swab_long: 0.256 ms
+TIFFSwabArrayOfLong8: 0.484 ms
+scalar_swab_long8: 0.445 ms
+TIFFSwabArrayOfDouble: 0.439 ms
+scalar_swab_double: 0.438 ms
+
+$ ./test/predictor_threadpool_benchmark 4 10
+predictor+pack with 4 threads (10 loops each): 5.86 ms
+```
+
+Executing `scripts/cross_simd_test.py` still reports multi-architecture speeds:
+
+```
+SSE pack speed : 4190.95 MPix/s
+SSE unpack speed : 4219.14 MPix/s
+NEON pack speed : 747.12 MPix/s
+NEON unpack speed : 382.29 MPix/s
+```

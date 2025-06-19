@@ -117,6 +117,15 @@ def bench(binary: Path, loops=10, qemu=False):
     return float(pack.group(1)), float(unpack.group(1))
 
 
+def bench_threadpool(binary: Path, threads=4, loops=10):
+    """Return total time in milliseconds for the threadpool benchmark."""
+    env = os.environ.copy()
+    env["srcdir"] = str(ROOT / "test")
+    out = run([str(binary), str(threads), str(loops)], cwd=binary.parent, env=env)
+    m = re.search(r"([0-9.]+) ms", out)
+    return float(m.group(1)) if m else None
+
+
 def check(binary: Path, qemu=False):
     env = os.environ.copy()
     env["srcdir"] = str(ROOT / "test")
@@ -137,6 +146,9 @@ def main():
     build(SSE_BUILD)
 
     sse_pack, sse_unpack = bench(SSE_BUILD / "tools" / "bayerbench")
+    sse_thread_ms = bench_threadpool(
+        SSE_BUILD / "test" / "predictor_threadpool_benchmark"
+    )
     check(SSE_BUILD / "test" / "dng_simd_compare")
 
     neon_pack = neon_unpack = None
@@ -158,6 +170,8 @@ def main():
     print("\nSummary:\n------")
     print(f"SSE pack speed : {sse_pack:.2f} MPix/s")
     print(f"SSE unpack speed : {sse_unpack:.2f} MPix/s")
+    if sse_thread_ms is not None:
+        print(f"threadpool benchmark : {sse_thread_ms:.2f} ms")
     if neon_pack is not None:
         print(f"NEON pack speed : {neon_pack:.2f} MPix/s")
         print(f"NEON unpack speed : {neon_unpack:.2f} MPix/s")
