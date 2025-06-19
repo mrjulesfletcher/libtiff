@@ -325,8 +325,8 @@ pack:   757.83 MPix/s
 unpack: 1188.53 MPix/s
 
 # Codex runner results
-pack:   405.00 MPix/s
-unpack: 405.34 MPix/s
+pack:   389.23 MPix/s
+unpack: 403.40 MPix/s
 
 $ ./test/swab_benchmark
 TIFFSwabArrayOfShort: 0.011 ms
@@ -336,16 +336,27 @@ scalar_swab_long:     0.014 ms
 TIFFSwabArrayOfLong8: 0.028 ms
 scalar_swab_long8:    0.025 ms
 # Codex runner results
-TIFFSwabArrayOfShort: 0.298 ms
-scalar_swab_short:    0.257 ms
+TIFFSwabArrayOfShort: 0.225 ms
+scalar_swab_short:    0.221 ms
 TIFFSwabArrayOfLong:  0.360 ms
-scalar_swab_long:     0.360 ms
-TIFFSwabArrayOfLong8: 0.655 ms
-scalar_swab_long8:    0.617 ms
+scalar_swab_long:     0.384 ms
+TIFFSwabArrayOfLong8: 0.623 ms
+scalar_swab_long8:    0.622 ms
 ```
 ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
 `TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`. `TIFFSwabArrayOfLong8` is
 around 3× faster than the scalar implementation on the same device.
+
+Running `scripts/cross_simd_test.py` on the Codex container confirmed
+the SIMD paths. Example summary:
+
+```bash
+$ python3 scripts/cross_simd_test.py
+SSE pack speed : 4320.16 MPix/s
+SSE unpack speed : 4265.02 MPix/s
+NEON pack speed : 756.23 MPix/s
+NEON unpack speed : 393.28 MPix/s
+```
 
 ## Thread Pool Usage
 
