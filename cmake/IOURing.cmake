@@ -1,5 +1,5 @@
 # io_uring optional support
-option(io-uring "Use io_uring for async I/O" OFF)
+option(io-uring "Use io_uring for async I/O" ON)
 set(USE_IO_URING ${io-uring})
 
 if(USE_IO_URING)

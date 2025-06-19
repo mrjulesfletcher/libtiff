@@ -19,4 +19,6 @@ Then simply execute::
 
 It will build two temporary directories, ``build_sse`` and ``build_neon``,
 compile ``bayerbench`` and ``dng_simd_compare`` in each, run them, and print a
-short summary comparing the NEON and SSE performance figures.
+short summary comparing the NEON and SSE performance figures.  The
+``predictor_threadpool_benchmark`` tool is also executed under the SSE build to
+highlight multi-threaded throughput.
