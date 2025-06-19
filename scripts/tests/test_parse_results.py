@@ -12,6 +12,15 @@ def test_parse_numeric_results():
     }
 
 
+def test_parse_fps_results():
+    text = "write_fps_640x480: 30.5 fps\nread_fps_640x480: 28.1 fps"
+    res = parse_results(text)
+    assert res == {
+        "write_fps_640x480 (fps)": 30.5,
+        "read_fps_640x480 (fps)": 28.1,
+    }
+
+
 def test_parse_status_ok():
     assert parse_results("") == {"status": "ok"}
 
