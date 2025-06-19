@@ -30,7 +30,9 @@
 #include "TiffLib/tiffio.h"
 #include <array>
 #include <assert.h>
+#include <memory>
 #include <stdio.h>
+#include <vector>
 
 // piggyback some data on top of the RGBA Image
 struct TIFFDibImage
@@ -65,11 +67,11 @@ int ChkTIFF(LPCTSTR lpszPath)
     eh = TIFFSetErrorHandler(NULL);
     wh = TIFFSetWarningHandler(NULL);
 
-    TIFF *tif = TIFFOpen(lpszPath, "r");
+    std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(TIFFOpen(lpszPath, "r"),
+                                                    &TIFFClose);
     if (tif)
     {
         rtn = 1;
-        TIFFClose(tif);
     }
 
     TIFFSetErrorHandler(eh);
@@ -89,7 +91,8 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
 
     if (ChkTIFF(lpszPath))
     {
-        TIFF *tif = TIFFOpen(lpszPath, "r");
+        std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(TIFFOpen(lpszPath, "r"),
+                                                        &TIFFClose);
         if (tif)
         {
             std::array<char, 1024> emsg;
@@ -102,22 +105,15 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
                 if (TIFFRGBAImageBegin(&img.tif, tif, -1, emsg.data()))
                 {
                     size_t npixels;
-                    uint32_t *raster;
-
                     DibInstallHack(&img);
 
                     npixels = img.tif.width * img.tif.height;
-                    raster =
-                        (uint32_t *)_TIFFmalloc(npixels * sizeof(uint32_t));
-                    if (raster != NULL)
+                    std::vector<uint32_t> raster(npixels);
+                    if (TIFFRGBAImageGet(&img.tif, raster.data(), img.tif.width,
+                                         img.tif.height))
                     {
-                        if (TIFFRGBAImageGet(&img.tif, raster, img.tif.width,
-                                             img.tif.height))
-                        {
-                            pDIB = TIFFRGBA2DIB(&img, raster);
-                        }
+                        pDIB = TIFFRGBA2DIB(&img, raster.data());
                     }
-                    _TIFFfree(raster);
                 }
                 TIFFRGBAImageEnd(&img.tif);
             }
@@ -125,7 +121,6 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
             {
                 TRACE("Unable to open image(%s): %s\n", lpszPath, emsg.data());
             }
-            TIFFClose(tif);
         }
     }
 
@@ -400,7 +395,7 @@ static int getStripContig1Bit(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     uint16_t orientation;
     uint32_t row, y, nrow, rowstoread;
     uint32_t pos;
-    u_char *buf;
+    std::vector<u_char> buf;
     uint32_t rowsperstrip;
     uint32_t imagewidth = img->width;
     tsize_t scanline;
@@ -411,8 +406,8 @@ static int getStripContig1Bit(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
     uint32_t wb = WIDTHBYTES(w);
     int ret = 1;
 
-    buf = (u_char *)_TIFFmalloc(TIFFStripSize(tif));
-    if (buf == 0)
+    buf.resize(TIFFStripSize(tif));
+    if (buf.empty())
     {
         TIFFErrorExtR(tif, TIFFFileName(tif), "No space for strip buffer");
         return (0);
@@ -429,7 +424,7 @@ static int getStripContig1Bit(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
         nrow = (row + rowstoread > h ? h - row : rowstoread);
         strip = TIFFComputeStrip(tif, row + img->row_offset, 0);
         stripsize = ((row + img->row_offset) % rowsperstrip + nrow) * scanline;
-        if (TIFFReadEncodedStrip(tif, strip, buf, stripsize) < 0 &&
+        if (TIFFReadEncodedStrip(tif, strip, buf.data(), stripsize) < 0 &&
             img->stoponerr)
         {
             ret = 0;
@@ -438,10 +433,9 @@ static int getStripContig1Bit(TIFFRGBAImage *img, uint32_t *raster, uint32_t w,
 
         pos = ((row + img->row_offset) % rowsperstrip) * scanline;
         (*put)(img, (uint32_t *)(braster + y * wb), 0, y, w, nrow, fromskew,
-               toskew, buf + pos);
+               toskew, buf.data() + pos);
         y += (orientation == ORIENTATION_TOPLEFT ? -(int32_t)nrow
                                                  : (int32_t)nrow);
     }
-    _TIFFfree(buf);
     return (ret);
 }
