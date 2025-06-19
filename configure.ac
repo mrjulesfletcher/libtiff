@@ -368,6 +368,36 @@ AC_COMPILE_IFELSE([
 ])
 AC_SUBST(HAVE_SSE42)
 
+dnl Check for AES intrinsics
+AC_MSG_CHECKING([for AES instruction support])
+AC_COMPILE_IFELSE([
+  AC_LANG_PROGRAM([
+#if defined(__aarch64__) || defined(__arm__)
+    #include <arm_neon.h>
+#else
+    #include <wmmintrin.h>
+#endif
+  ],[
+#if defined(__aarch64__) || defined(__arm__)
+    uint8x16_t v = vdupq_n_u8(0);
+    v = vaeseq_u8(v, v);
+    v = vaesmcq_u8(v);
+    return v[0];
+#else
+    __m128i v = _mm_setzero_si128();
+    v = _mm_aesenc_si128(v, _mm_setzero_si128());
+    return _mm_extract_epi8(v,0);
+#endif
+  ])],[
+  AC_MSG_RESULT(yes)
+  AC_DEFINE([HAVE_HW_AES],[1],[Define if AES intrinsics are available])
+  HAVE_HW_AES=1
+],[
+  AC_MSG_RESULT(no)
+  HAVE_HW_AES=0
+])
+AC_SUBST(HAVE_HW_AES)
+
 dnl ---------------------------------------------------------------------------
 dnl Optional internal thread pool
 dnl ---------------------------------------------------------------------------

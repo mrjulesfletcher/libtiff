@@ -25,6 +25,7 @@ int tiff_use_neon = 0;
 int tiff_use_sse41 = 0;
 int tiff_use_sse2 = 0;
 int tiff_use_sse42 = 0;
+int tiff_use_aes = 0;
 #ifdef ZIP_SUPPORT
 #include <zlib.h>
 #endif
@@ -213,6 +214,57 @@ static int detect_sse42(void)
     return 0;
 }
 
+static int detect_aes(void)
+{
+#if defined(HAVE_HW_AES)
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) || defined(_M_IX86)
+    unsigned int eax, ebx, ecx, edx;
+    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx))
+        return (ecx & bit_AES) != 0;
+    return 0;
+#elif defined(__aarch64__) || defined(__arm__)
+#if defined(__linux__)
+    unsigned long hwcap2 = 0;
+#ifdef TIFF_HAVE_GETAUXVAL
+#ifdef AT_HWCAP2
+    hwcap2 = getauxval(AT_HWCAP2);
+#endif
+#endif
+#ifdef PR_GET_AUXV
+    if (hwcap2 == 0)
+    {
+        unsigned long auxv[64];
+        long r = prctl(PR_GET_AUXV, auxv, sizeof(auxv), 0, 0);
+        if (r >= 0)
+        {
+            for (size_t i = 0; i + 1 < sizeof(auxv) / sizeof(auxv[0]); i += 2)
+            {
+                if (auxv[i] == AT_HWCAP2)
+                {
+                    hwcap2 = auxv[i + 1];
+                    break;
+                }
+            }
+        }
+    }
+#endif
+#ifdef HWCAP2_AES
+    if (hwcap2 & HWCAP2_AES)
+        return 1;
+#endif
+#endif /* __linux__ */
+#ifdef __ARM_FEATURE_CRYPTO
+    return 1;
+#endif
+    return 0;
+#else
+    return 0;
+#endif
+#else
+    return 0;
+#endif
+}
+
 void TIFFInitSIMD(void)
 {
     tiff_simd.loadu_u8 = loadu_u8_scalar;
@@ -253,6 +305,12 @@ void TIFFInitSIMD(void)
         tiff_use_sse42 = 1;
     }
 #endif
+#if defined(HAVE_HW_AES)
+    if (detect_aes())
+    {
+        tiff_use_aes = 1;
+    }
+#endif
 }
 
 int TIFFUseNEON(void) { return tiff_use_neon; }
@@ -270,6 +328,10 @@ void TIFFSetUseSSE41(int enable) { tiff_use_sse41 = enable; }
 void TIFFSetUseSSE2(int enable) { tiff_use_sse2 = enable; }
 
 void TIFFSetUseSSE42(int enable) { tiff_use_sse42 = enable; }
+
+int TIFFUseAES(void) { return tiff_use_aes; }
+
+void TIFFSetUseAES(int enable) { tiff_use_aes = enable; }
 
 #if defined(HAVE_ARM_CRC32) && defined(__ARM_FEATURE_CRC32)
 static uint32_t crc32_neon(uint32_t crc, const uint8_t *p, size_t len)
@@ -365,5 +427,127 @@ uint32_t tiff_crc32(uint32_t crc, const uint8_t *buf, size_t len)
     return (uint32_t)crc32(crc, buf, (uInt)len);
 #else
     return crc32_generic(crc, buf, len);
+#endif
+}
+
+void tiff_aes_whiten(uint8_t *buf, size_t len)
+{
+#if TIFF_SIMD_AES
+    if (!tiff_use_aes)
+        return;
+#if defined(__ARM_FEATURE_CRYPTO)
+    uint8x16_t zero = vdupq_n_u8(0);
+    while (len >= 16)
+    {
+        uint8x16_t b = vld1q_u8(buf);
+        b = vaeseq_u8(b, zero);
+        b = vaesmcq_u8(b);
+        b = vaeseq_u8(b, zero);
+        b = vaesmcq_u8(b);
+        vst1q_u8(buf, b);
+        buf += 16;
+        len -= 16;
+    }
+    if (len)
+    {
+        uint8_t tmp[16] = {0};
+        memcpy(tmp, buf, len);
+        uint8x16_t b = vld1q_u8(tmp);
+        b = vaeseq_u8(b, zero);
+        b = vaesmcq_u8(b);
+        b = vaeseq_u8(b, zero);
+        b = vaesmcq_u8(b);
+        vst1q_u8(tmp, b);
+        memcpy(buf, tmp, len);
+    }
+#elif defined(__AES__)
+    const __m128i zero = _mm_setzero_si128();
+    while (len >= 16)
+    {
+        __m128i b = _mm_loadu_si128((const __m128i *)buf);
+        b = _mm_aesenc_si128(b, zero);
+        b = _mm_aesenc_si128(b, zero);
+        _mm_storeu_si128((__m128i *)buf, b);
+        buf += 16;
+        len -= 16;
+    }
+    if (len)
+    {
+        uint8_t tmp[16] = {0};
+        memcpy(tmp, buf, len);
+        __m128i b = _mm_loadu_si128((const __m128i *)tmp);
+        b = _mm_aesenc_si128(b, zero);
+        b = _mm_aesenc_si128(b, zero);
+        _mm_storeu_si128((__m128i *)tmp, b);
+        memcpy(buf, tmp, len);
+    }
+#else
+    (void)buf;
+    (void)len;
+#endif
+#else
+    (void)buf;
+    (void)len;
+#endif
+}
+
+void tiff_aes_unwhiten(uint8_t *buf, size_t len)
+{
+#if TIFF_SIMD_AES
+    if (!tiff_use_aes)
+        return;
+#if defined(__ARM_FEATURE_CRYPTO)
+    uint8x16_t zero = vdupq_n_u8(0);
+    while (len >= 16)
+    {
+        uint8x16_t b = vld1q_u8(buf);
+        b = vaesdq_u8(b, zero);
+        b = vaesimcq_u8(b);
+        b = vaesdq_u8(b, zero);
+        b = vaesimcq_u8(b);
+        vst1q_u8(buf, b);
+        buf += 16;
+        len -= 16;
+    }
+    if (len)
+    {
+        uint8_t tmp[16] = {0};
+        memcpy(tmp, buf, len);
+        uint8x16_t b = vld1q_u8(tmp);
+        b = vaesdq_u8(b, zero);
+        b = vaesimcq_u8(b);
+        b = vaesdq_u8(b, zero);
+        b = vaesimcq_u8(b);
+        vst1q_u8(tmp, b);
+        memcpy(buf, tmp, len);
+    }
+#elif defined(__AES__)
+    const __m128i zero = _mm_setzero_si128();
+    while (len >= 16)
+    {
+        __m128i b = _mm_loadu_si128((const __m128i *)buf);
+        b = _mm_aesdec_si128(b, zero);
+        b = _mm_aesdec_si128(b, zero);
+        _mm_storeu_si128((__m128i *)buf, b);
+        buf += 16;
+        len -= 16;
+    }
+    if (len)
+    {
+        uint8_t tmp[16] = {0};
+        memcpy(tmp, buf, len);
+        __m128i b = _mm_loadu_si128((const __m128i *)tmp);
+        b = _mm_aesdec_si128(b, zero);
+        b = _mm_aesdec_si128(b, zero);
+        _mm_storeu_si128((__m128i *)tmp, b);
+        memcpy(buf, tmp, len);
+    }
+#else
+    (void)buf;
+    (void)len;
+#endif
+#else
+    (void)buf;
+    (void)len;
 #endif
 }

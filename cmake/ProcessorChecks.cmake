@@ -116,3 +116,32 @@ if(HAVE_SSE42)
     add_compile_options("${_sse42_flags}")
   endif()
 endif()
+
+# Detect AES instruction support
+set(_aes_flags "${TIFF_SSE_FLAGS}")
+if(NOT _aes_flags)
+  if(CMAKE_C_COMPILER_ID MATCHES "^(GNU|Clang|AppleClang)$")
+    if(CMAKE_SYSTEM_PROCESSOR MATCHES "^(aarch64|arm64|arm)")
+      set(_aes_flags "-march=armv8-a+crypto")
+    else()
+      set(_aes_flags "-maes")
+    endif()
+  endif()
+endif()
+
+check_c_source_compiles(
+  "#if defined(__aarch64__) || defined(__arm__)
+   #include <arm_neon.h>
+   #include <arm_acle.h>
+   int main(){ uint8x16_t v = vdupq_n_u8(0); v = vaeseq_u8(v, v); v = vaesmcq_u8(v); return (int)v[0]; }
+   #else
+   #include <wmmintrin.h>
+   int main(){ __m128i v = _mm_setzero_si128(); v = _mm_aesenc_si128(v, _mm_setzero_si128()); return _mm_extract_epi8(v,0); }
+   #endif"
+  HAVE_HW_AES)
+if(HAVE_HW_AES)
+  add_compile_definitions(HAVE_HW_AES=1)
+  if(_aes_flags)
+    add_compile_options("${_aes_flags}")
+  endif()
+endif()

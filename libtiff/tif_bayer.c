@@ -1065,11 +1065,17 @@ void TIFFPackRaw12(const uint16_t *src, uint8_t *dst, size_t count, int bigendia
     else
 #endif
         pack12_scalar(src, dst, count, bigendian);
+#if TIFF_SIMD_AES
+    tiff_aes_whiten(dst, ((count + 1) / 2) * 3);
+#endif
 }
 
 void TIFFUnpackRaw12(const uint8_t *src, uint16_t *dst, size_t count,
                      int bigendian)
 {
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten((uint8_t *)src, ((count + 1) / 2) * 3);
+#endif
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
     if (tiff_use_neon)
         unpack12_neon(src, dst, count, bigendian);
@@ -1096,10 +1102,16 @@ void TIFFPackRaw10(const uint16_t *src, uint8_t *dst, size_t count, int bigendia
     else
 #endif
         pack10_scalar(src, dst, count, bigendian);
+#if TIFF_SIMD_AES
+    tiff_aes_whiten(dst, ((count + 3) / 4) * 5);
+#endif
 }
 
 void TIFFUnpackRaw10(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
 {
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten((uint8_t *)src, ((count + 3) / 4) * 5);
+#endif
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
     if (tiff_use_neon)
         unpack10_neon(src, dst, count, bigendian);
@@ -1126,10 +1138,16 @@ void TIFFPackRaw14(const uint16_t *src, uint8_t *dst, size_t count, int bigendia
     else
 #endif
         pack14_scalar(src, dst, count, bigendian);
+#if TIFF_SIMD_AES
+    tiff_aes_whiten(dst, ((count + 1) / 2) * 7);
+#endif
 }
 
 void TIFFUnpackRaw14(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
 {
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten((uint8_t *)src, ((count + 1) / 2) * 7);
+#endif
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
     if (tiff_use_neon)
         unpack14_neon(src, dst, count, bigendian);
@@ -1156,10 +1174,16 @@ void TIFFPackRaw16(const uint16_t *src, uint8_t *dst, size_t count, int bigendia
     else
 #endif
         pack16_scalar(src, dst, count, bigendian);
+#if TIFF_SIMD_AES
+    tiff_aes_whiten(dst, count * 2);
+#endif
 }
 
 void TIFFUnpackRaw16(const uint8_t *src, uint16_t *dst, size_t count, int bigendian)
 {
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten((uint8_t *)src, count * 2);
+#endif
 #if defined(HAVE_NEON) && defined(__ARM_NEON)
     if (tiff_use_neon)
         unpack16_neon(src, dst, count, bigendian);
