@@ -21,8 +21,8 @@
  * OF THIS SOFTWARE.
  */
 
-#include "tiffiop.h"
 #include "tiff_simd.h"
+#include "tiffiop.h"
 #ifdef LZMA_SUPPORT
 /*
  * TIFF Library.
@@ -169,6 +169,7 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 {
     static const char module[] = "LZMADecode";
     LZMAState *sp = LZMADecoderState(tif);
+    size_t occ_initial = (size_t)occ;
 
     (void)s;
     assert(sp != NULL);
@@ -250,6 +251,9 @@ static int LZMADecode(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
     tif->tif_rawcp = (uint8_t *)sp->stream.next_in; /* cast away const */
     tif->tif_rawcc = sp->stream.avail_in;
 
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten(op, occ_initial);
+#endif
     return 1;
 }
 
@@ -307,17 +311,24 @@ static int LZMAEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 {
     static const char module[] = "LZMAEncode";
     LZMAState *sp = LZMAEncoderState(tif);
+    size_t orig_cc = (size_t)cc;
 
     assert(sp != NULL);
     assert(sp->state == LSTATE_INIT_ENCODE);
 
     (void)s;
+#if TIFF_SIMD_AES
+    tiff_aes_whiten(bp, orig_cc);
+#endif
     sp->stream.next_in = bp;
     sp->stream.avail_in = (size_t)cc;
     if ((tmsize_t)sp->stream.avail_in != cc)
     {
         TIFFErrorExtR(tif, module,
                       "Liblzma cannot deal with buffers this size");
+#if TIFF_SIMD_AES
+        tiff_aes_unwhiten(bp, orig_cc);
+#endif
         return 0;
     }
     do
@@ -328,13 +339,21 @@ static int LZMAEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
             TIFFErrorExtR(tif, module,
                           "Encoding error at scanline %" PRIu32 ", %s",
                           tif->tif_row, LZMAStrerror(ret));
+#if TIFF_SIMD_AES
+            tiff_aes_unwhiten(bp, orig_cc);
+#endif
             return 0;
         }
         if (sp->stream.avail_out == 0)
         {
             tif->tif_rawcc = tif->tif_rawdatasize;
             if (!TIFFFlushData1(tif))
+            {
+#if TIFF_SIMD_AES
+                tiff_aes_unwhiten(bp, orig_cc);
+#endif
                 return 0;
+            }
             sp->stream.next_out = tif->tif_rawdata;
             sp->stream.avail_out =
                 (size_t)
@@ -342,6 +361,9 @@ static int LZMAEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
                                              is made already in LZMAPreEncode */
         }
     } while (sp->stream.avail_in > 0);
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten(bp, orig_cc);
+#endif
     return 1;
 }
 
@@ -368,7 +390,12 @@ static int LZMAPostEncode(TIFF *tif)
                     tif->tif_rawcc =
                         tif->tif_rawdatasize - sp->stream.avail_out;
                     if (!TIFFFlushData1(tif))
+                    {
+#if TIFF_SIMD_AES
+                        tiff_aes_unwhiten(bp, orig_cc);
+#endif
                         return 0;
+                    }
                     sp->stream.next_out = tif->tif_rawdata;
                     sp->stream.avail_out =
                         (size_t)
@@ -380,6 +407,9 @@ static int LZMAPostEncode(TIFF *tif)
             default:
                 TIFFErrorExtR(tif, module, "Liblzma error: %s",
                               LZMAStrerror(ret));
+#if TIFF_SIMD_AES
+                tiff_aes_unwhiten(bp, orig_cc);
+#endif
                 return 0;
         }
     } while (ret != LZMA_STREAM_END);

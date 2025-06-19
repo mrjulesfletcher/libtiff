@@ -23,8 +23,8 @@
  * OF THIS SOFTWARE.
  */
 
-#include "tiffiop.h"
 #include "tiff_simd.h"
+#include "tiffiop.h"
 #ifdef LZW_SUPPORT
 /*
  * TIFF Library.
@@ -406,6 +406,7 @@ static int LZWDecode(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
     LZWCodecState *sp = LZWDecoderState(tif);
     uint8_t *op = (uint8_t *)op0;
     tmsize_t occ = occ0;
+    size_t occ_initial = (size_t)occ0;
     uint8_t *bp;
     long nbits, nextbits, nbitsmask;
     WordType nextdata;
@@ -456,6 +457,9 @@ static int LZWDecode(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
                     codep = codep->next;
                 } while (--occ && codep);
             }
+#if TIFF_SIMD_AES
+            tiff_aes_unwhiten(op0, occ_initial);
+#endif
             return (1);
         }
         /*
@@ -740,6 +744,9 @@ after_loop:
                       tif->tif_row, (uint64_t)occ);
         return (0);
     }
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten(op0, occ_initial);
+#endif
     return (1);
 
 no_eoi:
@@ -802,6 +809,7 @@ static int LZWDecodeCompat(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
     LZWCodecState *sp = LZWDecoderState(tif);
     uint8_t *op = (uint8_t *)op0;
     tmsize_t occ = occ0;
+    size_t occ_initial = (size_t)occ0;
     uint8_t *tp;
     uint8_t *bp;
     int code, nbits;
@@ -841,6 +849,9 @@ static int LZWDecodeCompat(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
                 *--tp = codep->value;
                 codep = codep->next;
             } while (--occ);
+#if TIFF_SIMD_AES
+            tiff_aes_unwhiten(op0, occ_initial);
+#endif
             return (1);
         }
         /*
@@ -1014,6 +1025,9 @@ static int LZWDecodeCompat(TIFF *tif, uint8_t *op0, tmsize_t occ0, uint16_t s)
                       tif->tif_row, (uint64_t)occ);
         return (0);
     }
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten(op0, occ_initial);
+#endif
     return (1);
 }
 #endif /* LZW_COMPAT */
@@ -1129,10 +1143,19 @@ static int LZWEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
     int free_ent, maxcode, nbits;
     uint8_t *op;
     uint8_t *limit;
+    size_t orig_cc = (size_t)cc;
 
     (void)s;
+#if TIFF_SIMD_AES
+    tiff_aes_whiten(bp, orig_cc);
+#endif
     if (sp == NULL)
+    {
+#if TIFF_SIMD_AES
+        tiff_aes_unwhiten(bp, orig_cc);
+#endif
         return (0);
+    }
 
     assert(sp->enc_hashtab != NULL);
 
@@ -1220,7 +1243,12 @@ static int LZWEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
         {
             tif->tif_rawcc = (tmsize_t)(op - tif->tif_rawdata);
             if (!TIFFFlushData1(tif))
+            {
+#if TIFF_SIMD_AES
+                tiff_aes_unwhiten(bp, orig_cc);
+#endif
                 return 0;
+            }
             op = tif->tif_rawdata;
         }
         PutNextCode(op, ent);
@@ -1293,6 +1321,9 @@ static int LZWEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
     sp->lzw_maxcode = (unsigned short)maxcode;
     sp->lzw_nbits = (unsigned short)nbits;
     tif->tif_rawcp = op;
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten(bp, orig_cc);
+#endif
     return (1);
 }
 
@@ -1313,7 +1344,12 @@ static int LZWPostEncode(TIFF *tif)
     {
         tif->tif_rawcc = (tmsize_t)(op - tif->tif_rawdata);
         if (!TIFFFlushData1(tif))
+        {
+#if TIFF_SIMD_AES
+            tiff_aes_unwhiten(bp, orig_cc);
+#endif
             return 0;
+        }
         op = tif->tif_rawdata;
     }
     if (sp->enc_oldcode != (hcode_t)-1)
