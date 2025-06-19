@@ -34,6 +34,15 @@ test/predictor_threadpool_benchmark
 test/pack_uring_benchmark
   write (ms): 4.23
   read (ms): 4.10
+scripts/raw_to_dng_benchmark.py
+  1920x1080
+    convert_fps: 813.24
+  2560x1440
+    convert_fps: 705.10
+  3840x2160
+    convert_fps: 402.45
+  5760x3240
+    convert_fps: 210.07
 ```
 
 The absolute values vary with compiler flags and hardware but provide a
@@ -58,3 +67,4 @@ Other utilities assist with performance analysis and documentation:
   vectorizer failed to optimize.
 - `scripts/test_doc_coverage.py` checks that newly added tests call only
   documented public APIs.
+- `scripts/raw_to_dng_benchmark.py` measures raw to DNG conversion speed using raw2tiff.
