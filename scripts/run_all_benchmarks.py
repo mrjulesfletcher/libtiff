@@ -58,7 +58,7 @@ def parse_results(out):
     if out is None:
         return results
     for line in out.splitlines():
-        m = re.search(r"([A-Za-z0-9_+]+):?\s*([0-9.]+)\s*(ms|MPix/s)?", line)
+        m = re.search(r"([A-Za-z0-9_+]+):?\s*([0-9.]+)\s*(ms|MPix/s|fps)?", line)
         if m:
             key = m.group(1)
             val = float(m.group(2))
@@ -100,6 +100,12 @@ def main():
         print(f"Running {rel}...")
         out = run_bench(rel, args)
         summary[rel] = parse_results(out)
+
+    speed_script = ROOT / "scripts" / "resolution_speed_test.py"
+    if speed_script.exists():
+        print("Running resolution_speed_test.py...")
+        out = run([sys.executable, str(speed_script), "--frames", "2"])
+        summary["resolution_speed_test"] = parse_results(out)
 
     print("\nBenchmark summary:\n------------------")
     for prog, res in summary.items():
