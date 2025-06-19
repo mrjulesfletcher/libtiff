@@ -41,6 +41,20 @@ sense of relative performance between scalar implementations and their
 SIMD or multi-threaded counterparts.
 
 Additional tools exercised by the script verify NEON and SSE4.1 helpers
-such as `assemble_strip_neon_test`, `rgb_pack_neon_test` and
-`predictor_sse41_test`.  These programs do not print timings but return
+such as `assemble_strip_neon_test`, `rgb_pack_neon_test`,
+`bayer_neon_test`, `gray_flip_neon_test`, `reverse_bits_neon_test`,
+`memmove_simd_test`, `ycbcr_neon_test`, `dng_simd_compare` and
+`predictor_sse41_test`. These programs do not print timings but return
 zero on success which is reported as `status: ok` in the summary.
+Tests for the C++ bindings include `tiffstream_api`, while
+`tiff_fdopen_async` exercises `TIFFFdOpen` from multiple threads using
+`std::async`.
+
+Other utilities assist with performance analysis and documentation:
+
+- `scripts/cross_simd_test.py` cross-compiles for SSE4.1 and NEON and
+  runs representative benchmarks under both builds.
+- `scripts/vectorization_audit.py` builds with clang and lists loops the
+  vectorizer failed to optimize.
+- `scripts/test_doc_coverage.py` checks that newly added tests call only
+  documented public APIs.
