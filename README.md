@@ -324,6 +324,10 @@ unpack: 1661.60 MPix/s
 pack:   757.83 MPix/s
 unpack: 1188.53 MPix/s
 
+# Codex runner results
+pack:   405.00 MPix/s
+unpack: 405.34 MPix/s
+
 $ ./test/swab_benchmark
 TIFFSwabArrayOfShort: 0.011 ms
 scalar_swab_short:    0.004 ms
@@ -331,6 +335,13 @@ TIFFSwabArrayOfLong:  0.016 ms
 scalar_swab_long:     0.014 ms
 TIFFSwabArrayOfLong8: 0.028 ms
 scalar_swab_long8:    0.025 ms
+# Codex runner results
+TIFFSwabArrayOfShort: 0.298 ms
+scalar_swab_short:    0.257 ms
+TIFFSwabArrayOfLong:  0.360 ms
+scalar_swab_long:     0.360 ms
+TIFFSwabArrayOfLong8: 0.655 ms
+scalar_swab_long8:    0.617 ms
 ```
 ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
 `TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`. `TIFFSwabArrayOfLong8` is
