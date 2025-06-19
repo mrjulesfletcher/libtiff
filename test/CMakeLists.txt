@@ -57,6 +57,14 @@ if(JPEG_SUPPORT)
     list(APPEND TIFFIMAGES images/quad-tile.jpg.tiff)
 endif()
 
+add_test(NAME parse_results_pytest
+         COMMAND python3 -m pytest -q
+         ${CMAKE_SOURCE_DIR}/scripts/tests/test_parse_results.py)
+
+add_test(NAME parse_results_async_pytest
+         COMMAND python3 -m pytest -q
+         ${CMAKE_SOURCE_DIR}/scripts/tests/test_parse_results_async.py)
+
 if (OJPEG_SUPPORT)
     list(APPEND TIFFIMAGES_OJPEG
         images/ojpeg_zackthecat_subsamp22_single_strip.tiff
@@ -420,6 +428,18 @@ add_executable(open_dng_alloc_fail ../placeholder.h)
 target_sources(open_dng_alloc_fail PRIVATE open_dng_alloc_fail.c)
 target_link_libraries(open_dng_alloc_fail PRIVATE tiff tiff_port failalloc)
 list(APPEND simple_tests open_dng_alloc_fail)
+
+add_executable(tiffstream_api ../placeholder.h)
+target_sources(tiffstream_api PRIVATE tiffstream_api.cpp)
+set_target_properties(tiffstream_api PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(tiffstream_api PRIVATE tiffxx tiff tiff_port)
+list(APPEND simple_tests tiffstream_api)
+
+add_executable(tiff_fdopen_async ../placeholder.h)
+target_sources(tiff_fdopen_async PRIVATE tiff_fdopen_async.cpp)
+set_target_properties(tiff_fdopen_async PROPERTIES LINKER_LANGUAGE CXX)
+target_link_libraries(tiff_fdopen_async PRIVATE tiffxx tiff tiff_port)
+list(APPEND simple_tests tiff_fdopen_async)
 
 if(WEBP_SUPPORT AND EMSCRIPTEN)
   # Emscripten is pretty finnicky about linker flags.

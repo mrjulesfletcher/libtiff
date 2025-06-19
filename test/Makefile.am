@@ -110,7 +110,8 @@ check_PROGRAMS = \
        bayer_neon_test \
        dng_simd_compare \
        packbits_literal_run threadpool_stress uring_thread_stress threadpool_alloc_fail threadpool_init_fail assemble_strip_neon_alloc_fail predictor_threadpool_resize ycbcr_neon_test predictor_sse41_test \
-       concurrent_rw test_open_jpeg_dng test_bigtiff_roundtrip test_client_open_stream open_dng_alloc_fail
+       concurrent_rw test_open_jpeg_dng test_bigtiff_roundtrip test_client_open_stream open_dng_alloc_fail tiffstream_api
+       tiff_fdopen_async
 endif
 
 # Test scripts to execute
@@ -410,6 +411,12 @@ concurrent_rw_LDADD = $(LIBTIFF)
 
 open_dng_alloc_fail_SOURCES = open_dng_alloc_fail.c failalloc.c
 open_dng_alloc_fail_LDADD = $(LIBTIFF)
+
+tiffstream_api_SOURCES = tiffstream_api.cpp
+tiffstream_api_LDADD = $(LIBTIFF)
+
+tiff_fdopen_async_SOURCES = tiff_fdopen_async.cpp
+tiff_fdopen_async_LDADD = $(LIBTIFF)
 
 AM_CPPFLAGS = -I$(top_srcdir)/libtiff
 

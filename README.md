@@ -407,9 +407,31 @@ $ cmake --build .
 $ ctest       # or: make check
 ```
 Additional programs validate SIMD helpers individually:
-- `assemble_strip_neon_test` writes and reads a small image to verify strip assembly【F:test/assemble_strip_neon_test.c†L8-L68】.
+- `assemble_strip_neon_test` writes and reads a small image to verify strip assembly.
 - `swab_neon_test` checks byte swapping correctness.
 - `swab_benchmark` reports timing for NEON vs. scalar swapping.
+- `bayer_neon_test` validates NEON Bayer packing and unpacking.
+- `gray_flip_neon_test` exercises NEON optimized grayscale flipping.
+- `rgb_pack_neon_test` checks NEON RGB packing helpers.
+- `reverse_bits_neon_test` verifies NEON bit reversal routines.
+- `memmove_simd_test` covers the vectorized `memmove` implementation.
+- `ycbcr_neon_test` validates NEON YCbCr color conversion.
+- `predictor_sse41_test` runs the SSE4.1 predictor path.
+- `dng_simd_compare` compares NEON and SSE decode results.
+- `bayer_pack_test` ensures scalar and SIMD Bayer packing match.
+- `bayer_simd_benchmark` measures Bayer SIMD performance.
+- `predictor_threadpool_benchmark` times thread pool predictor code.
+- `pack_uring_benchmark` benchmarks asynchronous I/O packing.
+- `tiffstream_api` exercises the C++ stream interface (`TIFFStreamOpen`).
+- `tiff_fdopen_async` opens one TIFF via file descriptor on multiple
+  threads using `std::async`.
+- `scripts/cross_simd_test.py` compares SSE4.1 and NEON implementations.
+- `scripts/run_all_benchmarks.py` builds the project and summarises all
+  benchmarks.
+- `scripts/vectorization_audit.py` lists loops that failed automatic
+  vectorization.
+- `scripts/test_doc_coverage.py` ensures used APIs have matching
+  documentation.
 All SIMD helpers must pass the same tests as the scalar implementations.
 
 ## Contributing
