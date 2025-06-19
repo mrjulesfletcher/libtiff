@@ -25,7 +25,9 @@ int tiff_use_neon = 0;
 int tiff_use_sse41 = 0;
 int tiff_use_sse2 = 0;
 int tiff_use_sse42 = 0;
+#ifdef ZIP_SUPPORT
 #include <zlib.h>
+#endif
 
 /* Scalar implementations */
 static tiff_v16u8 loadu_u8_scalar(const uint8_t *ptr)
@@ -335,6 +337,20 @@ static uint32_t crc32_sse42(uint32_t crc, const uint8_t *p, size_t len)
 }
 #endif
 
+#ifndef ZIP_SUPPORT
+static uint32_t crc32_generic(uint32_t crc, const uint8_t *p, size_t len)
+{
+    crc = ~crc;
+    while (len--)
+    {
+        crc ^= *p++;
+        for (int i = 0; i < 8; i++)
+            crc = (crc >> 1) ^ (0xEDB88320U & (-(int)(crc & 1)));
+    }
+    return ~crc;
+}
+#endif
+
 uint32_t tiff_crc32(uint32_t crc, const uint8_t *buf, size_t len)
 {
 #if defined(HAVE_ARM_CRC32) && defined(__ARM_FEATURE_CRC32)
@@ -345,5 +361,9 @@ uint32_t tiff_crc32(uint32_t crc, const uint8_t *buf, size_t len)
     if (tiff_use_sse42)
         return crc32_sse42(crc, buf, len);
 #endif
+#ifdef ZIP_SUPPORT
     return (uint32_t)crc32(crc, buf, (uInt)len);
+#else
+    return crc32_generic(crc, buf, len);
+#endif
 }
