@@ -210,7 +210,9 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
 #if LIBDEFLATE_SUPPORT
     if (sp->libdeflate_state == 1)
+    {
         return 0;
+    }
 
     /* If we have libdeflate support and we are asked to read a whole */
     /* strip/tile, then go for using it */
@@ -280,6 +282,9 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                 return 0;
             }
 
+#if TIFF_SIMD_AES
+            tiff_aes_unwhiten(op, (size_t)occ_initial);
+#endif
 #if defined(HAVE_ARM_CRC32)
             sp->crc32 = tiff_crc32(0, op, (size_t)occ_initial);
 #endif
@@ -337,6 +342,9 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
 
     tif->tif_rawcp = sp->stream.next_in;
 
+#if TIFF_SIMD_AES
+    tiff_aes_unwhiten(op, (size_t)occ_initial);
+#endif
 #if defined(HAVE_ARM_CRC32)
     sp->crc32 = tiff_crc32(0, op, (size_t)occ_initial);
 #endif
@@ -420,11 +428,14 @@ static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
 {
     static const char module[] = "ZIPEncode";
     ZIPState *sp = ZIPEncoderState(tif);
+    tmsize_t orig_cc = cc;
 
     assert(sp != NULL);
     assert(sp->state == ZSTATE_INIT_ENCODE);
 
     (void)s;
+
+    tiff_aes_whiten(bp, (size_t)cc);
 
 #if LIBDEFLATE_SUPPORT
     if (sp->libdeflate_state == 1)
@@ -506,14 +517,19 @@ static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
             {
                 TIFFErrorExtR(tif, module, "Encoder error at scanline %lu",
                               (unsigned long)tif->tif_row);
+                tiff_aes_unwhiten(bp, (size_t)orig_cc);
                 return 0;
             }
 
             tif->tif_rawcc = nCompressedBytes;
 
             if (!TIFFFlushData1(tif))
+            {
+                tiff_aes_unwhiten(bp, (size_t)orig_cc);
                 return 0;
+            }
 
+            tiff_aes_unwhiten(bp, (size_t)orig_cc);
             return 1;
         }
     } while (0);
@@ -532,19 +548,24 @@ static int ZIPEncode(TIFF *tif, uint8_t *bp, tmsize_t cc, uint16_t s)
         if (deflate(&sp->stream, Z_NO_FLUSH) != Z_OK)
         {
             TIFFErrorExtR(tif, module, "Encoder error: %s", SAFE_MSG(sp));
+            tiff_aes_unwhiten(bp, (size_t)orig_cc);
             return (0);
         }
         if (sp->stream.avail_out == 0)
         {
             tif->tif_rawcc = tif->tif_rawdatasize;
             if (!TIFFFlushData1(tif))
+            {
+                tiff_aes_unwhiten(bp, (size_t)orig_cc);
                 return 0;
+            }
             sp->stream.next_out = tif->tif_rawdata;
             sp->stream.avail_out =
                 TIFF_CLAMP_UINT64_TO_INT32_MAX(tif->tif_rawdatasize);
         }
         cc -= (avail_in_before - sp->stream.avail_in);
     } while (cc > 0);
+    tiff_aes_unwhiten(bp, (size_t)orig_cc);
     return (1);
 }
 

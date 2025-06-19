@@ -189,4 +189,7 @@
 /* Define to 1 if SSE4.2 intrinsics are available */
 #cmakedefine HAVE_SSE42 1
 
+/* Define to 1 if AES intrinsics are available */
+#cmakedefine HAVE_HW_AES 1
+
 /* clang-format on */

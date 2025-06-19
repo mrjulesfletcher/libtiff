@@ -152,3 +152,19 @@ SSE unpack speed : 4219.14 MPix/s
 NEON pack speed : 747.12 MPix/s
 NEON unpack speed : 382.29 MPix/s
 ```
+
+## AES Whitening Benchmarks
+
+The Bayer RAW helpers were benchmarked both with and without the new AES-based
+whitening step enabled. The measurements were taken on the Codex container using
+a small program that calls `TIFFSetUseAES()` after `TIFFInitSIMD()`.
+
+```
+$ ./benchaes 50
+use_aes=0 pack 664.31 MPix/s, unpack 680.79 MPix/s
+use_aes=1 pack 668.09 MPix/s, unpack 681.42 MPix/s
+```
+
+Whitening with AES shows roughly comparable throughput to the unwhitened
+pipeline while improving compression ratios when using the ZIP codec.
+

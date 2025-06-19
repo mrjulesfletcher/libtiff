@@ -524,10 +524,14 @@ will work.
       - enable or disable ARM NEON optimized routines
     * - :c:func:`TIFFSetUseSSE41`
       - enable or disable SSE4.1 optimized routines
+    * - :c:func:`TIFFSetUseAES`
+      - enable or disable hardware AES whitening
     * - :c:func:`TIFFUseNEON`
       - query if NEON optimizations are enabled
     * - :c:func:`TIFFUseSSE41`
       - query if SSE4.1 optimizations are enabled
+    * - :c:func:`TIFFUseAES`
+      - query if AES whitening is enabled
     * - :c:func:`TIFFWriteBufferSetup`
       - sets up the data buffer used to write raw (encoded) data to a file
     * - :c:func:`TIFFWriteCheck`

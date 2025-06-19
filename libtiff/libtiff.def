@@ -219,10 +219,12 @@ EXPORTS	TIFFAccessTagMethods
         TIFFUseNEON
         TIFFUseSSE41
         TIFFUseSSE2
+        TIFFUseAES
         TIFFUseVulkan
         TIFFSetUseNEON
         TIFFSetUseSSE41
         TIFFSetUseSSE2
+        TIFFSetUseAES
         TIFFSetUseVulkan
         TIFFYCbCr8ToRGBAVulkan
         TIFFPredictorDiff16Vulkan

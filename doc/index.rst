@@ -63,6 +63,7 @@ The following sections are included in this documentation:
     bayer16neon
     cross_simd
     zipneon
+    zipaes
     async_dng
     addingtags
     tools
