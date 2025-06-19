@@ -81,3 +81,4 @@ test/o-*
 cmake-build*
 build*
 Testing/
+flawfinder.log

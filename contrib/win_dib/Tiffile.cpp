@@ -28,6 +28,7 @@
 
 #include "TiffLib/tiff.h"
 #include "TiffLib/tiffio.h"
+#include <array>
 #include <assert.h>
 #include <stdio.h>
 
@@ -91,14 +92,14 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
         TIFF *tif = TIFFOpen(lpszPath, "r");
         if (tif)
         {
-            char emsg[1024];
+            std::array<char, 1024> emsg;
 
-            if (TIFFRGBAImageOK(tif, emsg))
+            if (TIFFRGBAImageOK(tif, emsg.data()))
             {
                 TIFFDibImage img;
-                char emsg[1024];
+                std::array<char, 1024> emsg;
 
-                if (TIFFRGBAImageBegin(&img.tif, tif, -1, emsg))
+                if (TIFFRGBAImageBegin(&img.tif, tif, -1, emsg.data()))
                 {
                     size_t npixels;
                     uint32_t *raster;
@@ -122,7 +123,7 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
             }
             else
             {
-                TRACE("Unable to open image(%s): %s\n", lpszPath, emsg);
+                TRACE("Unable to open image(%s): %s\n", lpszPath, emsg.data());
             }
             TIFFClose(tif);
         }
