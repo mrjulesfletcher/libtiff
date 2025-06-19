@@ -215,7 +215,7 @@ bool TiffStream::seekInt(thandle_t fd, unsigned int offset, int origin)
     return false;
 }
 
-bool TiffStream::isOpen(thandle_t fd)
+bool TiffStream::isOpen(thandle_t fd) const
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
     return (ts->m_inStream != NULL || ts->m_outStream != NULL ||

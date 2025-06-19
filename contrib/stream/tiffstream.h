@@ -42,14 +42,14 @@ class TiffStream
   public:
     // query method
     TIFF *getTiffHandle() const { return m_tif; }
-    unsigned int getStreamLength() { return m_streamLength; }
+    unsigned int getStreamLength() const { return m_streamLength; }
 
   private:
     // internal methods
     unsigned int getSize(thandle_t fd);
     unsigned int tell(thandle_t fd);
     bool seekInt(thandle_t fd, unsigned int offset, int origin);
-    bool isOpen(thandle_t fd);
+    bool isOpen(thandle_t fd) const;
 
   private:
     thandle_t m_this;

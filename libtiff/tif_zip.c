@@ -280,7 +280,9 @@ static int ZIPDecodeInternal(TIFF *tif, uint8_t *op, tmsize_t occ, uint16_t s)
                 return 0;
             }
 
+#if defined(HAVE_ARM_CRC32)
             sp->crc32 = tiff_crc32(0, op, (size_t)occ_initial);
+#endif
             return 1;
         }
     } while (0);
