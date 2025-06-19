@@ -247,6 +247,8 @@ LIBTIFF_4.7.1 {
     TIFFSetThreadPoolSize;
     TIFFGetThreadCount;
     TIFFInitSIMD;
+    TIFFInitVulkan;
+    TIFFCleanupVulkan;
     tiff_use_neon;
     tiff_use_sse41;
     tiff_use_sse2;
@@ -254,9 +256,14 @@ LIBTIFF_4.7.1 {
     TIFFUseNEON;
     TIFFUseSSE41;
     TIFFUseSSE2;
+    tiff_use_vulkan;
+    TIFFUseVulkan;
     TIFFSetUseNEON;
     TIFFSetUseSSE41;
     TIFFSetUseSSE2;
+    TIFFSetUseVulkan;
+    TIFFYCbCr8ToRGBAVulkan;
+    TIFFPredictorDiff16Vulkan;
     TIFFSetMapSize;
     TIFFSetMapAdvice;
     TIFFSetURingQueueDepth;

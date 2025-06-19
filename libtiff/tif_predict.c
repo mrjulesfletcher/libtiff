@@ -28,6 +28,7 @@
  * Predictor Tag Support (used by multiple codecs).
  */
 #include "tif_predict.h"
+#include "tiff_vulkan.h"
 #include "tiffiop.h"
 
 #if defined(HAVE_SSE2)
@@ -1245,6 +1246,12 @@ static int horDiff16(TIFF *tif, uint8_t *cp0, tmsize_t cc)
     {
         TIFFErrorExtR(tif, "horDiff8", "%s", "(cc%(2*stride))!=0");
         return 0;
+    }
+
+    if (TIFFUseVulkan())
+    {
+        TIFFPredictorDiff16Vulkan(wp, wp, (uint32_t)wc, (uint32_t)stride);
+        return 1;
     }
 
     if (wc > stride)

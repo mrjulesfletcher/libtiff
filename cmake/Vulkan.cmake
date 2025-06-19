@@ -1,0 +1,16 @@
+# Vulkan optional GPU support
+option(vulkan "use Vulkan GPU backend" OFF)
+set(USE_VULKAN ${vulkan})
+
+if(USE_VULKAN)
+    find_path(VULKAN_INCLUDE_DIR vulkan/vulkan.h)
+    find_library(VULKAN_LIBRARY vulkan)
+    if(VULKAN_INCLUDE_DIR AND VULKAN_LIBRARY)
+        add_compile_definitions(HAVE_VULKAN=1)
+        list(APPEND TIFF_INCLUDES ${VULKAN_INCLUDE_DIR})
+        list(APPEND tiff_libs_private_list "${VULKAN_LIBRARY}")
+    else()
+        message(WARNING "Vulkan requested but headers or library not found -- disabling")
+        set(USE_VULKAN OFF CACHE BOOL "use Vulkan GPU backend" FORCE)
+    endif()
+endif()

@@ -59,7 +59,9 @@ noinst_HEADERS = \
         strip_sse41.h \
         strip_simd.h \
         reverse_bits_neon.h \
-        reverse_bits_sse.h
+        reverse_bits_sse.h \
+        vulkan_shader_spv.h \
+        predictor_spv.h
 
 nodist_libtiffinclude_HEADERS = \
 	tiffconf.h
@@ -113,6 +115,7 @@ libtiff_la_SOURCES = \
         tif_rgb.c \
         tif_write.c \
         tif_uring.c \
+        tif_vulkan.c \
         tiff_threadpool.c \
         tif_mmap.c \
         tif_zip.c \

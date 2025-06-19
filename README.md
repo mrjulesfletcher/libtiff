@@ -245,6 +245,13 @@ Directory offsets are cached in memory to speed up `TIFFSetDirectory()` and
 avoid expensive scans through large files. The cache is invalidated on write so
 that applications always see consistent state.
 
+### GPU Acceleration
+An experimental Vulkan backend accelerates YCbCr to RGBA conversion on the
+Raspberry Pi 5. The predictor differencing step used when compressing RAW data
+to DNG can also run on the GPU. Enable Vulkan with `-Dvulkan=ON` or
+`--enable-vulkan` when configuring and call `TIFFInitVulkan()` before
+processing images.
+
 ## How to Use SIMD Routines
 Below is a short example that assembles a 12‑bit strip and writes a DNG.
 The full program is [`test/assemble_strip_neon_test.c`](test/assemble_strip_neon_test.c).

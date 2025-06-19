@@ -136,6 +136,11 @@
 /* define to build with io_uring support */
 #undef USE_IO_URING
 
+/* define to build with Vulkan GPU acceleration */
+#undef USE_VULKAN
+/* Define if Vulkan headers and library are available */
+#undef HAVE_VULKAN
+
 /* Support webp compression */
 #undef WEBP_SUPPORT
 

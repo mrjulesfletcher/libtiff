@@ -53,6 +53,8 @@ set(tiff_private_HEADERS
         strip_simd.h
         reverse_bits_neon.h
         reverse_bits_sse.h
+        vulkan_shader_spv.h
+        predictor_spv.h
         ${CMAKE_CURRENT_BINARY_DIR}/tif_config.h)
 
 
@@ -132,6 +134,9 @@ else()
 endif()
 
 target_sources(tiff PRIVATE tif_uring.c)
+if(USE_VULKAN)
+  target_sources(tiff PRIVATE tif_vulkan.c)
+endif()
 if(USE_IO_URING)
   target_link_libraries(tiff PRIVATE ${IOURING_LIBRARY})
 endif()
