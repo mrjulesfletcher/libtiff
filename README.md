@@ -358,6 +358,9 @@ threadpool benchmark : 5.86 ms
 NEON pack speed : 747.12 MPix/s
 NEON unpack speed : 382.29 MPix/s
 ```
+For a combined build, test and benchmark run, execute
+`scripts/run_all_benchmarks.py`.  It invokes a set of micro benchmarks as
+well as NEON/SSE validation helpers and prints a summary table.
 
 ## Thread Pool Usage
 
