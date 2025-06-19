@@ -192,4 +192,7 @@
 /* Define to 1 if AES intrinsics are available */
 #cmakedefine HAVE_HW_AES 1
 
+/* Define to 1 if PMULL/CLMUL intrinsics are available */
+#cmakedefine HAVE_PMULL 1
+
 /* clang-format on */

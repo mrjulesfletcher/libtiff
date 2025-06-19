@@ -168,3 +168,15 @@ use_aes=1 pack 668.09 MPix/s, unpack 681.42 MPix/s
 Whitening with AES shows roughly comparable throughput to the unwhitened
 pipeline while improving compression ratios when using the ZIP codec.
 
+
+## PMULL Hash Benchmarks
+
+A small benchmark was added to measure the throughput of the new `tiff_pmull_hash` helper.
+The test processes a 1 MiB buffer filled with pseudo-random data.
+
+```
+$ ./test/pmull_hash_benchmark 50
+hash=0xbefb8c8bbaad8737
+throughput: 1.16 MB/s
+```
+

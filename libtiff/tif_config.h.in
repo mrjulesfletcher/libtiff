@@ -208,4 +208,7 @@
 /* Define to 1 if AES intrinsics are available */
 #undef HAVE_HW_AES
 
+/* Define to 1 if PMULL/CLMUL intrinsics are available */
+#undef HAVE_PMULL
+
 /* clang-format on */

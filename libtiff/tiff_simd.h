@@ -16,7 +16,7 @@
 #if defined(HAVE_SSE42)
 #include <nmmintrin.h>
 #endif
-#if defined(HAVE_HW_AES) && defined(__AES__)
+#if (defined(HAVE_HW_AES) && defined(__AES__)) || defined(HAVE_PMULL)
 #include <wmmintrin.h>
 #endif
 
@@ -49,6 +49,11 @@ extern "C"
 #define TIFF_SIMD_AES 1
 #else
 #define TIFF_SIMD_AES 0
+#endif
+#if defined(HAVE_PMULL)
+#define TIFF_SIMD_PMULL 1
+#else
+#define TIFF_SIMD_PMULL 0
 #endif
 #if TIFF_SIMD_NEON || TIFF_SIMD_SSE41 || TIFF_SIMD_SSE42 || TIFF_SIMD_SSE2
 #define TIFF_SIMD_ENABLED 1
@@ -299,10 +304,13 @@ extern "C"
     }
 
     uint32_t tiff_crc32(uint32_t crc, const uint8_t *buf, size_t len);
+    uint64_t tiff_pmull_hash(uint64_t h, const uint8_t *buf, size_t len);
     void tiff_aes_whiten(uint8_t *buf, size_t len);
     void tiff_aes_unwhiten(uint8_t *buf, size_t len);
     int TIFFUseAES(void);
     void TIFFSetUseAES(int);
+    int TIFFUsePMULL(void);
+    void TIFFSetUsePMULL(int);
 
 #ifdef __cplusplus
 } // extern "C"

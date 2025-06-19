@@ -257,15 +257,18 @@ LIBTIFF_4.7.1 {
     TIFFUseSSE41;
     TIFFUseSSE2;
     TIFFUseAES;
+    TIFFUsePMULL;
     tiff_use_vulkan;
     TIFFUseVulkan;
     TIFFSetUseNEON;
     TIFFSetUseSSE41;
     TIFFSetUseSSE2;
     TIFFSetUseAES;
+    TIFFSetUsePMULL;
     TIFFSetUseVulkan;
     TIFFYCbCr8ToRGBAVulkan;
     TIFFPredictorDiff16Vulkan;
+    tiff_pmull_hash;
     TIFFSetMapSize;
     TIFFSetMapAdvice;
     TIFFSetURingQueueDepth;

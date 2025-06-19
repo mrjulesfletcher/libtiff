@@ -26,6 +26,7 @@ int tiff_use_sse41 = 0;
 int tiff_use_sse2 = 0;
 int tiff_use_sse42 = 0;
 int tiff_use_aes = 0;
+int tiff_use_pmull = 0;
 #ifdef ZIP_SUPPORT
 #include <zlib.h>
 #endif
@@ -265,6 +266,58 @@ static int detect_aes(void)
 #endif
 }
 
+static int detect_pmull(void)
+{
+#if defined(HAVE_PMULL)
+#if defined(__x86_64__) || defined(__i386__) || defined(_M_X64) ||                \
+    defined(_M_IX86)
+    unsigned int eax, ebx, ecx, edx;
+    if (__get_cpuid(1, &eax, &ebx, &ecx, &edx))
+        return (ecx & bit_PCLMUL) != 0;
+    return 0;
+#elif defined(__aarch64__) || defined(__arm__)
+#if defined(__linux__)
+    unsigned long hwcap2 = 0;
+#ifdef TIFF_HAVE_GETAUXVAL
+#ifdef AT_HWCAP2
+    hwcap2 = getauxval(AT_HWCAP2);
+#endif
+#endif
+#ifdef PR_GET_AUXV
+    if (hwcap2 == 0)
+    {
+        unsigned long auxv[64];
+        long r = prctl(PR_GET_AUXV, auxv, sizeof(auxv), 0, 0);
+        if (r >= 0)
+        {
+            for (size_t i = 0; i + 1 < sizeof(auxv) / sizeof(auxv[0]); i += 2)
+            {
+                if (auxv[i] == AT_HWCAP2)
+                {
+                    hwcap2 = auxv[i + 1];
+                    break;
+                }
+            }
+        }
+    }
+#endif
+#ifdef HWCAP2_PMULL
+    if (hwcap2 & HWCAP2_PMULL)
+        return 1;
+#endif
+#endif /* __linux__ */
+#ifdef __ARM_FEATURE_CRYPTO
+    return 1;
+#endif
+    return 0;
+#else
+    return 0;
+#endif
+#else
+    return 0;
+#endif
+}
+
 void TIFFInitSIMD(void)
 {
     tiff_simd.loadu_u8 = loadu_u8_scalar;
@@ -311,6 +364,12 @@ void TIFFInitSIMD(void)
         tiff_use_aes = 1;
     }
 #endif
+#if defined(HAVE_PMULL)
+    if (detect_pmull())
+    {
+        tiff_use_pmull = 1;
+    }
+#endif
 }
 
 int TIFFUseNEON(void) { return tiff_use_neon; }
@@ -332,6 +391,10 @@ void TIFFSetUseSSE42(int enable) { tiff_use_sse42 = enable; }
 int TIFFUseAES(void) { return tiff_use_aes; }
 
 void TIFFSetUseAES(int enable) { tiff_use_aes = enable; }
+
+int TIFFUsePMULL(void) { return tiff_use_pmull; }
+
+void TIFFSetUsePMULL(int enable) { tiff_use_pmull = enable; }
 
 #if defined(HAVE_ARM_CRC32) && defined(__ARM_FEATURE_CRC32)
 static uint32_t crc32_neon(uint32_t crc, const uint8_t *p, size_t len)
@@ -550,4 +613,102 @@ void tiff_aes_unwhiten(uint8_t *buf, size_t len)
     (void)buf;
     (void)len;
 #endif
+}
+
+/* PMULL-based 64-bit Galois hash */
+
+#define PMULL_POLY 0x1D872B41A9C8D9FDULL
+
+static uint64_t pmull_hash_generic(uint64_t h, const uint8_t *p, size_t len)
+{
+    while (len >= 8)
+    {
+        uint64_t v;
+        memcpy(&v, p, 8);
+        __uint128_t prod = (__uint128_t)(h ^ v) * PMULL_POLY;
+        h = (uint64_t)(prod ^ (prod >> 64));
+        p += 8;
+        len -= 8;
+    }
+    if (len)
+    {
+        uint64_t v = 0;
+        memcpy(&v, p, len);
+        __uint128_t prod = (__uint128_t)(h ^ v) * PMULL_POLY;
+        h = (uint64_t)(prod ^ (prod >> 64));
+    }
+    return h;
+}
+
+#if defined(HAVE_PMULL) && defined(__ARM_FEATURE_CRYPTO)
+static uint64_t pmull_hash_neon(uint64_t h, const uint8_t *p, size_t len)
+{
+    const poly64_t poly = (poly64_t)PMULL_POLY;
+    poly64_t acc = (poly64_t)h;
+    while (len >= 8)
+    {
+        uint64_t v;
+        memcpy(&v, p, 8);
+        acc = veor_p64(acc, *((poly64_t *)&v));
+        poly128_t prod = vmull_p64(acc, poly);
+        acc = veor_p64(vget_low_p64(prod), vget_high_p64(prod));
+        p += 8;
+        len -= 8;
+    }
+    if (len)
+    {
+        uint64_t v = 0;
+        memcpy(&v, p, len);
+        acc = veor_p64(acc, *((poly64_t *)&v));
+        poly128_t prod = vmull_p64(acc, poly);
+        acc = veor_p64(vget_low_p64(prod), vget_high_p64(prod));
+    }
+    return (uint64_t)acc;
+}
+#endif
+
+#if defined(HAVE_PMULL) && defined(__PCLMUL__)
+static uint64_t pmull_hash_pclmul(uint64_t h, const uint8_t *p, size_t len)
+{
+    const __m128i poly = _mm_set_epi64x(PMULL_POLY, 0);
+    __m128i acc = _mm_set_epi64x(0, h);
+    while (len >= 8)
+    {
+        uint64_t v;
+        memcpy(&v, p, 8);
+        __m128i blk = _mm_set_epi64x(0, v);
+        acc = _mm_xor_si128(acc, blk);
+        __m128i prod = _mm_clmulepi64_si128(acc, poly, 0x00);
+        uint64_t lo = (uint64_t)_mm_cvtsi128_si64(prod);
+        uint64_t hi = (uint64_t)_mm_cvtsi128_si64(_mm_srli_si128(prod, 8));
+        acc = _mm_set_epi64x(0, lo ^ hi);
+        p += 8;
+        len -= 8;
+    }
+    if (len)
+    {
+        uint64_t v = 0;
+        memcpy(&v, p, len);
+        __m128i blk = _mm_set_epi64x(0, v);
+        acc = _mm_xor_si128(acc, blk);
+        __m128i prod = _mm_clmulepi64_si128(acc, poly, 0x00);
+        uint64_t lo = (uint64_t)_mm_cvtsi128_si64(prod);
+        uint64_t hi = (uint64_t)_mm_cvtsi128_si64(_mm_srli_si128(prod, 8));
+        acc = _mm_set_epi64x(0, lo ^ hi);
+    }
+    return (uint64_t)_mm_cvtsi128_si64(acc);
+}
+#endif
+
+uint64_t tiff_pmull_hash(uint64_t h, const uint8_t *buf, size_t len)
+{
+#if defined(HAVE_PMULL) && defined(__ARM_FEATURE_CRYPTO)
+    if (tiff_use_pmull)
+        return pmull_hash_neon(h, buf, len);
+#endif
+#if defined(HAVE_PMULL) && defined(__PCLMUL__)
+    if (tiff_use_pmull)
+        return pmull_hash_pclmul(h, buf, len);
+#endif
+    return pmull_hash_generic(h, buf, len);
 }
