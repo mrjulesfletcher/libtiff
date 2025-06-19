@@ -1647,9 +1647,9 @@ static void putagreytile_neon(TIFFRGBAImage *img, uint32_t *dest, uint32_t x,
         uint32_t ww = w;
         while (ww >= 16)
         {
-            uint8x16x2_t src = vld2q_u8(src);
-            uint8x16_t g = src.val[0];
-            uint8x16_t a = src.val[1];
+            uint8x16x2_t vs = vld2q_u8(src);
+            uint8x16_t g = vs.val[0];
+            uint8x16_t a = vs.val[1];
             if (invert)
                 g = vsubq_u8(maxv, g);
             uint8x16x4_t outv;
@@ -1692,10 +1692,10 @@ static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *dest,
         uint32_t ww = w;
         while (ww >= 16)
         {
-            uint8x16x3_t src = vld3q_u8(src);
-            uint8x16_t yv = src.val[0];
-            uint8x16_t cbv = src.val[1];
-            uint8x16_t crv = src.val[2];
+            uint8x16x3_t vs = vld3q_u8(src);
+            uint8x16_t yv = vs.val[0];
+            uint8x16_t cbv = vs.val[1];
+            uint8x16_t crv = vs.val[2];
 
             int16x8_t y0 = vreinterpretq_s16_u16(vmovl_u8(vget_low_u8(yv)));
             int16x8_t y1 = vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(yv)));
@@ -1708,36 +1708,36 @@ static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *dest,
             int16x8_t cr1 = vsubq_s16(
                 vreinterpretq_s16_u16(vmovl_u8(vget_high_u8(crv))), c128);
 
-            int32x4_t r0 = vmlal_s16(vshll_n_s16(vget_low_s16(y0), 8),
-                                     vget_low_s16(cr0), 359);
-            int32x4_t r1 = vmlal_s16(vshll_n_s16(vget_high_s16(y0), 8),
-                                     vget_high_s16(cr0), 359);
-            int32x4_t r2 = vmlal_s16(vshll_n_s16(vget_low_s16(y1), 8),
-                                     vget_low_s16(cr1), 359);
-            int32x4_t r3 = vmlal_s16(vshll_n_s16(vget_high_s16(y1), 8),
-                                     vget_high_s16(cr1), 359);
-            int32x4_t g0 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_low_s16(y0), 8),
-                                               vget_low_s16(cb0), 88),
-                                     vget_low_s16(cr0), 183);
+            int32x4_t r0 = vmlal_n_s16(vshll_n_s16(vget_low_s16(y0), 8),
+                                      vget_low_s16(cr0), 359);
+            int32x4_t r1 = vmlal_n_s16(vshll_n_s16(vget_high_s16(y0), 8),
+                                      vget_high_s16(cr0), 359);
+            int32x4_t r2 = vmlal_n_s16(vshll_n_s16(vget_low_s16(y1), 8),
+                                      vget_low_s16(cr1), 359);
+            int32x4_t r3 = vmlal_n_s16(vshll_n_s16(vget_high_s16(y1), 8),
+                                      vget_high_s16(cr1), 359);
+            int32x4_t g0 = vmlsl_n_s16(vmlsl_n_s16(vshll_n_s16(vget_low_s16(y0), 8),
+                                                 vget_low_s16(cb0), 88),
+                                      vget_low_s16(cr0), 183);
             int32x4_t g1 =
-                vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y0), 8),
-                                    vget_high_s16(cb0), 88),
-                          vget_high_s16(cr0), 183);
-            int32x4_t g2 = vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_low_s16(y1), 8),
-                                               vget_low_s16(cb1), 88),
-                                     vget_low_s16(cr1), 183);
+                vmlsl_n_s16(vmlsl_n_s16(vshll_n_s16(vget_high_s16(y0), 8),
+                                        vget_high_s16(cb0), 88),
+                              vget_high_s16(cr0), 183);
+            int32x4_t g2 = vmlsl_n_s16(vmlsl_n_s16(vshll_n_s16(vget_low_s16(y1), 8),
+                                                 vget_low_s16(cb1), 88),
+                                      vget_low_s16(cr1), 183);
             int32x4_t g3 =
-                vmlsl_s16(vmlsl_s16(vshll_n_s16(vget_high_s16(y1), 8),
-                                    vget_high_s16(cb1), 88),
-                          vget_high_s16(cr1), 183);
-            int32x4_t b0 = vmlal_s16(vshll_n_s16(vget_low_s16(y0), 8),
-                                     vget_low_s16(cb0), 454);
-            int32x4_t b1 = vmlal_s16(vshll_n_s16(vget_high_s16(y0), 8),
-                                     vget_high_s16(cb0), 454);
-            int32x4_t b2 = vmlal_s16(vshll_n_s16(vget_low_s16(y1), 8),
-                                     vget_low_s16(cb1), 454);
-            int32x4_t b3 = vmlal_s16(vshll_n_s16(vget_high_s16(y1), 8),
-                                     vget_high_s16(cb1), 454);
+                vmlsl_n_s16(vmlsl_n_s16(vshll_n_s16(vget_high_s16(y1), 8),
+                                        vget_high_s16(cb1), 88),
+                              vget_high_s16(cr1), 183);
+            int32x4_t b0 = vmlal_n_s16(vshll_n_s16(vget_low_s16(y0), 8),
+                                      vget_low_s16(cb0), 454);
+            int32x4_t b1 = vmlal_n_s16(vshll_n_s16(vget_high_s16(y0), 8),
+                                      vget_high_s16(cb0), 454);
+            int32x4_t b2 = vmlal_n_s16(vshll_n_s16(vget_low_s16(y1), 8),
+                                      vget_low_s16(cb1), 454);
+            int32x4_t b3 = vmlal_n_s16(vshll_n_s16(vget_high_s16(y1), 8),
+                                      vget_high_s16(cb1), 454);
 
             uint8x16_t rv =
                 vcombine_u8(vqmovun_s16(vcombine_s16(vqshrn_n_s32(r0, 8),
@@ -1768,7 +1768,11 @@ static void putcontig8bitYCbCr11tile_neon(TIFFRGBAImage *img, uint32_t *dest,
         }
         for (; ww > 0; --ww)
         {
-            YCbCrtoRGB(*dest++, src[0]);
+            int32_t Cb = src[1];
+            int32_t Cr = src[2];
+            uint32_t r, g, b;
+            TIFFYCbCrtoRGB(img->ycbcr, src[0], Cb, Cr, &r, &g, &b);
+            *dest++ = PACK(r, g, b);
             src += 3;
         }
         dest += toskew;

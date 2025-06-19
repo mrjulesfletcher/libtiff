@@ -69,10 +69,12 @@ Benchmarking a 10MB image gave about 2x faster compression with `zip:p9:s1` (lib
 ### Cross testing NEON and SSE
 The `scripts/cross_simd_test.py` helper builds the library for both
 SSE4 and NEON and runs a couple of validation and benchmark tools under
-each build (the NEON binaries execute under `qemu-aarch64`).  Install
-`qemu-user` and the AArch64 cross compiler, then run::
+each build (the NEON binaries execute under `qemu-aarch64`).  The script will
+try to install `qemu-user` and the cross compiler automatically if run with
+permission.  If installation fails (for example on a machine without network
+access), the NEON tests are skipped gracefully::
 
-    python3 scripts/cross_simd_test.py
+    sudo python3 scripts/cross_simd_test.py
 
 
 ### Autotools

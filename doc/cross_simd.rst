@@ -7,9 +7,11 @@ NEON binaries are executed under ``qemu-aarch64`` so the script can be run on an
 x86 host without real ARM hardware.
 
 Running the script requires the ``qemu-user`` package and the AArch64 cross
-compiler suite::
+compiler suite.  The helper will attempt to install them automatically if they
+are missing.  If the installation step fails (e.g. in an offline environment),
+the NEON tests will be skipped gracefully::
 
-    sudo apt-get install qemu-user gcc-aarch64-linux-gnu g++-aarch64-linux-gnu
+    sudo python3 scripts/cross_simd_test.py
 
 Then simply execute::
 
