@@ -29,6 +29,7 @@
  * TIFF I/O Library Definitions.
  */
 #include "tiff.h"
+#include "tiff_vulkan.h"
 #include "tiffvers.h"
 
 /*

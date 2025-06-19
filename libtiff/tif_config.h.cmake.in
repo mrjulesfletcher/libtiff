@@ -133,6 +133,11 @@
 /* define to build with io_uring support */
 #cmakedefine USE_IO_URING 1
 
+/* define to build with Vulkan GPU acceleration */
+#cmakedefine USE_VULKAN 1
+/* Define if Vulkan headers and library are available */
+#cmakedefine HAVE_VULKAN 1
+
 /* Support WEBP compression */
 #cmakedefine WEBP_SUPPORT 1
 

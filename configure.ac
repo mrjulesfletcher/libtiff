@@ -1210,6 +1210,32 @@ fi
 AM_CONDITIONAL([HAVE_IO_URING], [test "$have_io_uring" = yes])
 
 dnl ---------------------------------------------------------------------------
+dnl Optional Vulkan backend
+dnl ---------------------------------------------------------------------------
+
+AC_ARG_ENABLE(vulkan,
+              AS_HELP_STRING([--enable-vulkan],
+                             [enable Vulkan GPU acceleration]),,)
+
+if test "x$enable_vulkan" = "xyes" ; then
+  AC_CHECK_LIB(vulkan, vkCreateInstance, [have_vulkan_lib=yes], [have_vulkan_lib=no])
+  AC_CHECK_HEADER(vulkan/vulkan.h, [have_vulkan_header=yes], [have_vulkan_header=no])
+  if test "$have_vulkan_lib" = yes -a "$have_vulkan_header" = yes; then
+    AC_DEFINE([HAVE_VULKAN],[1],[Define if Vulkan headers and library are available])
+    USE_VULKAN=yes
+    LIBS="-lvulkan $LIBS"
+    tiff_libs_private="-lvulkan ${tiff_libs_private}"
+  else
+    AC_MSG_WARN([Vulkan requested but headers or library not found -- disabling])
+    USE_VULKAN=no
+  fi
+else
+  USE_VULKAN=no
+fi
+
+AM_CONDITIONAL([HAVE_VULKAN], [test "$USE_VULKAN" = yes])
+
+dnl ---------------------------------------------------------------------------
 dnl Check for X Athena Widgets
 dnl ---------------------------------------------------------------------------
 
