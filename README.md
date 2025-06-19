@@ -422,6 +422,8 @@ Additional programs validate SIMD helpers individually:
 - `bayer_simd_benchmark` measures Bayer SIMD performance.
 - `predictor_threadpool_benchmark` times thread pool predictor code.
 - `pack_uring_benchmark` benchmarks asynchronous I/O packing.
+- `scripts/raw_to_dng_benchmark.py` measures raw-to-DNG conversion speed and
+  prints `convert_fps_<WxH>` lines for each tested resolution.
 - `tiffstream_api` exercises the C++ stream interface (`TIFFStreamOpen`).
 - `tiff_fdopen_async` opens one TIFF via file descriptor on multiple
   threads using `std::async`.

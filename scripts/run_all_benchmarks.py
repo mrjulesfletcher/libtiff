@@ -15,6 +15,7 @@ import os
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -106,6 +107,28 @@ def main():
         print("Running resolution_speed_test.py...")
         out = run([sys.executable, str(speed_script), "--frames", "2"])
         summary["resolution_speed_test"] = parse_results(out)
+
+    raw_dng_script = ROOT / "scripts" / "raw_to_dng_benchmark.py"
+    if raw_dng_script.exists():
+        raw2tiff = BUILD / "tools" / "raw2tiff"
+        print("Running raw_to_dng_benchmark.py...")
+        out = run([
+            sys.executable,
+            str(raw_dng_script),
+            "--raw2tiff",
+            str(raw2tiff),
+            "--frames",
+            "2",
+            "--res",
+            "1920x1080",
+            "--res",
+            "2560x1440",
+            "--res",
+            "3840x2160",
+            "--res",
+            "5760x3240",
+        ])
+        summary["raw_to_dng_benchmark"] = parse_results(out)
 
     print("\nBenchmark summary:\n------------------")
     for prog, res in summary.items():
