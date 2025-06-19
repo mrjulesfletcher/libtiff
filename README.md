@@ -315,22 +315,22 @@ tiff_storeu_u8(ptr_out, tiff_add_u8(a, b));
 
 ## Benchmarks
 Run the provided utilities to reproduce the numbers below.  These were measured
-on an Intel Xeon Platinum 8370C with GCC and `-msse4.1`.
+on an Intel Xeon Platinum 8171M with GCC 13.3.0 and `-msse4.1`.
 ```bash
 $ ./tools/bayerbench 50
-pack:   2177.78 MPix/s
-unpack: 1661.60 MPix/s
+pack:   323.03 MPix/s
+unpack: 466.72 MPix/s
 # with SSE2 only
-pack:   757.83 MPix/s
-unpack: 1188.53 MPix/s
+pack:   323.03 MPix/s
+unpack: 466.72 MPix/s
 
 $ ./test/swab_benchmark
-TIFFSwabArrayOfShort: 0.011 ms
-scalar_swab_short:    0.004 ms
-TIFFSwabArrayOfLong:  0.016 ms
-scalar_swab_long:     0.014 ms
-TIFFSwabArrayOfLong8: 0.028 ms
-scalar_swab_long8:    0.025 ms
+TIFFSwabArrayOfShort: 0.198 ms
+scalar_swab_short:    0.193 ms
+TIFFSwabArrayOfLong:  0.312 ms
+scalar_swab_long:     0.488 ms
+TIFFSwabArrayOfLong8: 0.708 ms
+scalar_swab_long8:    0.614 ms
 ```
 ARM NEON builds on an RK3588 at 2.4 GHz show roughly 6× improvements for
 `TIFFPackRaw12` and 5× for `TIFFUnpackRaw12`. `TIFFSwabArrayOfLong8` is
