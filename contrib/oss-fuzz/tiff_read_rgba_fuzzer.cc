@@ -58,7 +58,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     setenv("JSIMD_FORCENONE", "1", 1);
 #endif
 #endif
-    std::istringstream s(std::string(Data, Data + Size));
+    std::istringstream s(
+        std::string(reinterpret_cast<const char *>(Data), Size));
     TIFF *tif = TIFFStreamOpen("MemTIFF", &s);
     if (!tif)
     {
