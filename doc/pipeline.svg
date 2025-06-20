@@ -28,7 +28,7 @@
   <text x="425" y="50">AssembleStripSIMD</text>
 
   <rect class="box accel" x="530" y="30" width="150" height="40" />
-  <text x="605" y="50">Predictor NEON/SSE</text>
+  <text x="605" y="50">Predictor/AES NEON/SSE</text>
 
   <rect class="box" x="710" y="30" width="120" height="40" />
   <text x="770" y="50">DNG File</text>
@@ -41,7 +41,7 @@
   <text x="245" y="130">YCbCr→RGBA NEON</text>
 
   <rect class="box accel" x="350" y="110" width="150" height="40" />
-  <text x="425" y="130">Predictor &amp; Swap</text>
+  <text x="425" y="130">Predictor/AES &amp; Swap</text>
 
   <rect class="box accel" x="530" y="110" width="150" height="40" />
   <text x="605" y="130">RGB Pack NEON</text>
@@ -60,7 +60,7 @@
   <text x="425" y="210">Decode</text>
 
   <rect class="box accel" x="530" y="190" width="150" height="40" />
-  <text x="605" y="210">Predictor &amp; Swap</text>
+  <text x="605" y="210">Predictor/AES &amp; Swap</text>
 
   <rect class="box accel" x="710" y="190" width="120" height="40" />
   <text x="770" y="210">GPU HVS/Vulkan</text>
