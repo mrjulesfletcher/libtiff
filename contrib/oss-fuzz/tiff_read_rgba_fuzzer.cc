@@ -25,6 +25,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <sstream>
+#include <vector>
 #include <tiffio.h>
 #include <tiffio.hxx>
 
@@ -207,25 +208,29 @@ int main(int argc, char *argv[])
         fprintf(stderr, "%s does not exist.\n", pszFilename);
         exit(1);
     }
-    fseek(f, 0, SEEK_END);
-    nLen = (int)ftell(f);
-    fseek(f, 0, SEEK_SET);
-    buf = malloc(nLen);
-    if (!buf)
+    std::unique_ptr<FILE, decltype(&fclose)> fp(f, &fclose);
+
+    fseek(fp.get(), 0, SEEK_END);
+    long len = ftell(fp.get());
+    if (len < 0)
     {
-        fprintf(stderr, "malloc failed.\n");
-        fclose(f);
-        exit(1);
+        fprintf(stderr, "ftell() failed\n");
+        return 1;
     }
-    CPL_IGNORE_RET_VAL(fread(buf, nLen, 1, f));
-    fclose(f);
+    fseek(fp.get(), 0, SEEK_SET);
+
+    nLen = static_cast<int>(len);
+    std::vector<uint8_t> buffer(static_cast<size_t>(nLen));
+    if (!buffer.empty())
+    {
+        CPL_IGNORE_RET_VAL(fread(buffer.data(), nLen, 1, fp.get()));
+    }
     for (int i = 0; i < nLoops; i++)
     {
-        nRet = LLVMFuzzerTestOneInput(static_cast<const uint8_t *>(buf), nLen);
+        nRet = LLVMFuzzerTestOneInput(buffer.data(), nLen);
         if (nRet != 0)
             break;
     }
-    free(buf);
     return nRet;
 }
 
