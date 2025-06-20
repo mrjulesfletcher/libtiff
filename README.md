@@ -63,6 +63,17 @@ Install libdeflate and enable the option when configuring:
 $ cmake -Dlibdeflate=ON -DCMAKE_BUILD_TYPE=Release ..
 $ cmake --build . -j$(nproc)
 ```
+
+### Optional Build Optimizations
+Enable profile guided optimisation, link time optimisation and LLVM BOLT tuning with dedicated CMake options:
+```bash
+$ cmake -Denable-pgo=ON ..                # instrumentation build
+$ cmake -Denable-lto=ON ..                # enable LTO
+$ cmake -Denable-bolt=ON ..               # create BOLT target
+```
+Reuse an existing profile by setting `-DLIBTIFF_PGO_PROFILE=/path/to/profdata`.
+The BOLT step operates on `libtiff.so` inside the build tree.
+
 Cross-compiling for Raspberry Pi 5 with libdeflate:
 ```bash
 $ cmake -DCMAKE_TOOLCHAIN_FILE=toolchains/rpi5.cmake \
@@ -248,6 +259,11 @@ details on querying per‑strile information.
 Directory offsets are cached in memory to speed up `TIFFSetDirectory()` and
 avoid expensive scans through large files. The cache is invalidated on write so
 that applications always see consistent state.
+
+### ZIP AES Whitening
+Compression codecs can optionally whiten data using hardware AES instructions before Deflate or LZMA.
+The feature is enabled automatically when supported and controlled with `TIFFUseAES()` and `TIFFSetUseAES()`.
+See [doc/zipaes.rst](doc/zipaes.rst) for details.
 
 ### GPU Acceleration
 An experimental Vulkan backend accelerates YCbCr to RGBA conversion on the
@@ -468,6 +484,7 @@ Additional programs validate SIMD helpers individually:
   vectorization.
 - `scripts/test_doc_coverage.py` ensures used APIs have matching
   documentation.
+Formal TLA+ models verify the thread pool and asynchronous IO handling; see `doc/threadpool_verification.rst` and `doc/uring_threadpool_verification.rst` for running `tlc`.
 All SIMD helpers must pass the same tests as the scalar implementations.
 
 ## Contributing
