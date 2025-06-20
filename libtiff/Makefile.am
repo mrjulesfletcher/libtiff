@@ -116,6 +116,7 @@ libtiff_la_SOURCES = \
         tif_write.c \
         tif_uring.c \
         tif_vulkan.c \
+        tif_hvs.c \
         tiff_threadpool.c \
         tif_mmap.c \
         tif_zip.c \

@@ -78,6 +78,7 @@ LIBTIFF_4.0 {
     TIFFReadEncodedTile;
     TIFFReadRGBAImage;
     TIFFReadRGBAImageOriented;
+    TIFFReadRGBAImageHVS;
     TIFFReadRGBAStrip;
     TIFFReadRGBATile;
     TIFFReadRawStrip;
@@ -260,12 +261,15 @@ LIBTIFF_4.7.1 {
     TIFFUsePMULL;
     tiff_use_vulkan;
     TIFFUseVulkan;
+    tiff_use_hvs;
+    TIFFUseHVS;
     TIFFSetUseNEON;
     TIFFSetUseSSE41;
     TIFFSetUseSSE2;
     TIFFSetUseAES;
     TIFFSetUsePMULL;
     TIFFSetUseVulkan;
+    TIFFSetUseHVS;
     TIFFYCbCr8ToRGBAVulkan;
     TIFFPredictorDiff16Vulkan;
     tiff_pmull_hash;

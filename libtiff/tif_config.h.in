@@ -140,6 +140,10 @@
 #undef USE_VULKAN
 /* Define if Vulkan headers and library are available */
 #undef HAVE_VULKAN
+/* define to build with DRM/HVS acceleration */
+#undef USE_DRM_HVS
+/* Define if libdrm is available */
+#undef HAVE_LIBDRM
 
 /* Support webp compression */
 #undef WEBP_SUPPORT

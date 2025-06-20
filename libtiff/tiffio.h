@@ -30,6 +30,7 @@
  */
 #include "tiff.h"
 #include "tiff_vulkan.h"
+#include "tiff_hvs.h"
 #include "tiffvers.h"
 
 /*
@@ -471,6 +472,8 @@ extern "C"
                                  int = 0);
     extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
                                          int = ORIENTATION_BOTLEFT, int = 0);
+    extern int TIFFReadRGBAImageHVS(TIFF *, uint32_t, uint32_t, uint32_t *,
+                                    int = ORIENTATION_BOTLEFT, int = 0);
 #else
 extern void TIFFPrintDirectory(TIFF *, FILE *, long);
 extern int TIFFReadScanline(TIFF *tif, void *buf, uint32_t row,
@@ -480,6 +483,8 @@ extern int TIFFWriteScanline(TIFF *tif, void *buf, uint32_t row,
 extern int TIFFReadRGBAImage(TIFF *, uint32_t, uint32_t, uint32_t *, int);
 extern int TIFFReadRGBAImageOriented(TIFF *, uint32_t, uint32_t, uint32_t *,
                                      int, int);
+extern int TIFFReadRGBAImageHVS(TIFF *, uint32_t, uint32_t, uint32_t *,
+                                int, int);
 #endif
 
     extern int TIFFReadRGBAStrip(TIFF *, uint32_t, uint32_t *);

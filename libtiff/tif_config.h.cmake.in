@@ -137,6 +137,10 @@
 #cmakedefine USE_VULKAN 1
 /* Define if Vulkan headers and library are available */
 #cmakedefine HAVE_VULKAN 1
+/* define to build with DRM/HVS acceleration */
+#cmakedefine USE_DRM_HVS 1
+/* Define if libdrm is available */
+#cmakedefine HAVE_LIBDRM 1
 
 /* Support WEBP compression */
 #cmakedefine WEBP_SUPPORT 1

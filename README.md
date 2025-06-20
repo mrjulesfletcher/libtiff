@@ -252,6 +252,10 @@ to DNG can also run on the GPU. Enable Vulkan with `-Dvulkan=ON` or
 `--enable-vulkan` when configuring and call `TIFFInitVulkan()` before
 processing images.
 
+On DRM-enabled systems, the library can also offload color space conversion
+through the HVS pipeline. Configure with `-Ddrm-hvs=ON` or
+`--enable-drm-hvs` and call `TIFFSetUseHVS(1)` before reading images.
+
 ## How to Use SIMD Routines
 Below is a short example that assembles a 12‑bit strip and writes a DNG.
 The full program is [`test/assemble_strip_neon_test.c`](test/assemble_strip_neon_test.c).
