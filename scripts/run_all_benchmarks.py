@@ -62,7 +62,7 @@ def parse_results(out):
     if out is None:
         return results
     for line in out.splitlines():
-        m = re.search(r"([A-Za-z0-9_+]+):?\s*([0-9.]+)\s*(ms|MPix/s|fps)?", line)
+        m = re.search(r"([A-Za-z0-9_+x-]+):\s*([0-9.e+-]+)\s*(ms|MPix/s|fps)?", line)
         if m:
             key = m.group(1)
             try:
