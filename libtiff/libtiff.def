@@ -108,9 +108,10 @@ EXPORTS	TIFFAccessTagMethods
 	TIFFReadEncodedStrip
 	TIFFReadEncodedTile
 	TIFFReadFromUserBuffer
-	TIFFReadRGBAImage
-	TIFFReadRGBAImageOriented
-	TIFFReadRGBAStrip
+        TIFFReadRGBAImage
+        TIFFReadRGBAImageOriented
+        TIFFReadRGBAImageHVS
+        TIFFReadRGBAStrip
 	TIFFReadRGBAStripExt
 	TIFFReadRGBATile
 	TIFFReadRGBATileExt
@@ -221,6 +222,7 @@ EXPORTS	TIFFAccessTagMethods
         TIFFUseSSE2
         TIFFUseAES
         TIFFUseVulkan
+        TIFFUseHVS
         TIFFSetUseNEON
         TIFFSetUseSSE41
         TIFFSetUseSSE2
@@ -229,6 +231,7 @@ EXPORTS	TIFFAccessTagMethods
         TIFFSetUsePMULL
         tiff_pmull_hash
         TIFFSetUseVulkan
+        TIFFSetUseHVS
         TIFFYCbCr8ToRGBAVulkan
         TIFFPredictorDiff16Vulkan
         TIFFSetMapSize
