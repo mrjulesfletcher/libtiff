@@ -24,10 +24,11 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <memory>
 #include <sstream>
-#include <vector>
 #include <tiffio.h>
 #include <tiffio.hxx>
+#include <vector>
 
 /* stolen from tiffiop.h, which is a private header so we can't just include it
  */
