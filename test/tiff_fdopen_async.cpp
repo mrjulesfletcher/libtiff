@@ -44,7 +44,9 @@ int main()
         std::async(std::launch::async, check_via_fd, path.c_str())};
 
     int ret = 0;
-    for (auto &f : futures)
-        ret |= f.get();
+    for (auto &future_res : futures)
+    {
+        ret |= future_res.get();
+    }
     return ret;
 }

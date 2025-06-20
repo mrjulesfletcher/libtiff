@@ -231,18 +231,18 @@ bool TiffStream::seekInt(thandle_t fd, std::uint64_t offset, int origin)
     if (ts->m_inStream != nullptr)
     {
         ts->m_inStream->seekg(offset, org);
-        return true;
+        return !ts->m_inStream->fail();
     }
     else if (ts->m_outStream != nullptr)
     {
         ts->m_outStream->seekp(offset, org);
-        return true;
+        return !ts->m_outStream->fail();
     }
     else if (ts->m_ioStream != nullptr)
     {
         ts->m_ioStream->seekg(offset, org);
         ts->m_ioStream->seekp(offset, org);
-        return true;
+        return !ts->m_ioStream->fail();
     }
     return false;
 }
