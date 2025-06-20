@@ -679,7 +679,8 @@ static int Fax3SetupState(TIFF *tif)
         "for Group 3/4 run arrays");
     if (dsp->runs == NULL)
         return (0);
-    tiff_memset_u8(dsp->runs, 0,
+    /* dst argument expects uint8_t*, so cast to silence compiler warning */
+    tiff_memset_u8((uint8_t *)dsp->runs, 0,
                    TIFFSafeMultiply(uint32_t, dsp->nruns, 2) * sizeof(uint32_t));
     dsp->curruns = dsp->runs;
     if (needsRefLine)
