@@ -39,7 +39,7 @@ class TiffStream
     static toff_t size(thandle_t fd);
     static int close(thandle_t fd);
     static int map(thandle_t fd, tdata_t *phase, toff_t *psize);
-    static void unmap(thandle_t fd, tdata_t base, tsize_t size);
+    static void unmap(thandle_t fd, tdata_t base, toff_t size);
 
   public:
     // query method
