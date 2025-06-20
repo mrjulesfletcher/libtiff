@@ -65,7 +65,12 @@ def parse_results(out):
         m = re.search(r"([A-Za-z0-9_+]+):?\s*([0-9.]+)\s*(ms|MPix/s|fps)?", line)
         if m:
             key = m.group(1)
-            val = float(m.group(2))
+            try:
+                val = float(m.group(2))
+            except ValueError:
+                # Skip entries where the numeric portion isn't actually a
+                # number (for example error messages like "TIFFOpen:")
+                continue
             unit = m.group(3) or ""
             results[f"{key} ({unit.strip()})"] = val
     if not results:
