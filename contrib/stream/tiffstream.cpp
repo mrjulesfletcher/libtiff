@@ -1,6 +1,7 @@
 // tiff stream interface class implementation
 
 #include "tiffstream.h"
+#include <algorithm>
 
 const char *TiffStream::m_name = "TiffStream";
 
@@ -75,13 +76,16 @@ tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
     if (istr == nullptr)
         return 0;
 
-    int remain = ts->m_streamLength - ts->tell(fd);
-    if (remain <= 0)
+    std::size_t current = ts->tell(fd);
+    if (current >= ts->m_streamLength)
         return 0;
 
-    int actual = remain < size ? remain : size;
+    std::size_t remain = ts->m_streamLength - current;
+    std::streamsize actual =
+        static_cast<std::streamsize>(std::min<std::size_t>(remain, size));
+
     istr->read(reinterpret_cast<char *>(buf), actual);
-    return istr->gcount();
+    return static_cast<tsize_t>(istr->gcount());
 }
 
 tsize_t TiffStream::write(thandle_t fd, tdata_t buf, tsize_t size)
@@ -141,7 +145,8 @@ toff_t TiffStream::size(thandle_t fd)
     return ts->getSize(fd);
 }
 
-int TiffStream::map(thandle_t /*fd*/, tdata_t * /*phase*/, toff_t * /*psize*/) {
+int TiffStream::map(thandle_t /*fd*/, tdata_t * /*phase*/, toff_t * /*psize*/)
+{
     return 0;
 }
 
