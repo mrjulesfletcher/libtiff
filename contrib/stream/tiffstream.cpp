@@ -18,12 +18,15 @@ TiffStream::TiffStream()
     m_streamLength = 0;
 
     m_this = reinterpret_cast<thandle_t>(this);
-};
+}
 
 TiffStream::~TiffStream()
 {
     if (m_tif != nullptr)
+    {
         TIFFClose(m_tif);
+        m_tif = nullptr;
+    }
 }
 
 TIFF *TiffStream::makeFileStream(std::istream *str)
@@ -134,16 +137,19 @@ int TiffStream::close(thandle_t fd)
     if (ts->m_inStream != nullptr)
     {
         ts->m_inStream = nullptr;
+        ts->m_tif = nullptr;
         return 0;
     }
     else if (ts->m_outStream != nullptr)
     {
         ts->m_outStream = nullptr;
+        ts->m_tif = nullptr;
         return 0;
     }
     else if (ts->m_ioStream != nullptr)
     {
         ts->m_ioStream = nullptr;
+        ts->m_tif = nullptr;
         return 0;
     }
     return -1;
@@ -201,7 +207,8 @@ bool TiffStream::seekInt(thandle_t fd, std::uint64_t offset, int origin)
     if (!isOpen(fd))
         return false;
 
-    if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max()))
+    if (offset >
+        static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max()))
         return false;
 
     std::ios::seekdir org;
