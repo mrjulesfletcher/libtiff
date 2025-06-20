@@ -65,6 +65,8 @@ The following sections are included in this documentation:
     zipneon
     zipaes
     async_dng
+    threadpool_verification
+    uring_threadpool_verification
     addingtags
     tools
     contrib
