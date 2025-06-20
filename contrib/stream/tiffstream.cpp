@@ -2,6 +2,7 @@
 
 #include "tiffstream.h"
 #include <algorithm>
+#include <cstdint>
 
 const char *TiffStream::m_name = "TiffStream";
 
@@ -76,11 +77,11 @@ tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
     if (istr == nullptr)
         return 0;
 
-    std::size_t current = ts->tell(fd);
+    std::uint64_t current = ts->tell(fd);
     if (current >= ts->m_streamLength)
         return 0;
 
-    std::size_t remain = ts->m_streamLength - current;
+    std::uint64_t remain = ts->m_streamLength - current;
     std::streamsize actual =
         static_cast<std::streamsize>(std::min<std::size_t>(remain, size));
 
@@ -112,7 +113,7 @@ tsize_t TiffStream::write(thandle_t fd, tdata_t buf, tsize_t size)
 toff_t TiffStream::seek(thandle_t fd, toff_t offset, int origin)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    if (ts->seekInt(fd, offset, origin) == true)
+    if (ts->seekInt(fd, static_cast<std::uint64_t>(offset), origin))
         return offset;
     else
         return -1;
@@ -152,20 +153,20 @@ int TiffStream::map(thandle_t /*fd*/, tdata_t * /*phase*/, toff_t * /*psize*/)
 
 void TiffStream::unmap(thandle_t /*fd*/, tdata_t /*base*/, tsize_t /*size*/) {}
 
-unsigned int TiffStream::getSize(thandle_t fd)
+std::uint64_t TiffStream::getSize(thandle_t fd)
 {
     if (!isOpen(fd))
         return 0;
 
-    unsigned int pos = tell(fd);
+    std::uint64_t pos = tell(fd);
     seekInt(fd, 0, end);
-    unsigned int size = tell(fd);
+    std::uint64_t size = tell(fd);
     seekInt(fd, pos, beg);
 
     return size;
 }
 
-unsigned int TiffStream::tell(thandle_t fd)
+std::uint64_t TiffStream::tell(thandle_t fd)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
     std::streampos pos = std::streampos(-1);
@@ -183,10 +184,10 @@ unsigned int TiffStream::tell(thandle_t fd)
     }
     if (pos == std::streampos(-1))
         return 0;
-    return static_cast<unsigned int>(pos);
+    return static_cast<std::uint64_t>(pos);
 }
 
-bool TiffStream::seekInt(thandle_t fd, unsigned int offset, int origin)
+bool TiffStream::seekInt(thandle_t fd, std::uint64_t offset, int origin)
 {
     if (!isOpen(fd))
         return false;

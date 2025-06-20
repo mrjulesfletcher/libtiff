@@ -4,6 +4,7 @@
 #define _TIFF_STREAM_H_
 
 #include <cstddef>
+#include <cstdint>
 #include <iostream>
 
 #include "tiffio.h"
@@ -47,9 +48,9 @@ class TiffStream
 
   private:
     // internal methods
-    unsigned int getSize(thandle_t fd);
-    unsigned int tell(thandle_t fd);
-    bool seekInt(thandle_t fd, unsigned int offset, int origin);
+    std::uint64_t getSize(thandle_t fd);
+    std::uint64_t tell(thandle_t fd);
+    bool seekInt(thandle_t fd, std::uint64_t offset, int origin);
     bool isOpen(thandle_t fd) const;
 
   private:
