@@ -85,6 +85,9 @@ include(IncludeChecks)
 # Checks for functions and other symbols
 include(SymbolChecks)
 
+# Optional optimization support (PGO/LTO/BOLT)
+include(Optimize)
+
 # Standard installation paths
 include(GNUInstallDirs)
 # Documentation install directory (default to cmake project docdir)
