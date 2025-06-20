@@ -178,9 +178,8 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
         *reinterpret_cast<BITMAPINFOHEADER *>(pDIB) = bi;
 
         // Get a pointer to the color table
-        RGBQUAD *pRgbq =
-            reinterpret_cast<RGBQUAD *>(static_cast<LPSTR>(pDIB) +
-                                        sizeof(BITMAPINFOHEADER));
+        RGBQUAD *pRgbq = reinterpret_cast<RGBQUAD *>(static_cast<LPSTR>(pDIB) +
+                                                     sizeof(BITMAPINFOHEADER));
 
         pRgbq[0].rgbRed = 0;
         pRgbq[0].rgbBlue = 0;
@@ -235,9 +234,8 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
         *reinterpret_cast<BITMAPINFOHEADER *>(pDIB) = bi;
 
         // Get a pointer to the color table
-        RGBQUAD *pRgbq =
-            reinterpret_cast<RGBQUAD *>(static_cast<LPSTR>(pDIB) +
-                                        sizeof(BITMAPINFOHEADER));
+        RGBQUAD *pRgbq = reinterpret_cast<RGBQUAD *>(static_cast<LPSTR>(pDIB) +
+                                                     sizeof(BITMAPINFOHEADER));
 
         // Pointers to the bits
         // PVOID pbiBits = (LPSTR)pRgbq + bi.biClrUsed * sizeof(RGBQUAD);
