@@ -43,10 +43,22 @@
 
 static inline uint16_t add_sat_u16(uint16_t a, uint16_t b)
 {
+#if defined(HAVE_NEON) && defined(__ARM_NEON)
+    /*
+     * Use NEON saturating arithmetic to avoid branches entirely.
+     * vqaddq_u16 performs unsigned saturating addition and is
+     * cheaper than manually comparing against 65535.
+     */
+    uint16x8_t va = vdupq_n_u16(a);
+    uint16x8_t vb = vdupq_n_u16(b);
+    uint16x8_t sum = vqaddq_u16(va, vb);
+    return vgetq_lane_u16(sum, 0);
+#else
     uint32_t sum = (uint32_t)a + (uint32_t)b;
     if (sum > 65535U)
         sum = 65535U;
     return (uint16_t)sum;
+#endif
 }
 
 #define PredictorState(tif) ((TIFFPredictorState *)(tif)->tif_data)
