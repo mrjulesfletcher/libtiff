@@ -114,7 +114,7 @@ extern "C"
         if (static_cast<tmsize_t>(request_size) != size)
             return static_cast<tmsize_t>(-1);
 
-        data->stream->read((char *)buf, request_size);
+        data->stream->read(reinterpret_cast<char *>(buf), request_size);
 
         return static_cast<tmsize_t>(data->stream->gcount());
     }
@@ -280,7 +280,10 @@ extern "C"
             }
         }
 
-        return (uint64_t)(data->stream->tellg() - data->start_pos);
+        ios::pos_type pos = data->stream->tellg();
+        if (pos == ios::pos_type(-1))
+            return static_cast<uint64_t>(-1);
+        return static_cast<uint64_t>(pos - data->start_pos);
     }
 
     static uint64_t _tiffosSizeProc(thandle_t fd)
@@ -294,7 +297,7 @@ extern "C"
         len = os->tellp();
         os->seekp(pos);
 
-        return (uint64_t)len;
+        return static_cast<uint64_t>(len);
     }
 
     static uint64_t _tiffisSizeProc(thandle_t fd)
@@ -307,7 +310,7 @@ extern "C"
         len = data->stream->tellg();
         data->stream->seekg(pos);
 
-        return (uint64_t)len;
+        return static_cast<uint64_t>(len);
     }
 
     static int _tiffosCloseProc(thandle_t fd)
