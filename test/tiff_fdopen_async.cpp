@@ -5,6 +5,7 @@
 #include <future>
 #include <array>
 #include <memory>
+#include <string>
 #include <unistd.h>
 
 static int check_via_fd(const char *path)

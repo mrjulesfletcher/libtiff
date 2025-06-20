@@ -141,9 +141,11 @@ toff_t TiffStream::size(thandle_t fd)
     return ts->getSize(fd);
 }
 
-int TiffStream::map(thandle_t fd, tdata_t *phase, toff_t *psize) { return 0; }
+int TiffStream::map(thandle_t /*fd*/, tdata_t * /*phase*/, toff_t * /*psize*/) {
+    return 0;
+}
 
-void TiffStream::unmap(thandle_t fd, tdata_t base, tsize_t size) {}
+void TiffStream::unmap(thandle_t /*fd*/, tdata_t /*base*/, tsize_t /*size*/) {}
 
 unsigned int TiffStream::getSize(thandle_t fd)
 {
@@ -161,19 +163,22 @@ unsigned int TiffStream::getSize(thandle_t fd)
 unsigned int TiffStream::tell(thandle_t fd)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
+    std::streampos pos = std::streampos(-1);
     if (ts->m_inStream != nullptr)
     {
-        return ts->m_inStream->tellg();
+        pos = ts->m_inStream->tellg();
     }
     else if (ts->m_outStream != nullptr)
     {
-        return ts->m_outStream->tellp();
+        pos = ts->m_outStream->tellp();
     }
     else if (ts->m_ioStream != nullptr)
     {
-        return ts->m_ioStream->tellg();
+        pos = ts->m_ioStream->tellg();
     }
-    return 0;
+    if (pos == std::streampos(-1))
+        return 0;
+    return static_cast<unsigned int>(pos);
 }
 
 bool TiffStream::seekInt(thandle_t fd, unsigned int offset, int origin)

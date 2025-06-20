@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <fstream>
 #include <memory>
+#include <string>
 
 int main()
 {
