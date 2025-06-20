@@ -6,11 +6,11 @@ const char *TiffStream::m_name = "TiffStream";
 
 TiffStream::TiffStream()
 {
-    m_tif = NULL;
+    m_tif = nullptr;
 
-    m_inStream = NULL;
-    m_outStream = NULL;
-    m_ioStream = NULL;
+    m_inStream = nullptr;
+    m_outStream = nullptr;
+    m_ioStream = nullptr;
 
     m_streamLength = 0;
 
@@ -19,15 +19,15 @@ TiffStream::TiffStream()
 
 TiffStream::~TiffStream()
 {
-    if (m_tif != NULL)
+    if (m_tif != nullptr)
         TIFFClose(m_tif);
 }
 
-TIFF *TiffStream::makeFileStream(istream *str)
+TIFF *TiffStream::makeFileStream(std::istream *str)
 {
     m_inStream = str;
-    m_outStream = NULL;
-    m_ioStream = NULL;
+    m_outStream = nullptr;
+    m_ioStream = nullptr;
     m_streamLength = getSize(m_this);
 
     m_tif = TIFFClientOpen(m_name, "r", m_this, read, write, seek, close, size,
@@ -35,11 +35,11 @@ TIFF *TiffStream::makeFileStream(istream *str)
     return m_tif;
 }
 
-TIFF *TiffStream::makeFileStream(ostream *str)
+TIFF *TiffStream::makeFileStream(std::ostream *str)
 {
-    m_inStream = NULL;
+    m_inStream = nullptr;
     m_outStream = str;
-    m_ioStream = NULL;
+    m_ioStream = nullptr;
     m_streamLength = getSize(m_this);
 
     m_tif = TIFFClientOpen(m_name, "w", m_this, read, write, seek, close, size,
@@ -47,10 +47,10 @@ TIFF *TiffStream::makeFileStream(ostream *str)
     return m_tif;
 }
 
-TIFF *TiffStream::makeFileStream(iostream *str)
+TIFF *TiffStream::makeFileStream(std::iostream *str)
 {
-    m_inStream = NULL;
-    m_outStream = NULL;
+    m_inStream = nullptr;
+    m_outStream = nullptr;
     m_ioStream = str;
     m_streamLength = getSize(m_this);
 
@@ -62,17 +62,17 @@ TIFF *TiffStream::makeFileStream(iostream *str)
 tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    istream *istr = NULL;
-    if (ts->m_inStream != NULL)
+    std::istream *istr = nullptr;
+    if (ts->m_inStream != nullptr)
     {
         istr = ts->m_inStream;
     }
-    else if (ts->m_ioStream != NULL)
+    else if (ts->m_ioStream != nullptr)
     {
         istr = ts->m_ioStream;
     }
 
-    if (istr == NULL)
+    if (istr == nullptr)
         return 0;
 
     int remain = ts->m_streamLength - ts->tell(fd);
@@ -87,20 +87,20 @@ tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
 tsize_t TiffStream::write(thandle_t fd, tdata_t buf, tsize_t size)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    ostream *ostr = NULL;
-    if (ts->m_outStream != NULL)
+    std::ostream *ostr = nullptr;
+    if (ts->m_outStream != nullptr)
     {
         ostr = ts->m_outStream;
     }
-    else if (ts->m_ioStream != NULL)
+    else if (ts->m_ioStream != nullptr)
     {
         ostr = ts->m_ioStream;
     }
 
-    if (ostr == NULL)
+    if (ostr == nullptr)
         return 0;
 
-    streampos start = ostr->tellp();
+    std::streampos start = ostr->tellp();
     ostr->write(reinterpret_cast<const char *>(buf), size);
     return ostr->tellp() - start;
 }
@@ -117,19 +117,19 @@ toff_t TiffStream::seek(thandle_t fd, toff_t offset, int origin)
 int TiffStream::close(thandle_t fd)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    if (ts->m_inStream != NULL)
+    if (ts->m_inStream != nullptr)
     {
-        ts->m_inStream = NULL;
+        ts->m_inStream = nullptr;
         return 0;
     }
-    else if (ts->m_outStream != NULL)
+    else if (ts->m_outStream != nullptr)
     {
-        ts->m_outStream = NULL;
+        ts->m_outStream = nullptr;
         return 0;
     }
-    else if (ts->m_ioStream != NULL)
+    else if (ts->m_ioStream != nullptr)
     {
-        ts->m_ioStream = NULL;
+        ts->m_ioStream = nullptr;
         return 0;
     }
     return -1;
@@ -161,15 +161,15 @@ unsigned int TiffStream::getSize(thandle_t fd)
 unsigned int TiffStream::tell(thandle_t fd)
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    if (ts->m_inStream != NULL)
+    if (ts->m_inStream != nullptr)
     {
         return ts->m_inStream->tellg();
     }
-    else if (ts->m_outStream != NULL)
+    else if (ts->m_outStream != nullptr)
     {
         return ts->m_outStream->tellp();
     }
-    else if (ts->m_ioStream != NULL)
+    else if (ts->m_ioStream != nullptr)
     {
         return ts->m_ioStream->tellg();
     }
@@ -181,32 +181,32 @@ bool TiffStream::seekInt(thandle_t fd, unsigned int offset, int origin)
     if (!isOpen(fd))
         return false;
 
-    ios::seek_dir org;
+    std::ios::seekdir org;
     switch (origin)
     {
         case beg:
-            org = ios::beg;
+            org = std::ios::beg;
             break;
         case cur:
-            org = ios::cur;
+            org = std::ios::cur;
             break;
         case end:
-            org = ios::end;
+            org = std::ios::end;
             break;
     }
 
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    if (ts->m_inStream != NULL)
+    if (ts->m_inStream != nullptr)
     {
         ts->m_inStream->seekg(offset, org);
         return true;
     }
-    else if (ts->m_outStream != NULL)
+    else if (ts->m_outStream != nullptr)
     {
         ts->m_outStream->seekp(offset, org);
         return true;
     }
-    else if (ts->m_ioStream != NULL)
+    else if (ts->m_ioStream != nullptr)
     {
         ts->m_ioStream->seekg(offset, org);
         ts->m_ioStream->seekp(offset, org);
@@ -218,6 +218,6 @@ bool TiffStream::seekInt(thandle_t fd, unsigned int offset, int origin)
 bool TiffStream::isOpen(thandle_t fd) const
 {
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
-    return (ts->m_inStream != NULL || ts->m_outStream != NULL ||
-            ts->m_ioStream != NULL);
+    return (ts->m_inStream != nullptr || ts->m_outStream != nullptr ||
+            ts->m_ioStream != nullptr);
 }
