@@ -3,6 +3,7 @@
 #include "tiffstream.h"
 #include <algorithm>
 #include <cstdint>
+#include <limits>
 
 const char *TiffStream::m_name = "TiffStream";
 
@@ -82,8 +83,10 @@ tsize_t TiffStream::read(thandle_t fd, tdata_t buf, tsize_t size)
         return 0;
 
     std::uint64_t remain = ts->m_streamLength - current;
-    std::streamsize actual =
-        static_cast<std::streamsize>(std::min<std::size_t>(remain, size));
+    std::size_t to_read = std::min<std::size_t>(remain, size);
+    std::streamsize actual = static_cast<std::streamsize>(to_read);
+    if (static_cast<std::size_t>(actual) != to_read)
+        return 0;
 
     istr->read(reinterpret_cast<char *>(buf), actual);
     return static_cast<tsize_t>(istr->gcount());
@@ -106,8 +109,14 @@ tsize_t TiffStream::write(thandle_t fd, tdata_t buf, tsize_t size)
         return 0;
 
     std::streampos start = ostr->tellp();
-    ostr->write(reinterpret_cast<const char *>(buf), size);
-    return ostr->tellp() - start;
+    std::streamsize actual = static_cast<std::streamsize>(size);
+    if (static_cast<tsize_t>(actual) != size)
+        return 0;
+    ostr->write(reinterpret_cast<const char *>(buf), actual);
+    std::streampos end = ostr->tellp();
+    if (end == std::streampos(-1))
+        return 0;
+    return static_cast<tsize_t>(end - start);
 }
 
 toff_t TiffStream::seek(thandle_t fd, toff_t offset, int origin)
@@ -190,6 +199,9 @@ std::uint64_t TiffStream::tell(thandle_t fd)
 bool TiffStream::seekInt(thandle_t fd, std::uint64_t offset, int origin)
 {
     if (!isOpen(fd))
+        return false;
+
+    if (offset > static_cast<std::uint64_t>(std::numeric_limits<std::streamoff>::max()))
         return false;
 
     std::ios::seekdir org;
