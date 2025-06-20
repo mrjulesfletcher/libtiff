@@ -22,6 +22,7 @@
  * OF THIS SOFTWARE.
  */
 
+#include "tiff_threadpool.h"
 #include "tiffiop.h"
 #ifdef ZIP_SUPPORT
 /*

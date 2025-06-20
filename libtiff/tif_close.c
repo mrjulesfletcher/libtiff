@@ -25,6 +25,7 @@
 /*
  * TIFF Library.
  */
+#include "tiff_threadpool.h"
 #include "tiffiop.h"
 #include <string.h>
 

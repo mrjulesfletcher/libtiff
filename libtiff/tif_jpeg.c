@@ -25,9 +25,10 @@
 #define WIN32_LEAN_AND_MEAN
 #define VC_EXTRALEAN
 
+#include "tiff_threadpool.h"
 #include "tiffiop.h"
-#include <stdlib.h>
 #include <errno.h>
+#include <stdlib.h>
 
 #ifdef JPEG_SUPPORT
 
@@ -444,7 +445,8 @@ static int TIFFjpeg_start_decompress(JPEGState *sp)
             TIFFWarningExtR(
                 sp->tif, module,
                 "Invalid LIBTIFF_JPEG_MAX_ALLOWED_SCAN_NUMBER value '%s',"
-                " using default", sz_max_allowed_scan_number);
+                " using default",
+                sz_max_allowed_scan_number);
         }
         else
             sp->otherSettings.max_allowed_scan_number = (int)val;
@@ -1532,7 +1534,7 @@ static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc, uint16_t s)
 
 #if JPEG_LIB_MK1_OR_12BIT
 /*ARGSUSED*/ static int JPEGDecodeInternal(TIFF *tif, uint8_t *buf, tmsize_t cc,
-                                   uint16_t s)
+                                           uint16_t s)
 {
     JPEGState *sp = JState(tif);
     tmsize_t nrows;

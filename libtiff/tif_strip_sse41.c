@@ -1,5 +1,6 @@
 #include "tif_bayer.h"
 #include "tiff_simd.h"
+#include "tiff_threadpool.h"
 #include "tiffiop.h"
 #include <stdbool.h>
 #include <string.h>
