@@ -2,6 +2,10 @@
 
 This repository extends **libtiff** with optimized implementations for ARM NEON and x86 SSE4.1/4.2.  Additional helpers simplify working with 12‑bit data and assembling in-memory TIFF/DNG strips.  The fork stays API compatible with upstream while delivering substantial speedups on supported CPUs.
 
+The diagram below shows the full processing pipeline for Bayer RAW, YCbCr and
+standard TIFF images including SIMD and GPU acceleration paths.
+![Processing pipeline with SIMD and GPU paths](doc/pipeline.svg)
+
 ## Building
 
 ### Dependencies

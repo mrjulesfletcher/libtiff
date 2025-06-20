@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="320" viewBox="0 0 960 320" font-family="sans-serif" font-size="12">
+  <style>
+    .box { fill:#f0f0f0; stroke:#333; }
+    .accel { fill:#e8f6ff; }
+    .arrow { fill:none; stroke:#333; marker-end:url(#arrow); }
+    text { dominant-baseline:middle; text-anchor:middle; }
+  </style>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#333" />
+    </marker>
+  </defs>
+  <!-- Inputs -->
+  <rect class="box" x="20" y="30" width="120" height="40" />
+  <text x="80" y="50">Bayer RAW</text>
+
+  <rect class="box" x="20" y="110" width="120" height="40" />
+  <text x="80" y="130">YCbCr TIFF</text>
+
+  <rect class="box" x="20" y="190" width="120" height="40" />
+  <text x="80" y="210">Standard TIFF</text>
+
+  <!-- Bayer workflow -->
+  <rect class="box accel" x="170" y="30" width="150" height="40" />
+  <text x="245" y="50">TIFFPackRaw12/16</text>
+
+  <rect class="box accel" x="350" y="30" width="150" height="40" />
+  <text x="425" y="50">AssembleStripSIMD</text>
+
+  <rect class="box accel" x="530" y="30" width="150" height="40" />
+  <text x="605" y="50">Predictor NEON/SSE</text>
+
+  <rect class="box" x="710" y="30" width="120" height="40" />
+  <text x="770" y="50">DNG File</text>
+
+  <rect class="box accel" x="850" y="30" width="90" height="40" />
+  <text x="895" y="50">Async I/O</text>
+
+  <!-- YCbCr workflow -->
+  <rect class="box accel" x="170" y="110" width="150" height="40" />
+  <text x="245" y="130">YCbCr→RGBA NEON</text>
+
+  <rect class="box accel" x="350" y="110" width="150" height="40" />
+  <text x="425" y="130">Predictor &amp; Swap</text>
+
+  <rect class="box accel" x="530" y="110" width="150" height="40" />
+  <text x="605" y="130">RGB Pack NEON</text>
+
+  <rect class="box accel" x="710" y="110" width="120" height="40" />
+  <text x="770" y="130">GPU HVS/Vulkan</text>
+
+  <rect class="box" x="850" y="110" width="90" height="40" />
+  <text x="895" y="130">RGBA Out</text>
+
+  <!-- Standard TIFF workflow -->
+  <rect class="box accel" x="170" y="190" width="150" height="40" />
+  <text x="245" y="210">Decompress</text>
+
+  <rect class="box" x="350" y="190" width="150" height="40" />
+  <text x="425" y="210">Decode</text>
+
+  <rect class="box accel" x="530" y="190" width="150" height="40" />
+  <text x="605" y="210">Predictor &amp; Swap</text>
+
+  <rect class="box accel" x="710" y="190" width="120" height="40" />
+  <text x="770" y="210">GPU HVS/Vulkan</text>
+
+  <rect class="box" x="850" y="190" width="90" height="40" />
+  <text x="895" y="210">RGBA Out</text>
+
+  <!-- Arrows Bayer -->
+  <path class="arrow" d="M140 50H170" />
+  <path class="arrow" d="M320 50H350" />
+  <path class="arrow" d="M500 50H530" />
+  <path class="arrow" d="M680 50H710" />
+  <path class="arrow" d="M830 50H850" />
+
+  <!-- Arrows YCbCr -->
+  <path class="arrow" d="M140 130H170" />
+  <path class="arrow" d="M320 130H350" />
+  <path class="arrow" d="M500 130H530" />
+  <path class="arrow" d="M680 130H710" />
+  <path class="arrow" d="M830 130H850" />
+
+  <!-- Arrows Standard -->
+  <path class="arrow" d="M140 210H170" />
+  <path class="arrow" d="M320 210H350" />
+  <path class="arrow" d="M500 210H530" />
+  <path class="arrow" d="M680 210H710" />
+  <path class="arrow" d="M830 210H850" />
+</svg>
