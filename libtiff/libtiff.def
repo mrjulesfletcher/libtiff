@@ -217,6 +217,8 @@ EXPORTS	TIFFAccessTagMethods
         TIFFInitSIMD
         TIFFInitVulkan
         TIFFCleanupVulkan
+        TIFFInitHVS
+        TIFFCleanupHVS
         TIFFUseNEON
         TIFFUseSSE41
         TIFFUseSSE2

@@ -68,3 +68,5 @@ Other utilities assist with performance analysis and documentation:
 - `scripts/test_doc_coverage.py` checks that newly added tests call only
   documented public APIs.
 - `scripts/raw_to_dng_benchmark.py` measures raw to DNG conversion speed using raw2tiff.
+  The test can be combined with the HVS path by building with `-Ddrm-hvs=ON`
+  and setting `TIFFSetUseHVS(1)` in the conversion tool.

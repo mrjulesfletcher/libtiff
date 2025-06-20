@@ -250,6 +250,8 @@ LIBTIFF_4.7.1 {
     TIFFInitSIMD;
     TIFFInitVulkan;
     TIFFCleanupVulkan;
+    TIFFInitHVS;
+    TIFFCleanupHVS;
     tiff_use_neon;
     tiff_use_sse41;
     tiff_use_sse2;

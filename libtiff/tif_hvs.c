@@ -8,6 +8,26 @@
 #include <xf86drmMode.h>
 
 int tiff_use_hvs = 0;
+static int tiff_hvs_fd = -1;
+
+void TIFFInitHVS(void)
+{
+    if (tiff_use_hvs)
+        return;
+    tiff_hvs_fd = open("/dev/dri/card0", O_RDWR);
+    if (tiff_hvs_fd >= 0)
+        tiff_use_hvs = 1;
+}
+
+void TIFFCleanupHVS(void)
+{
+    if (tiff_hvs_fd >= 0)
+    {
+        close(tiff_hvs_fd);
+        tiff_hvs_fd = -1;
+    }
+    tiff_use_hvs = 0;
+}
 
 int TIFFUseHVS(void) { return tiff_use_hvs; }
 
@@ -50,6 +70,10 @@ int tiff_use_hvs = 0;
 int TIFFUseHVS(void) { return 0; }
 
 void TIFFSetUseHVS(int enable) { (void)enable; }
+
+void TIFFInitHVS(void) {}
+
+void TIFFCleanupHVS(void) {}
 
 int TIFFReadRGBAImageHVS(TIFF *tif, uint32_t width, uint32_t height,
                          uint32_t *raster, int orientation, int stopOnError)
