@@ -60,7 +60,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 #endif
     std::istringstream s(
         std::string(reinterpret_cast<const char *>(Data), Size));
-    TIFF *tif = TIFFStreamOpen("MemTIFF", &s);
+    std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(
+        TIFFStreamOpen("MemTIFF", &s), &TIFFClose);
     if (!tif)
     {
         return 0;
@@ -73,7 +74,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
     /* don't continue if file size is ludicrous */
     if (TIFFTileSize64(tif) > MAX_SIZE)
     {
-        TIFFClose(tif);
         return 0;
     }
     uint64_t bufsize = TIFFTileSize64(tif);
@@ -81,7 +81,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
      * fuzzer */
     if (bufsize > MAX_SIZE || bufsize == 0)
     {
-        TIFFClose(tif);
         return 0;
     }
 
@@ -97,7 +96,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         if (tilewidth * 2 > MAX_SIZE || imagewidth * 2 > MAX_SIZE ||
             tilewidth == 0 || imagewidth == 0)
         {
-            TIFFClose(tif);
             return 0;
         }
     }
@@ -112,7 +110,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         if (rowsize * 2 > MAX_SIZE || stripsize * 2 > MAX_SIZE ||
             rowsize == 0 || stripsize == 0)
         {
-            TIFFClose(tif);
             return 0;
         }
     }
@@ -121,44 +118,37 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
     if (size > MAX_SIZE || size == 0)
     {
-        TIFFClose(tif);
         return 0;
     }
 
-    raster = (uint32_t *)_TIFFmalloc(size * sizeof(uint32_t));
+    std::unique_ptr<uint32_t, decltype(&_TIFFfree)> raster(
+        static_cast<uint32_t *>(_TIFFmalloc(size * sizeof(uint32_t))),
+        &_TIFFfree);
     int ret = 0;
-    if (raster != NULL)
+    if (raster)
     {
-        TIFFReadRGBAImage(tif, w, h, raster, 0);
+        TIFFReadRGBAImage(tif.get(), w, h, raster.get(), 0);
 
-        if (!TIFFIsTiled(tif))
+        if (!TIFFIsTiled(tif.get()))
         {
-            // Allocate a buffer to hold one scanline
-            tsize_t scanlineSize = TIFFScanlineSize(tif);
-            void *buffer = _TIFFmalloc(scanlineSize);
+            tsize_t scanlineSize = TIFFScanlineSize(tif.get());
+            std::unique_ptr<void, decltype(&_TIFFfree)> buffer(
+                _TIFFmalloc(scanlineSize), &_TIFFfree);
             if (!buffer)
             {
                 fprintf(stderr, "Memory allocation failed\n");
-                ret = 1;
-                goto cleanup;
+                return 1;
             }
 
-            // Read each scanline
             for (uint32_t row = 0; row < h; row++)
             {
-                if (TIFFReadScanline(tif, buffer, row, 0) < 0)
+                if (TIFFReadScanline(tif.get(), buffer.get(), row, 0) < 0)
                 {
-                    _TIFFfree(buffer);
-                    ret = 1;
-                    goto cleanup;
+                    return 1;
                 }
             }
-            _TIFFfree(buffer);
         }
-    cleanup:
-        _TIFFfree(raster);
     }
-    TIFFClose(tif);
 
     return ret;
 }

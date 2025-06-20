@@ -91,16 +91,16 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
 
     if (ChkTIFF(lpszPath))
     {
-        std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(TIFFOpen(lpszPath, "r"),
-                                                        &TIFFClose);
+        std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(
+            TIFFOpen(lpszPath, "r"), &TIFFClose);
         if (tif)
         {
-            std::array<char, 1024> emsg;
+            std::array<char, 1024> emsg{};
 
             if (TIFFRGBAImageOK(tif, emsg.data()))
             {
                 TIFFDibImage img;
-                std::array<char, 1024> emsg;
+                std::array<char, 1024> emsg{};
 
                 if (TIFFRGBAImageBegin(&img.tif, tif, -1, emsg.data()))
                 {
@@ -201,8 +201,8 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
             (BITMAPINFOHEADER *)pDIB); //(LPSTR)pRgbq + 3 * sizeof(RGBQUAD);
 
         int sizeWords = bi.biSizeImage / 4;
-        RGBQUAD *rgbDib = (RGBQUAD *)pbiBits;
-        long *rgbTif = (long *)raster;
+        RGBQUAD *rgbDib = reinterpret_cast<RGBQUAD *>(pbiBits);
+        const uint32_t *rgbTif = raster;
 
         _TIFFmemcpy(pbiBits, raster, bi.biSizeImage);
     }
@@ -250,8 +250,8 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
         PVOID pbiBits = (LPSTR)pRgbq + 3 * sizeof(RGBQUAD);
 
         int sizeWords = bi.biSizeImage / 4;
-        RGBQUAD *rgbDib = (RGBQUAD *)pbiBits;
-        long *rgbTif = (long *)raster;
+        RGBQUAD *rgbDib = reinterpret_cast<RGBQUAD *>(pbiBits);
+        const uint32_t *rgbTif = raster;
 
         // Swap the byte order while copying
         for (int i = 0; i < sizeWords; ++i)
