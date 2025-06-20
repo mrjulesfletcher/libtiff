@@ -34,6 +34,10 @@
  *   TIFFReadDirectory, so as to eliminate current possibly repetitive lookup.
  */
 
+#ifdef TIFF_DO_NOT_USE_NON_EXT_ALLOC_FUNCTIONS
+#undef TIFF_DO_NOT_USE_NON_EXT_ALLOC_FUNCTIONS
+#endif
+
 #include "tiffconf.h"
 #include "tiffiop.h"
 #include <errno.h>
@@ -5673,12 +5677,13 @@ int _TIFFCheckDirNumberAndOffset(TIFF *tif, tdir_t dirn, uint64_t diroff)
     /* Update cache of directory offsets */
     if (dirn >= tif->tif_dir_offset_cache_count)
     {
-        tdir_t newalloc = tif->tif_dir_offset_cache_alloc ? tif->tif_dir_offset_cache_alloc : 16;
+        tdir_t newalloc = tif->tif_dir_offset_cache_alloc
+                              ? tif->tif_dir_offset_cache_alloc
+                              : 16;
         while (newalloc <= dirn)
             newalloc *= 2;
-        uint64_t *newcache =
-            (uint64_t *)_TIFFreallocExt(tif, tif->tif_dir_offset_cache,
-                                        newalloc * sizeof(uint64_t));
+        uint64_t *newcache = (uint64_t *)_TIFFreallocExt(
+            tif, tif->tif_dir_offset_cache, newalloc * sizeof(uint64_t));
         if (!newcache)
             return 0;
         memset(newcache + tif->tif_dir_offset_cache_alloc, 0,
@@ -5959,7 +5964,8 @@ int _TIFFRemoveEntryFromDirectoryListByOffset(TIFF *tif, uint64_t diroff)
                                   foundEntryOldDir);
                 TIFFHashSetRemove(tif->tif_map_dir_offset_to_number,
                                   foundEntryOldOff);
-                if (foundEntryOldOff->dirNumber < tif->tif_dir_offset_cache_count &&
+                if (foundEntryOldOff->dirNumber <
+                        tif->tif_dir_offset_cache_count &&
                     tif->tif_dir_offset_cache)
                 {
                     tif->tif_dir_offset_cache[foundEntryOldOff->dirNumber] = 0;
