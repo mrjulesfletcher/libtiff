@@ -5667,6 +5667,9 @@ int _TIFFCheckDirNumberAndOffset(TIFF *tif, tdir_t dirn, uint64_t diroff)
     if (diroff == 0) /* no more directories */
         return 0;
 
+    if (dirn == TIFF_NON_EXISTENT_DIR_NUMBER)
+        return 1;
+
     /* Update cache of directory offsets */
     if (dirn >= tif->tif_dir_offset_cache_count)
     {
