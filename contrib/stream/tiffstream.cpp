@@ -151,7 +151,7 @@ int TiffStream::map(thandle_t /*fd*/, tdata_t * /*phase*/, toff_t * /*psize*/)
     return 0;
 }
 
-void TiffStream::unmap(thandle_t /*fd*/, tdata_t /*base*/, tsize_t /*size*/) {}
+void TiffStream::unmap(thandle_t /*fd*/, tdata_t /*base*/, toff_t /*size*/) {}
 
 std::uint64_t TiffStream::getSize(thandle_t fd)
 {
@@ -204,6 +204,8 @@ bool TiffStream::seekInt(thandle_t fd, std::uint64_t offset, int origin)
         case end:
             org = std::ios::end;
             break;
+        default:
+            return false;
     }
 
     TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
