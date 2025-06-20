@@ -67,7 +67,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
         return 0;
     }
     uint32_t w, h;
-    uint32_t *raster;
 
     TIFFGetField(tif, TIFFTAG_IMAGEWIDTH, &w);
     TIFFGetField(tif, TIFFTAG_IMAGELENGTH, &h);
@@ -157,9 +156,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t *Data, size_t Size)
 
 template <class T> static void CPL_IGNORE_RET_VAL(T) {}
 
-static void Usage(int, char *argv[])
+static void Usage(const char *prog)
 {
-    fprintf(stderr, "%s [--help] [-repeat N] filename.\n", argv[0]);
+    fprintf(stderr, "%s [--help] [-repeat N] filename.\n", prog);
     exit(1);
 }
 
@@ -185,12 +184,12 @@ int main(int argc, char *argv[])
         }
         else if (strcmp(argv[i], "--help") == 0)
         {
-            Usage(argc, argv);
+            Usage(argv[0]);
         }
         else if (argv[i][0] == '-')
         {
             fprintf(stderr, "Unrecognized option: %s", argv[i]);
-            Usage(argc, argv);
+            Usage(argv[0]);
         }
         else
         {
@@ -200,7 +199,7 @@ int main(int argc, char *argv[])
     if (pszFilename == nullptr)
     {
         fprintf(stderr, "No filename specified\n");
-        Usage(argc, argv);
+        Usage(argv[0]);
     }
     FILE *f = fopen(pszFilename, "rb");
     if (!f)
