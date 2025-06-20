@@ -22,6 +22,7 @@ int main(void)
     TIFFErrorHandlerExt prev = TIFFSetErrorHandlerExt(myErrorHandler);
     const char *mod =
         TIFFUseSSE41() ? "TIFFAssembleStripSSE41" : "TIFFAssembleStripNEON";
+    (void)mod;
 
     /* Failure of first allocation */
     setenv("FAIL_MALLOC_COUNT", "1", 1);
