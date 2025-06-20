@@ -254,7 +254,8 @@ processing images.
 
 On DRM-enabled systems, the library can also offload color space conversion
 through the HVS pipeline. Configure with `-Ddrm-hvs=ON` or
-`--enable-drm-hvs` and call `TIFFSetUseHVS(1)` before reading images.
+`--enable-drm-hvs` and initialize the subsystem with `TIFFInitHVS()`.  Enable
+hardware processing by calling `TIFFSetUseHVS(1)` before reading images.
 
 ## How to Use SIMD Routines
 Below is a short example that assembles a 12‑bit strip and writes a DNG.
@@ -301,6 +302,15 @@ _TIFFThreadPoolWait(pool);
 _tiffUringWait(tif);
 free(s);
 free(tmp);
+```
+
+Enable the HVS unit to offload colour conversion when decoding the generated
+DNG:
+
+```c
+TIFFInitHVS();
+TIFFSetUseHVS(1);
+TIFFReadRGBAImageHVS(tif, width, height, raster, ORIENTATION_BOTLEFT, 0);
 ```
 
 See [doc/async_dng.rst](doc/async_dng.rst) for a detailed overview of

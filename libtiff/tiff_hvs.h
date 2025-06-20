@@ -14,12 +14,16 @@ extern "C" {
 extern int tiff_use_hvs;
 int TIFFUseHVS(void);
 void TIFFSetUseHVS(int enable);
+void TIFFInitHVS(void);
+void TIFFCleanupHVS(void);
 int TIFFReadRGBAImageHVS(TIFF *tif, uint32_t width, uint32_t height,
                          uint32_t *raster, int orientation, int stopOnError);
 #else
 extern int tiff_use_hvs;
 int TIFFUseHVS(void);
 void TIFFSetUseHVS(int enable);
+void TIFFInitHVS(void);
+void TIFFCleanupHVS(void);
 int TIFFReadRGBAImageHVS(TIFF *tif, uint32_t width, uint32_t height,
                          uint32_t *raster, int orientation, int stopOnError);
 #endif
