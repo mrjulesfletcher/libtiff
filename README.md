@@ -525,3 +525,5 @@ Including `tiff_simd.h` exposes `TIFF_SIMD_ENABLED`, `TIFF_SIMD_NEON` and
 
 ## License
 This fork inherits the original [libtiff license](LICENSE.md).
+Additional optimizations and improvements are © 2025 Jules Le Masson Fletcher and
+released under the same license.
