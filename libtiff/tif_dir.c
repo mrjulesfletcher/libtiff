@@ -703,7 +703,7 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
         default:
         {
             TIFFTagValue *tv;
-            int tv_size, iCustom;
+            int tv_size;
 
             /*
              * This can happen if multiple images are open with different
@@ -743,7 +743,6 @@ static int _TIFFVSetField(TIFF *tif, uint32_t tag, va_list ap)
             tv = TIFFCustomValueLookup(td, tag);
             if (tv != NULL)
             {
-                iCustom = (int)(tv - td->td_customValues);
                 if (tv->value != NULL)
                 {
                     _TIFFfreeExt(tif, tv->value);
