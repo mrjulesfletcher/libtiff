@@ -50,7 +50,10 @@ def run_bench(path, args=None):
     cmd = [str(exe)]
     if args:
         cmd.extend(args)
-    out = run(cmd, cwd=exe.parent)
+    try:
+        out = run(cmd, cwd=exe.parent)
+    except subprocess.CalledProcessError as e:
+        out = e.stdout + e.stderr
     return out
 
 
