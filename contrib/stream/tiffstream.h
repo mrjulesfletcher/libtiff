@@ -3,7 +3,7 @@
 #ifndef _TIFF_STREAM_H_
 #define _TIFF_STREAM_H_
 
-#include <iostream.h>
+#include <iostream>
 
 #include "tiffio.h"
 
@@ -25,9 +25,9 @@ class TiffStream
 
   public:
     // factory methods
-    TIFF *makeFileStream(iostream *str);
-    TIFF *makeFileStream(istream *str);
-    TIFF *makeFileStream(ostream *str);
+    TIFF *makeFileStream(std::iostream *str);
+    TIFF *makeFileStream(std::istream *str);
+    TIFF *makeFileStream(std::ostream *str);
 
   public:
     // tiff client methods
@@ -55,9 +55,9 @@ class TiffStream
     thandle_t m_this;
     TIFF *m_tif;
     static const char *m_name;
-    istream *m_inStream;
-    ostream *m_outStream;
-    iostream *m_ioStream;
+    std::istream *m_inStream;
+    std::ostream *m_outStream;
+    std::iostream *m_ioStream;
     int m_streamLength;
 };
 
