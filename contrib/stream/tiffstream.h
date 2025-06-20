@@ -3,6 +3,7 @@
 #ifndef _TIFF_STREAM_H_
 #define _TIFF_STREAM_H_
 
+#include <cstddef>
 #include <iostream>
 
 #include "tiffio.h"
@@ -42,7 +43,7 @@ class TiffStream
   public:
     // query method
     TIFF *getTiffHandle() const { return m_tif; }
-    unsigned int getStreamLength() const { return m_streamLength; }
+    std::size_t getStreamLength() const { return m_streamLength; }
 
   private:
     // internal methods
@@ -58,7 +59,7 @@ class TiffStream
     std::istream *m_inStream;
     std::ostream *m_outStream;
     std::iostream *m_ioStream;
-    int m_streamLength;
+    std::size_t m_streamLength;
 };
 
 #endif // _TIFF_STREAM_H_

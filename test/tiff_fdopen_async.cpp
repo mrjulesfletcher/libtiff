@@ -1,9 +1,9 @@
 #include "tiffio.hxx"
+#include <array>
 #include <cstdio>
 #include <cstdlib>
 #include <fcntl.h>
 #include <future>
-#include <array>
 #include <memory>
 #include <string>
 #include <unistd.h>
@@ -17,7 +17,7 @@ static int check_via_fd(const char *path)
         return 1;
     }
     std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(TIFFFdOpen(fd, path, "r"),
-                                                   &TIFFClose);
+                                                    &TIFFClose);
     if (!tif)
     {
         close(fd);
