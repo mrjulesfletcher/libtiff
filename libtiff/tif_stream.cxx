@@ -28,7 +28,10 @@
 #include "tiffiop.h"
 #include <iostream>
 
-using namespace std;
+using std::ios;
+using std::istream;
+using std::ostream;
+using std::streamsize;
 
 /*
   ISO C++ uses a 'std::streamsize' type to define counts.  This makes
@@ -354,6 +357,8 @@ extern "C"
                 return nullptr;
             data->stream = reinterpret_cast<ostream *>(fd);
             data->start_pos = data->stream->tellp();
+            if (data->start_pos == ios::pos_type(-1))
+                data->start_pos = ios::pos_type(0);
 
             // Open for writing.
             tif = TIFFClientOpen(
@@ -372,6 +377,8 @@ extern "C"
                 return nullptr;
             data->stream = reinterpret_cast<istream *>(fd);
             data->start_pos = data->stream->tellg();
+            if (data->start_pos == ios::pos_type(-1))
+                data->start_pos = ios::pos_type(0);
             // Open for reading.
             tif = TIFFClientOpen(
                 name, mode, reinterpret_cast<thandle_t>(data), _tiffisReadProc,
