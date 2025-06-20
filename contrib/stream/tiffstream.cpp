@@ -175,10 +175,10 @@ std::uint64_t TiffStream::getSize(thandle_t fd)
 
     std::uint64_t pos = tell(fd);
     seekInt(fd, 0, end);
-    std::uint64_t size = tell(fd);
+    std::uint64_t streamSize = tell(fd);
     seekInt(fd, pos, beg);
 
-    return size;
+    return streamSize;
 }
 
 std::uint64_t TiffStream::tell(thandle_t fd)
@@ -249,7 +249,7 @@ bool TiffStream::seekInt(thandle_t fd, std::uint64_t offset, int origin)
 
 bool TiffStream::isOpen(thandle_t fd) const
 {
-    TiffStream *ts = reinterpret_cast<TiffStream *>(fd);
+    const TiffStream *ts = reinterpret_cast<const TiffStream *>(fd);
     return (ts->m_inStream != nullptr || ts->m_outStream != nullptr ||
             ts->m_ioStream != nullptr);
 }

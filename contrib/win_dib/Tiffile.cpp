@@ -100,7 +100,6 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
             if (TIFFRGBAImageOK(tif, emsg.data()))
             {
                 TIFFDibImage img;
-                std::array<char, 1024> emsg{};
 
                 if (TIFFRGBAImageBegin(&img.tif, tif, -1, emsg.data()))
                 {
@@ -176,10 +175,12 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
         }
 
         // Copy the header info
-        *((BITMAPINFOHEADER *)pDIB) = bi;
+        *reinterpret_cast<BITMAPINFOHEADER *>(pDIB) = bi;
 
         // Get a pointer to the color table
-        RGBQUAD *pRgbq = (RGBQUAD *)((LPSTR)pDIB + sizeof(BITMAPINFOHEADER));
+        RGBQUAD *pRgbq =
+            reinterpret_cast<RGBQUAD *>(static_cast<LPSTR>(pDIB) +
+                                        sizeof(BITMAPINFOHEADER));
 
         pRgbq[0].rgbRed = 0;
         pRgbq[0].rgbBlue = 0;
@@ -197,12 +198,8 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
         // there should be no color table for 32 bit images, but
         // experience shows that the image is off by 3 words if it
         // is not included.  So here it is.
-        PVOID pbiBits = GetDIBImagePtr(
-            (BITMAPINFOHEADER *)pDIB); //(LPSTR)pRgbq + 3 * sizeof(RGBQUAD);
-
-        int sizeWords = bi.biSizeImage / 4;
-        RGBQUAD *rgbDib = reinterpret_cast<RGBQUAD *>(pbiBits);
-        const uint32_t *rgbTif = raster;
+        PVOID pbiBits =
+            GetDIBImagePtr(reinterpret_cast<BITMAPINFOHEADER *>(pDIB));
 
         _TIFFmemcpy(pbiBits, raster, bi.biSizeImage);
     }
@@ -235,10 +232,12 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
         }
 
         // Copy the header info
-        *((BITMAPINFOHEADER *)pDIB) = bi;
+        *reinterpret_cast<BITMAPINFOHEADER *>(pDIB) = bi;
 
         // Get a pointer to the color table
-        RGBQUAD *pRgbq = (RGBQUAD *)((LPSTR)pDIB + sizeof(BITMAPINFOHEADER));
+        RGBQUAD *pRgbq =
+            reinterpret_cast<RGBQUAD *>(static_cast<LPSTR>(pDIB) +
+                                        sizeof(BITMAPINFOHEADER));
 
         // Pointers to the bits
         // PVOID pbiBits = (LPSTR)pRgbq + bi.biClrUsed * sizeof(RGBQUAD);
