@@ -349,7 +349,9 @@ extern "C"
 
         if (strchr(mode, 'w'))
         {
-            tiffos_data *data = new tiffos_data;
+            tiffos_data *data = new (std::nothrow) tiffos_data;
+            if (!data)
+                return nullptr;
             data->stream = reinterpret_cast<ostream *>(fd);
             data->start_pos = data->stream->tellp();
 
@@ -365,7 +367,9 @@ extern "C"
         }
         else
         {
-            tiffis_data *data = new tiffis_data;
+            tiffis_data *data = new (std::nothrow) tiffis_data;
+            if (!data)
+                return nullptr;
             data->stream = reinterpret_cast<istream *>(fd);
             data->start_pos = data->stream->tellg();
             // Open for reading.
