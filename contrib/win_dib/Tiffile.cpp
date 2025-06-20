@@ -10,7 +10,7 @@
 /*--------------------------------------------------------------------
         READ TIFF
         Load the TIFF data from the file into memory.  Return
-        a pointer to a valid DIB (or NULL for errors).
+        a pointer to a valid DIB (or nullptr for errors).
         Uses the TIFFRGBA interface to libtiff.lib to convert
         most file formats to a usable form.  We just keep the 32 bit
         form of the data to display, rather than optimizing for the
@@ -22,7 +22,7 @@
             PVOID ReadTIFF ( LPCTSTR lpszPath )
 
         RETURN
-            A valid DIB pointer for success; NULL for failure.
+            A valid DIB pointer for success; nullptr for failure.
 
   --------------------------------------------------------------------*/
 
@@ -64,8 +64,8 @@ int ChkTIFF(LPCTSTR lpszPath)
     TIFFErrorHandler eh;
     TIFFErrorHandler wh;
 
-    eh = TIFFSetErrorHandler(NULL);
-    wh = TIFFSetWarningHandler(NULL);
+    eh = TIFFSetErrorHandler(nullptr);
+    wh = TIFFSetWarningHandler(nullptr);
 
     std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(TIFFOpen(lpszPath, "r"),
                                                     &TIFFClose);
@@ -84,15 +84,15 @@ void DibInstallHack(TIFFDibImage *img);
 
 PVOID ReadTIFF(LPCTSTR lpszPath)
 {
-    void *pDIB = 0;
+    void *pDIB = nullptr;
     TIFFErrorHandler wh;
 
     wh = TIFFSetWarningHandler(MyWarningHandler);
 
     if (ChkTIFF(lpszPath))
     {
-        std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(
-            TIFFOpen(lpszPath, "r"), &TIFFClose);
+        std::unique_ptr<TIFF, decltype(&TIFFClose)> tif(TIFFOpen(lpszPath, "r"),
+                                                        &TIFFClose);
         if (tif)
         {
             std::array<char, 1024> emsg{};
@@ -131,7 +131,7 @@ PVOID ReadTIFF(LPCTSTR lpszPath)
 
 HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
 {
-    void *pDIB = 0;
+    void *pDIB = nullptr;
     TIFFRGBAImage *img = &dib->tif;
 
     uint32_t imageLength;
@@ -170,9 +170,9 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
 
         // Allocate for the BITMAPINFO structure and the color table.
         pDIB = GlobalAllocPtr(GHND, dwDIBSize);
-        if (pDIB == 0)
+        if (pDIB == nullptr)
         {
-            return (NULL);
+            return nullptr;
         }
 
         // Copy the header info
@@ -229,9 +229,9 @@ HANDLE TIFFRGBA2DIB(TIFFDibImage *dib, uint32_t *raster)
 
         // Allocate for the BITMAPINFO structure and the color table.
         pDIB = GlobalAllocPtr(GHND, dwDIBSize);
-        if (pDIB == 0)
+        if (pDIB == nullptr)
         {
-            return (NULL);
+            return nullptr;
         }
 
         // Copy the header info
